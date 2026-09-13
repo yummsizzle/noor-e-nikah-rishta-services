@@ -144,10 +144,6 @@ tailwind.config = {
   .divider-orn span:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
 
   ::selection{background:#F0A04B;color:#43101F}
-  
-    /* typewriter */
-    @keyframes tw-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    .tw-cursor { display: inline-block; font-weight: 300; margin-left: 2px; animation: tw-blink 0.8s step-end infinite; }
     /* scrollbar */
   ::-webkit-scrollbar{width:10px}
   ::-webkit-scrollbar-track{background:#FBEEE2}
@@ -345,7 +341,7 @@ tailwind.config = {
   <div class="relative mx-auto max-w-6xl px-5 sm:px-8">
     <div class="text-center mb-12 reveal">
       <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">OUR STORY</p>
-      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">ABOUT NOOR-E-NIKAH</h2>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text">ABOUT NOOR-E-NIKAH</h2>
       <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
     </div>
 
@@ -426,7 +422,7 @@ tailwind.config = {
   <div class="relative mx-auto max-w-6xl px-5 sm:px-8">
     <div class="text-center mb-14 reveal">
       <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">WHAT WE OFFER</p>
-      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">OUR SERVICES</h2>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text">OUR SERVICES</h2>
       <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
     </div>
 
@@ -529,7 +525,7 @@ tailwind.config = {
   <div class="relative mx-auto max-w-4xl px-4 sm:px-8">
     <div class="text-center mb-10 reveal">
       <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">FREE &amp; CONFIDENTIAL</p>
-      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">PROFILE REGISTRATION</h2>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text">PROFILE REGISTRATION</h2>
       <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
       <p class="mt-5 text-[#4A1622]/75 max-w-2xl mx-auto">Please fill this simple form. Your details are received privately by
         <span class="text-burg font-medium">Seema Kadri</span> and are never displayed publicly.</p>
@@ -781,7 +777,7 @@ tailwind.config = {
   <div class="relative mx-auto max-w-6xl px-5 sm:px-8">
     <div class="text-center mb-14 reveal">
       <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">OUR PROMISE</p>
-      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">WHY CHOOSE US</h2>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text">WHY CHOOSE US</h2>
       <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
     </div>
 
@@ -829,7 +825,7 @@ tailwind.config = {
   <div class="relative mx-auto max-w-4xl px-5 sm:px-8 text-center">
     <div class="reveal mb-10">
       <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">WE ARE HERE FOR YOU</p>
-      <h2 class="font-serif text-3xl sm:text-5xl font-semibold gold-text typewriter-heading">CONTACT US</h2>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold gold-text">CONTACT US</h2>
       <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold-light"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
     </div>
 
@@ -1231,83 +1227,6 @@ document.getElementById('newEntry').addEventListener('click', () => {
 
 
 
-/* ---------- Typewriter Headings ---------- */
-const typeObserver = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    const el = e.target;
-    if(e.isIntersecting) {
-      el.dataset.typingActive = "true";
-      if (!el.twState.isRunning) {
-        runTypewriter(el);
-      }
-    } else {
-      el.dataset.typingActive = "false";
-    }
-  });
-}, {threshold: 0.1}); // Starts when slightly visible
-
-document.querySelectorAll('.typewriter-heading').forEach(el => {
-  const text = el.getAttribute('data-text') || el.textContent.trim();
-  el.setAttribute('data-text', text);
-  el.classList.add('relative');
-  
-  // Detect gradient class
-  let gradientClass = '';
-  if (el.classList.contains('gold-text')) {
-      gradientClass = 'gold-text';
-      el.classList.remove('gold-text');
-  } else if (el.classList.contains('warm-text')) {
-      gradientClass = 'warm-text';
-      el.classList.remove('warm-text');
-  }
-  
-  // Create placeholder and visible overlay
-  const htmlStr = `
-    <span class="${gradientClass}" style="opacity: 0; color: transparent; pointer-events: none; user-select: none; display: inline-block;">${text}</span>
-    <span class="${gradientClass} absolute inset-0 pointer-events-none" aria-hidden="true" style="text-align: inherit;">
-      <span class="typer-span"></span><span class="tw-cursor">|</span>
-    </span>
-  `;
-  el.innerHTML = htmlStr;
-  
-  el.twState = { text: text, i: 0, isDeleting: false, isRunning: false, timeout: null };
-  typeObserver.observe(el);
-});
-
-function runTypewriter(el) {
-  if (el.dataset.typingActive !== "true") {
-    el.twState.isRunning = false;
-    return;
-  }
-  el.twState.isRunning = true;
-  
-  const state = el.twState;
-  const typer = el.querySelector('.typer-span');
-  let delay = 0;
-  
-  if (!state.isDeleting) {
-    if (state.i < state.text.length) {
-      typer.textContent = state.text.substring(0, state.i + 1);
-      state.i++;
-      delay = 90 + Math.random() * 50; // 90-140ms (slow, elegant typing)
-    } else {
-      state.isDeleting = true;
-      delay = 3000; // 3 SECONDS hold so the user can easily read the heading!
-    }
-  } else {
-    if (state.i > 0) {
-      typer.textContent = state.text.substring(0, state.i - 1);
-      state.i--;
-      delay = 50 + Math.random() * 30; // 50-80ms (smooth, natural erasing)
-    } else {
-      state.isDeleting = false;
-      delay = 1000; // 1 second pause before typing again
-    }
-  }
-  
-  clearTimeout(state.timeout);
-  state.timeout = setTimeout(() => runTypewriter(el), delay);
-}
 </script>
 </body>
 </html>

@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Noor-E-Nikah Rishta Services | Trusted Matchmaking for Muslim Families</title>
+<meta name="description" content="Noor-E-Nikah Rishta Services — Personal Muslim matchmaking service by Seema Kadri, Mumbai / Mira Road. Trust, Privacy, Respect & Personal Attention." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        wine:   { DEFAULT:'#5B1226', deep:'#430D1C', light:'#7C1D38' },
+        burg:   '#8A2340',
+        gold:   { DEFAULT:'#C9A227', light:'#E8C979', pale:'#F4E3BC' },
+        cream:  { DEFAULT:'#FFF8F1', deep:'#FBEEE2' },
+        amber2: '#F0A04B',
+        coral:  '#E8735A',
+        blush:  '#F6C9C0'
+      },
+      fontFamily: {
+        serif: ['"Cormorant Garamond"','Georgia','serif'],
+        sans:  ['Jost','system-ui','sans-serif'],
+        arab:  ['Amiri','serif']
+      }
+    }
+  }
+}
+</script>
+<style>
+  :root{
+    --wine:#5B1226; --wine-deep:#430D1C; --gold:#C9A227; --gold-lt:#E8C979;
+    --cream:#FFF8F1; --coral:#E8735A; --amber:#F0A04B;
+  }
+  html{scroll-behavior:smooth; scroll-padding-top:78px;}
+  body{background:var(--cream); color:#3B1119; -webkit-font-smoothing:antialiased;}
+
+  /* ---------- Islamic geometric pattern ---------- */
+  .pattern-geo{
+    background-image:url("data:image/svg+xml,%3Csvg width='72' height='72' viewBox='0 0 72 72' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23C9A227' stroke-width='1' stroke-opacity='0.35'%3E%3Cpath d='M36 3 L69 36 L36 69 L3 36 Z'/%3E%3Cpath d='M36 14 L58 36 L36 58 L14 36 Z'/%3E%3Crect x='18' y='18' width='36' height='36'/%3E%3Ccircle cx='36' cy='36' r='6'/%3E%3C/g%3E%3C/svg%3E");
+    background-size:72px 72px;
+  }
+  .pattern-geo-soft{
+    background-image:url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%235B1226' stroke-width='1' stroke-opacity='0.18'%3E%3Cpath d='M32 2 L62 32 L32 62 L2 32 Z'/%3E%3Cpath d='M32 12 L52 32 L32 52 L12 32 Z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size:64px 64px;
+  }
+
+  .gold-line{
+    height:1px;background:linear-gradient(90deg,transparent,rgba(201,162,39,.15),var(--gold),rgba(201,162,39,.15),transparent);
+  }
+  .gold-text{
+    background:linear-gradient(100deg,#B8860B 0%,#E8C979 30%,#FFF0C4 48%,#E8C979 68%,#B8860B 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .warm-text{
+    background:linear-gradient(100deg,#8A2340 0%,#C24B3F 40%,#E8735A 60%,#F0A04B 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.6rem;font-family:Jost,sans-serif;
+       font-weight:500;letter-spacing:.06em;border-radius:999px;transition:.35s cubic-bezier(.2,.8,.2,1);position:relative;overflow:hidden}
+  .btn-gold{
+    background:linear-gradient(135deg,#F0A04B 0%,#E8735A 55%,#C9436B 100%);
+    color:#fff;box-shadow:0 10px 28px -10px rgba(232,115,90,.75), inset 0 0 0 1px rgba(255,255,255,.25);
+  }
+  .btn-gold:hover{transform:translateY(-3px);box-shadow:0 18px 38px -12px rgba(232,115,90,.9), inset 0 0 0 1px rgba(255,255,255,.4)}
+  .btn-outline{
+    color:#FFF3E2;border:1px solid rgba(232,201,121,.7);background:rgba(91,18,38,.35);backdrop-filter:blur(6px);
+  }
+  .btn-outline:hover{background:rgba(232,201,121,.14);transform:translateY(-3px);border-color:var(--gold-lt)}
+  .btn-wine{background:linear-gradient(135deg,#7C1D38,#5B1226);color:#FFF3E2;box-shadow:0 10px 28px -12px rgba(91,18,38,.7)}
+  .btn-wine:hover{transform:translateY(-3px)}
+
+  /* ---------- Cards ---------- */
+  .lux-card{
+    background:linear-gradient(160deg,#FFFDFA 0%,#FFF4E9 100%);
+    border:1px solid rgba(201,162,39,.28);
+    border-radius:20px 20px 20px 20px;
+    box-shadow:0 18px 40px -28px rgba(91,18,38,.45);
+    transition:.4s cubic-bezier(.2,.8,.2,1);position:relative;overflow:hidden;
+  }
+  .lux-card:before{content:'';position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -20%,rgba(240,160,75,.16),transparent 60%);opacity:0;transition:.4s}
+  .lux-card:hover{transform:translateY(-6px);box-shadow:0 28px 55px -28px rgba(91,18,38,.55);border-color:rgba(201,162,39,.6)}
+  .lux-card:hover:before{opacity:1}
+
+  /* arch shape */
+  .arch{border-radius:999px 999px 18px 18px;}
+  .arch-top{border-radius:50% 50% 0 0 / 22% 22% 0 0;}
+
+  /* ---------- Lanterns ---------- */
+  .lantern{transform-origin:top center;animation:sway 6s ease-in-out infinite}
+  .lantern.d2{animation-duration:7.5s;animation-delay:-2s}
+  .lantern.d3{animation-duration:8.5s;animation-delay:-4s}
+  @keyframes sway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}
+  .glow{filter:drop-shadow(0 0 12px rgba(240,160,75,.65))}
+  @keyframes twinkle{0%,100%{opacity:.25}50%{opacity:.9}}
+  .star{animation:twinkle 4s ease-in-out infinite}
+
+  /* ---------- Reveal ---------- */
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- Form ---------- */
+  .field label{display:block;font-family:Jost,sans-serif;font-size:.86rem;font-weight:500;letter-spacing:.05em;
+    text-transform:uppercase;color:#7C1D38;margin-bottom:.4rem}
+  .field input,.field select,.field textarea{
+    width:100%;background:#FFFDFA;border:1px solid rgba(138,35,64,.22);border-radius:12px;
+    padding:.85rem 1rem;font-family:Jost,sans-serif;font-size:1rem;color:#3B1119;transition:.25s;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{
+    outline:none;border-color:var(--amber);box-shadow:0 0 0 4px rgba(240,160,75,.18);background:#fff;
+  }
+  .field input::placeholder,.field textarea::placeholder{color:#B79AA1}
+  .field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%238A2340' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.6rem}
+  .radio-pill{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;border-radius:999px;
+    border:1px solid rgba(138,35,64,.25);background:#FFFDFA;cursor:pointer;font-size:.98rem;transition:.25s;user-select:none}
+  .radio-pill input{accent-color:#E8735A;width:1.05rem;height:1.05rem}
+  .radio-pill:has(input:checked){background:linear-gradient(135deg,#FFE7D2,#FFD9CF);border-color:#E8735A;
+    box-shadow:0 6px 18px -10px rgba(232,115,90,.9);font-weight:500}
+  .form-sec-badge{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+    background:linear-gradient(135deg,#5B1226,#8A2340);color:#F4E3BC;font-family:'Cormorant Garamond',serif;font-size:1.25rem;
+    box-shadow:0 8px 20px -12px rgba(91,18,38,.9);flex:none}
+
+  /* floating whatsapp */
+  .fab{position:fixed;right:16px;bottom:18px;z-index:60}
+  .fab-pulse:before{content:'';position:absolute;inset:0;border-radius:999px;background:rgba(232,115,90,.55);
+    animation:pulse 2.4s ease-out infinite;z-index:-1}
+  @keyframes pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.9);opacity:0}}
+
+  .divider-orn{display:flex;align-items:center;justify-content:center;gap:.9rem}
+  .divider-orn span{display:block;height:1px;width:56px;background:linear-gradient(90deg,transparent,var(--gold))}
+  .divider-orn span:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+
+  ::selection{background:#F0A04B;color:#43101F}
+  
+    /* typewriter */
+    @keyframes tw-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .tw-cursor { display: inline-block; font-weight: 300; margin-left: 2px; animation: tw-blink 0.8s step-end infinite; }
+    /* scrollbar */
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-track{background:#FBEEE2}
+  ::-webkit-scrollbar-thumb{background:linear-gradient(#8A2340,#5B1226);border-radius:10px}
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<!-- ============ NAV ============ -->
+<header id="nav" class="fixed top-0 inset-x-0 z-50 transition-all duration-500">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6">
+    <div id="navbar" class="mt-2 sm:mt-3 rounded-2xl transition-all duration-500 border border-transparent">
+      <div class="flex items-center justify-between px-3 sm:px-5 py-2.5">
+        <a href="#hero" class="flex items-center gap-3 group">
+          <span class="relative grid place-items-center w-11 h-11 rounded-xl" style="background:linear-gradient(135deg,#5B1226,#8A2340)">
+            <svg viewBox="0 0 48 48" class="w-7 h-7"><g fill="none" stroke="#E8C979" stroke-width="2"><path d="M24 6c-6 4-9 9-9 15a9 9 0 0018 0c0-6-3-11-9-15z"/><circle cx="24" cy="21" r="3.2" fill="#F0A04B" stroke="none"/><path d="M12 40h24" stroke-linecap="round"/></g></svg>
+          </span>
+          <span class="leading-tight">
+            <span id="navtitle" class="block font-serif font-semibold tracking-[.12em] text-[15px] sm:text-[17px] text-cream">NOOR-E-NIKAH</span>
+            <span id="navsub" class="block text-[9.5px] sm:text-[10.5px] tracking-[.3em] text-gold-light/90">RISHTA SERVICES</span>
+          </span>
+        </a>
+
+        <nav class="hidden lg:flex items-center gap-1">
+          <a href="#about" class="navlink px-4 py-2 text-[13px] tracking-widest">ABOUT</a>
+          <a href="#services" class="navlink px-4 py-2 text-[13px] tracking-widest">SERVICES</a>
+          <a href="#process" class="navlink px-4 py-2 text-[13px] tracking-widest">HOW IT WORKS</a>
+          <a href="#why" class="navlink px-4 py-2 text-[13px] tracking-widest">WHY US</a>
+          <a href="#contact" class="navlink px-4 py-2 text-[13px] tracking-widest">CONTACT</a>
+          <a href="#register" class="btn btn-gold ml-3 px-6 py-2.5 text-[13px]">REGISTER A PROFILE</a>
+        </nav>
+
+        <button id="burger" class="lg:hidden grid place-items-center w-11 h-11 rounded-xl border border-gold/40" aria-label="Menu">
+          <svg id="burgerIcon" viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+
+      <div id="mobileMenu" class="lg:hidden overflow-hidden max-h-0 transition-all duration-500">
+        <div class="px-4 pb-4 pt-1 grid gap-1">
+          <a href="#about" class="mlink">About Us</a>
+          <a href="#services" class="mlink">Our Services</a>
+          <a href="#process" class="mlink">How It Works</a>
+          <a href="#register" class="mlink">Register a Profile</a>
+          <a href="#why" class="mlink">Why Choose Us</a>
+          <a href="#contact" class="mlink">Contact Us</a>
+          <a href="https://wa.me/919594388960" target="_blank" class="btn btn-gold w-full py-3 mt-2 text-sm">WHATSAPP</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+<style>
+  .navlink{color:#FFEFDD;opacity:.85;font-weight:400;transition:.3s;border-radius:999px}
+  .navlink:hover{opacity:1;background:rgba(232,201,121,.14);color:#F4E3BC}
+  #navbar.scrolled{background:rgba(255,248,241,.92);backdrop-filter:blur(14px);border-color:rgba(201,162,39,.35);
+    box-shadow:0 14px 40px -26px rgba(91,18,38,.6)}
+  #navbar.scrolled .navlink{color:#5B1226}
+  #navbar.scrolled .navlink:hover{background:rgba(240,160,75,.16)}
+  #navbar.scrolled #navtitle{color:#5B1226}
+  #navbar.scrolled #navsub{color:#A8863A}
+  #navbar.scrolled #burger{color:#5B1226}
+  #burger{color:#F4E3BC}
+  .mlink{display:block;padding:.85rem 1rem;border-radius:12px;font-size:1rem;color:#5B1226;background:rgba(255,255,255,.7);
+    border:1px solid rgba(201,162,39,.25)}
+  #navbar:not(.scrolled) .mlink{color:#FFEFDD;background:rgba(91,18,38,.5);border-color:rgba(232,201,121,.3)}
+</style>
+
+<!-- ============ HERO ============ -->
+<section id="hero" class="relative min-h-[100svh] flex items-center overflow-hidden">
+  <!-- background layers -->
+  <div class="absolute inset-0" style="background:
+      radial-gradient(120% 80% at 50% 0%, #7C1D38 0%, #5B1226 45%, #430D1C 100%);"></div>
+  <div class="absolute inset-0 pattern-geo opacity-[.16]"></div>
+  <div class="absolute inset-0" style="background:radial-gradient(70% 45% at 50% 78%, rgba(240,160,75,.30), transparent 70%)"></div>
+  <div class="absolute inset-0" style="background:radial-gradient(45% 30% at 15% 20%, rgba(232,115,90,.25), transparent 70%)"></div>
+
+  <!-- stars -->
+  <svg class="absolute inset-0 w-full h-full opacity-70 pointer-events-none" preserveAspectRatio="none">
+    <g fill="#F4E3BC">
+      <circle class="star" cx="12%" cy="14%" r="1.6"/><circle class="star" style="animation-delay:1s" cx="26%" cy="9%" r="1.2"/>
+      <circle class="star" style="animation-delay:2s" cx="74%" cy="12%" r="1.5"/><circle class="star" style="animation-delay:.6s" cx="88%" cy="22%" r="1.1"/>
+      <circle class="star" style="animation-delay:2.6s" cx="60%" cy="7%" r="1.3"/><circle class="star" style="animation-delay:1.6s" cx="40%" cy="18%" r="1"/>
+    </g>
+  </svg>
+
+  <!-- crescent -->
+  <div class="absolute top-24 right-6 sm:right-16 opacity-90 glow">
+    <svg viewBox="0 0 100 100" class="w-16 h-16 sm:w-24 sm:h-24">
+      <defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4E3BC"/><stop offset="1" stop-color="#E8A54B"/></linearGradient></defs>
+      <path d="M65 12a40 40 0 100 76 32 32 0 110-76z" fill="url(#cg)" opacity=".9"/>
+      <path d="M84 20l2.6 6.4L93 29l-6.4 2.6L84 38l-2.6-6.4L75 29l6.4-2.6z" fill="#F4E3BC" opacity=".85"/>
+    </svg>
+  </div>
+
+  <!-- lanterns -->
+  <div class="absolute top-0 left-4 sm:left-14 lantern">
+    <svg viewBox="0 0 60 170" class="w-10 sm:w-14 glow"><g stroke="#E8C979" fill="none" stroke-width="2">
+      <path d="M30 0v42" stroke-width="1.4"/><path d="M18 48h24l-4-6H22z"/><path d="M14 54h32v56a16 16 0 01-16 16 16 16 0 01-16-16z"/>
+      <path d="M22 66v42M38 66v42M30 62v50" stroke-width="1"/><path d="M30 126v10M24 140h12" /></g>
+      <ellipse cx="30" cy="92" rx="9" ry="18" fill="#F0A04B" opacity=".45"/></svg>
+  </div>
+  <div class="absolute top-0 left-20 sm:left-40 lantern d2 hidden sm:block">
+    <svg viewBox="0 0 60 210" class="w-11 glow"><g stroke="#E8C979" fill="none" stroke-width="2">
+      <path d="M30 0v78" stroke-width="1.4"/><path d="M19 84h22l-3-6H22z"/><path d="M15 90h30v48a15 15 0 01-30 0z"/>
+      <path d="M23 100v36M37 100v36" stroke-width="1"/><path d="M30 153v9"/></g>
+      <ellipse cx="30" cy="118" rx="8" ry="15" fill="#E8735A" opacity=".4"/></svg>
+  </div>
+  <div class="absolute top-0 right-8 sm:right-52 lantern d3 hidden md:block">
+    <svg viewBox="0 0 60 190" class="w-12 glow"><g stroke="#E8C979" fill="none" stroke-width="2">
+      <path d="M30 0v58" stroke-width="1.4"/><path d="M19 64h22l-3-6H22z"/><path d="M15 70h30v50a15 15 0 01-30 0z"/>
+      <path d="M30 78v54" stroke-width="1"/><path d="M30 135v9"/></g>
+      <ellipse cx="30" cy="98" rx="8" ry="16" fill="#F0A04B" opacity=".4"/></svg>
+  </div>
+
+  <!-- mosque silhouette -->
+  <svg class="absolute bottom-0 inset-x-0 w-full h-[190px] sm:h-[260px] pointer-events-none" viewBox="0 0 1440 260" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="msk" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#320A16" stop-opacity=".55"/><stop offset="1" stop-color="#2A0812" stop-opacity=".95"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#msk)">
+      <path d="M0 260V196c40-4 62-22 74-46 12 24 34 42 74 46v64z"/>
+      <path d="M120 260v-96c0-4 3-6 6-6s6 2 6 6v96zM1308 260v-96c0-4 3-6 6-6s6 2 6 6v96z"/>
+      <path d="M240 260v-70c0-42 36-58 52-92 16 34 52 50 52 92v70z"/>
+      <path d="M470 260v-88c0-56 60-78 82-128 22 50 82 72 82 128v88z"/>
+      <path d="M760 260v-70c0-46 46-64 62-104 16 40 62 58 62 104v70z"/>
+      <path d="M1010 260v-58c0-38 34-52 46-84 12 32 46 46 46 84v58z"/>
+      <path d="M1180 260v-60c40-6 62-24 74-48 12 24 34 42 74 48v60z"/>
+      <rect x="0" y="232" width="1440" height="28"/>
+    </g>
+  </svg>
+
+  <!-- content -->
+  <div class="relative z-10 mx-auto max-w-5xl px-5 sm:px-8 pt-32 pb-40 sm:pt-36 sm:pb-52 text-center">
+    <p class="font-arab text-gold-light/85 text-lg sm:text-xl mb-4 reveal">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</p>
+
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/40 bg-white/5 backdrop-blur-sm mb-6 reveal">
+      <span class="w-1.5 h-1.5 rounded-full bg-amber2"></span>
+      <span class="text-[11px] sm:text-xs tracking-[.28em] text-gold-pale">MUMBAI &nbsp;•&nbsp; MIRA ROAD</span>
+    </div>
+
+    <h1 class="reveal font-serif leading-[1.05] text-[2.5rem] sm:text-6xl lg:text-7xl font-semibold tracking-tight">
+      <span class="gold-text">NOOR-E-NIKAH</span><br/>
+      <span class="text-cream/95 text-[1.6rem] sm:text-4xl lg:text-5xl tracking-[.14em] font-light">RISHTA SERVICES</span>
+    </h1>
+
+    <div class="divider-orn my-7 reveal">
+      <span></span>
+      <svg viewBox="0 0 24 24" class="w-5 h-5 text-gold-light"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg>
+      <span></span>
+    </div>
+
+    <p class="reveal font-serif italic text-xl sm:text-3xl text-gold-pale/95 mb-6">Trusted Matchmaking for Muslim Families</p>
+
+    <p class="reveal mx-auto max-w-2xl text-cream/80 text-base sm:text-lg leading-relaxed font-light">
+      Helping Muslim families find suitable matrimonial matches with
+      <span class="text-gold-light">trust, privacy, respect and understanding.</span>
+    </p>
+
+    <div class="reveal mt-10 flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center">
+      <a href="#register" class="btn btn-gold px-8 py-4 text-[14px] sm:text-[15px]">
+        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+        REGISTER A PROFILE
+      </a>
+      <a href="https://wa.me/919594388960?text=Assalamu%20Alaikum%2C%20I%20would%20like%20to%20know%20more%20about%20Noor-E-Nikah%20Rishta%20Services." target="_blank" class="btn btn-outline px-8 py-4 text-[14px] sm:text-[15px]">
+        <svg viewBox="0 0 32 32" class="w-5 h-5" fill="currentColor"><path d="M16 3C8.8 3 3 8.8 3 16c0 2.3.6 4.5 1.7 6.4L3 29l6.8-1.8c1.9 1 4 1.6 6.2 1.6 7.2 0 13-5.8 13-13S23.2 3 16 3zm0 23.6c-2 0-3.9-.5-5.5-1.5l-.4-.2-4 1.1 1.1-3.9-.3-.4A10.5 10.5 0 015.5 16c0-5.8 4.7-10.5 10.5-10.5S26.5 10.2 26.5 16 21.8 26.6 16 26.6zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0c-.3-.2-1.3-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2s0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.5s0-.4 0-.6c-.1-.2-.7-1.7-1-2.3s-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.7s1.2 3.1 1.4 3.3c.2.2 2.4 3.7 5.8 5.1.8.4 1.4.6 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.8.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+        WHATSAPP US
+      </a>
+    </div>
+
+    <p class="reveal mt-6 text-cream/60 text-sm tracking-wide">Call / WhatsApp &nbsp;•&nbsp; <a href="tel:9594388960" class="text-gold-light hover:underline">9594388960</a></p>
+  </div>
+
+  <a href="#about" class="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 text-gold-light/70 hover:text-gold-light transition">
+    <svg viewBox="0 0 24 24" class="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 9l6 6 6-6" stroke-linecap="round"/></svg>
+  </a>
+</section>
+
+<!-- ============ TRUST STRIP ============ -->
+<div class="relative bg-gradient-to-r from-[#5B1226] via-[#8A2340] to-[#5B1226] py-4 border-y border-gold/30">
+  <div class="absolute inset-0 pattern-geo opacity-10"></div>
+  <div class="relative mx-auto max-w-6xl px-5 grid grid-cols-2 sm:grid-cols-4 gap-y-3 text-center">
+    <div class="text-gold-pale text-[11px] sm:text-xs tracking-[.22em]">100% CONFIDENTIAL</div>
+    <div class="text-gold-pale text-[11px] sm:text-xs tracking-[.22em]">PERSONAL ATTENTION</div>
+    <div class="text-gold-pale text-[11px] sm:text-xs tracking-[.22em]">FAMILY ORIENTED</div>
+    <div class="text-gold-pale text-[11px] sm:text-xs tracking-[.22em]">MUMBAI &amp; MIRA ROAD</div>
+  </div>
+</div>
+
+<!-- ============ ABOUT ============ -->
+<section id="about" class="relative py-20 sm:py-28 overflow-hidden">
+  <div class="absolute inset-0 pattern-geo-soft opacity-[.35]"></div>
+  <div class="absolute -top-24 -left-24 w-80 h-80 rounded-full blur-3xl" style="background:radial-gradient(circle,rgba(240,160,75,.20),transparent 70%)"></div>
+  <div class="absolute -bottom-24 -right-16 w-96 h-96 rounded-full blur-3xl" style="background:radial-gradient(circle,rgba(246,201,192,.35),transparent 70%)"></div>
+
+  <div class="relative mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="text-center mb-12 reveal">
+      <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">OUR STORY</p>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">ABOUT NOOR-E-NIKAH</h2>
+      <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+    </div>
+
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <!-- arch artwork -->
+      <div class="lg:col-span-5 reveal">
+        <div class="relative mx-auto max-w-sm">
+          <div class="arch p-[2px]" style="background:linear-gradient(160deg,#E8C979,#C9A227 30%,#F6C9C0 60%,#E8C979)">
+            <div class="arch overflow-hidden" style="background:linear-gradient(170deg,#5B1226,#7C1D38 60%,#8A2340)">
+              <div class="relative h-[400px] sm:h-[440px] pattern-geo" style="background-color:transparent">
+                <div class="absolute inset-0" style="background:radial-gradient(70% 50% at 50% 85%,rgba(240,160,75,.35),transparent 70%)"></div>
+                <!-- inner artwork: two silhouettes + dua hands -->
+                <svg viewBox="0 0 300 420" class="absolute inset-0 w-full h-full">
+                  <g opacity=".95">
+                    <path d="M150 40c-4 0-7 3-7 7v10h14V47c0-4-3-7-7-7z" fill="#E8C979"/>
+                    <path d="M110 62h80l-10-16h-60z" fill="#E8C979" opacity=".8"/>
+                    <!-- crescent -->
+                    <path d="M175 25a17 17 0 100 26 13.6 13.6 0 110-26z" fill="#F4E3BC"/>
+                  </g>
+                  <!-- couple silhouettes -->
+                  <g fill="#2E0912" opacity=".78" transform="translate(0,120)">
+                    <!-- female with hijab -->
+                    <path d="M112 300v-96c0-26 12-42 30-48 6-2 8-8 8-14 0-4-6-8-6-20 0-16 10-26 22-26s22 10 22 26c0 12-6 16-6 20 0 6 2 12 8 14 18 6 30 22 30 48v96z" transform="translate(20,0)"/>
+                    <!-- male -->
+                    <path d="M60 300v-90c0-24 10-38 26-44 6-2 8-6 8-12 0-4-6-8-6-19 0-15 9-25 20-25s20 10 20 25c0 11-6 15-6 19 0 6 2 10 8 12 16 6 26 20 26 44v90z" transform="translate(-16,0)"/>
+                  </g>
+                  <g stroke="#E8C979" stroke-width="1.2" fill="none" opacity=".5">
+                    <circle cx="150" cy="230" r="86"/><circle cx="150" cy="230" r="100"/>
+                  </g>
+                  <g fill="#F0A04B" opacity=".85">
+                    <circle cx="60" cy="150" r="2"/><circle cx="240" cy="170" r="2"/><circle cx="80" cy="330" r="2"/><circle cx="225" cy="320" r="2"/>
+                  </g>
+                </svg>
+                <div class="absolute bottom-5 inset-x-0 text-center">
+                  <p class="font-arab text-gold-pale/90 text-base">وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً</p>
+                  <p class="text-[10px] tracking-[.25em] text-cream/60 mt-1">LOVE &amp; MERCY BETWEEN YOU</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7 reveal">
+        <p class="text-lg sm:text-xl leading-relaxed text-[#4A1622]/90 font-light">
+          <span class="font-serif text-4xl float-left mr-2 leading-none warm-text">N</span>oor-E-Nikah Rishta Services is a personal Muslim matchmaking service created to help
+          individuals and families find suitable matrimonial matches. We understand that finding the right life partner
+          is one of life's most important decisions.
+        </p>
+        <p class="mt-5 text-base sm:text-lg leading-relaxed text-[#4A1622]/80 font-light">
+          We personally understand family requirements, preferences and expectations and try to connect suitable
+          profiles and families with <span class="text-burg font-medium">care, privacy and respect.</span>
+        </p>
+
+        <p class="mt-8 text-[11px] tracking-[.3em] text-amber2">OUR APPROACH IS BASED ON</p>
+        <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="lux-card px-3 py-5 text-center"><div class="text-2xl mb-1">🤝</div><p class="font-serif text-lg text-wine">Trust</p></div>
+          <div class="lux-card px-3 py-5 text-center"><div class="text-2xl mb-1">🔒</div><p class="font-serif text-lg text-wine">Privacy</p></div>
+          <div class="lux-card px-3 py-5 text-center"><div class="text-2xl mb-1">🕌</div><p class="font-serif text-lg text-wine">Respect</p></div>
+          <div class="lux-card px-3 py-5 text-center"><div class="text-2xl mb-1">💐</div><p class="font-serif text-lg text-wine leading-tight">Personal<br>Attention</p></div>
+        </div>
+
+        <div class="mt-8 flex items-center gap-4 p-4 rounded-2xl border border-gold/30 bg-white/60">
+          <div class="w-12 h-12 rounded-full grid place-items-center text-cream font-serif text-xl" style="background:linear-gradient(135deg,#8A2340,#5B1226)">SK</div>
+          <div>
+            <p class="font-serif text-xl text-wine">Seema Kadri</p>
+            <p class="text-sm text-[#7C1D38]/75">Founder &amp; Personal Matchmaker • Mumbai / Mira Road</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SERVICES ============ -->
+<section id="services" class="relative py-20 sm:py-28" style="background:linear-gradient(180deg,#FBEEE2 0%,#FFF8F1 60%,#FFF3E8 100%)">
+  <div class="absolute inset-0 pattern-geo-soft opacity-25"></div>
+  <div class="relative mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="text-center mb-14 reveal">
+      <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">WHAT WE OFFER</p>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">OUR SERVICES</h2>
+      <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- card 1 -->
+      <div class="lux-card p-7 reveal">
+        <div class="w-14 h-14 arch-top rounded-b-xl grid place-items-center mb-5" style="background:linear-gradient(160deg,#FFD9A8,#F6C9C0)">
+          <svg viewBox="0 0 24 24" class="w-7 h-7 text-wine" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/><path d="M11 8.5v5M8.5 11h5" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-serif text-2xl text-wine mb-2 leading-snug">Suitable Rishta Suggestions</h3>
+        <p class="text-[#4A1622]/75 leading-relaxed">We try to suggest suitable profiles based on personal and family preferences.</p>
+      </div>
+      <!-- card 2 -->
+      <div class="lux-card p-7 reveal">
+        <div class="w-14 h-14 arch-top rounded-b-xl grid place-items-center mb-5" style="background:linear-gradient(160deg,#FFD0BE,#F6C9C0)">
+          <svg viewBox="0 0 24 24" class="w-7 h-7 text-wine" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M12 20s-6.5-4.3-8.4-8A4.6 4.6 0 0112 5.6 4.6 4.6 0 0120.4 12C18.5 15.7 12 20 12 20z" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-serif text-2xl text-wine mb-2 leading-snug">Personal Matchmaking</h3>
+        <p class="text-[#4A1622]/75 leading-relaxed">Personal attention and matchmaking assistance for Muslim families.</p>
+      </div>
+      <!-- card 3 -->
+      <div class="lux-card p-7 reveal">
+        <div class="w-14 h-14 arch-top rounded-b-xl grid place-items-center mb-5" style="background:linear-gradient(160deg,#FFE2B8,#FFC9C0)">
+          <svg viewBox="0 0 24 24" class="w-7 h-7 text-wine" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z" stroke-linejoin="round"/><path d="M9.5 12.2l1.8 1.8 3.4-3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-serif text-2xl text-wine mb-2 leading-snug">Privacy &amp; Confidentiality</h3>
+        <p class="text-[#4A1622]/75 leading-relaxed">Personal information is handled with care and shared selectively.</p>
+      </div>
+      <!-- card 4 -->
+      <div class="lux-card p-7 reveal">
+        <div class="w-14 h-14 arch-top rounded-b-xl grid place-items-center mb-5" style="background:linear-gradient(160deg,#FFD9A8,#FFC2C2)">
+          <svg viewBox="0 0 24 24" class="w-7 h-7 text-wine" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="8" cy="9" r="2.6"/><circle cx="16" cy="9" r="2.6"/><path d="M3.5 19c.6-2.8 2.4-4.4 4.5-4.4S12 16.2 12.6 19M11.4 19c.6-2.8 2.4-4.4 4.6-4.4s3.9 1.6 4.5 4.4" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-serif text-2xl text-wine mb-2 leading-snug">Family-Based Introductions</h3>
+        <p class="text-[#4A1622]/75 leading-relaxed">Introductions are facilitated when both sides show interest.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="process" class="relative py-20 sm:py-28 overflow-hidden" style="background:linear-gradient(160deg,#5B1226 0%,#43101F 55%,#5B1226 100%)">
+  <div class="absolute inset-0 pattern-geo opacity-[.13]"></div>
+  <div class="absolute inset-0" style="background:radial-gradient(60% 40% at 50% 0%,rgba(240,160,75,.22),transparent 70%)"></div>
+
+  <div class="relative mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="text-center mb-14 reveal">
+      <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">SIMPLE &amp; EASY</p>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold gold-text">HOW IT WORKS</h2>
+      <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold-light"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
+      <!-- steps -->
+      <div class="reveal relative">
+        <div class="h-full rounded-[22px] border border-gold/30 bg-white/[.05] backdrop-blur-sm p-7 text-center hover:bg-white/[.09] transition-all duration-500">
+          <div class="mx-auto w-16 h-16 mb-5 arch-top rounded-b-2xl grid place-items-center font-serif text-2xl text-wine" style="background:linear-gradient(160deg,#F4E3BC,#E8C979)">1</div>
+          <h3 class="font-serif text-2xl text-gold-pale mb-2">Register Your Profile</h3>
+          <p class="text-cream/70 leading-relaxed">Share your basic personal and family details.</p>
+        </div>
+      </div>
+      <div class="reveal relative">
+        <div class="h-full rounded-[22px] border border-gold/30 bg-white/[.05] backdrop-blur-sm p-7 text-center hover:bg-white/[.09] transition-all duration-500">
+          <div class="mx-auto w-16 h-16 mb-5 arch-top rounded-b-2xl grid place-items-center font-serif text-2xl text-wine" style="background:linear-gradient(160deg,#FFD9A8,#F0A04B)">2</div>
+          <h3 class="font-serif text-2xl text-gold-pale mb-2">Share Your Preferences</h3>
+          <p class="text-cream/70 leading-relaxed">Tell us what type of matrimonial match you are looking for.</p>
+        </div>
+      </div>
+      <div class="reveal relative">
+        <div class="h-full rounded-[22px] border border-gold/30 bg-white/[.05] backdrop-blur-sm p-7 text-center hover:bg-white/[.09] transition-all duration-500">
+          <div class="mx-auto w-16 h-16 mb-5 arch-top rounded-b-2xl grid place-items-center font-serif text-2xl text-wine" style="background:linear-gradient(160deg,#FFCDBE,#E8735A)">3</div>
+          <h3 class="font-serif text-2xl text-gold-pale mb-2">Profile Matching</h3>
+          <p class="text-cream/70 leading-relaxed">Suitable profiles are shortlisted based on available information and preferences.</p>
+        </div>
+      </div>
+      <div class="reveal relative">
+        <div class="h-full rounded-[22px] border border-gold/30 bg-white/[.05] backdrop-blur-sm p-7 text-center hover:bg-white/[.09] transition-all duration-500">
+          <div class="mx-auto w-16 h-16 mb-5 arch-top rounded-b-2xl grid place-items-center font-serif text-2xl text-cream" style="background:linear-gradient(160deg,#C9436B,#8A2340)">4</div>
+          <h3 class="font-serif text-2xl text-gold-pale mb-2">Family Introduction</h3>
+          <p class="text-cream/70 leading-relaxed">If both sides are interested, an introduction can be facilitated.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-12 reveal">
+      <a href="#register" class="btn btn-gold px-9 py-4 text-[14px]">START WITH STEP 1 — REGISTER</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ REGISTRATION FORM ============ -->
+<section id="register" class="relative py-20 sm:py-28">
+  <div class="absolute inset-0 pattern-geo-soft opacity-[.3]"></div>
+  <div class="absolute top-10 right-0 w-72 h-72 rounded-full blur-3xl" style="background:radial-gradient(circle,rgba(240,160,75,.22),transparent 70%)"></div>
+
+  <div class="relative mx-auto max-w-4xl px-4 sm:px-8">
+    <div class="text-center mb-10 reveal">
+      <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">FREE &amp; CONFIDENTIAL</p>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">PROFILE REGISTRATION</h2>
+      <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+      <p class="mt-5 text-[#4A1622]/75 max-w-2xl mx-auto">Please fill this simple form. Your details are received privately by
+        <span class="text-burg font-medium">Seema Kadri</span> and are never displayed publicly.</p>
+    </div>
+
+    <!-- FORM CARD -->
+    <div id="formCard" class="reveal relative rounded-[26px] p-[2px]" style="background:linear-gradient(160deg,#E8C979,#F6C9C0 40%,#C9A227 100%)">
+      <div class="rounded-[24px] bg-cream p-5 sm:p-10">
+        <form id="rishtaForm" novalidate>
+
+          <!-- A -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">A</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Basic Profile Details</h3>
+              <p class="text-xs tracking-widest text-amber2">REQUIRED</p></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div class="field">
+                <label for="registeringFor">Registering For *</label>
+                <select id="registeringFor" name="Registering For" required>
+                  <option value="">— Please select —</option>
+                  <option>My Son</option><option>My Daughter</option><option>Myself</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="fullName">Full Name *</label>
+                <input id="fullName" name="Full Name" type="text" placeholder="Enter full name" required />
+              </div>
+              <div class="field sm:col-span-2">
+                <label>Gender *</label>
+                <div class="flex flex-wrap gap-3">
+                  <label class="radio-pill"><input type="radio" name="Gender" value="Male" required><span>Male</span></label>
+                  <label class="radio-pill"><input type="radio" name="Gender" value="Female"><span>Female</span></label>
+                </div>
+              </div>
+              <div class="field">
+                <label for="dob">Date of Birth</label>
+                <input id="dob" name="Date of Birth" type="date" max="" />
+              </div>
+              <div class="field">
+                <label for="age">Age *</label>
+                <input id="age" name="Age" type="number" placeholder="Calculated automatically" readonly required />
+              </div>
+              <div class="field sm:col-span-2">
+                <label>Marital Status *</label>
+                <div class="flex flex-wrap gap-3">
+                  <label class="radio-pill"><input type="radio" name="Marital Status" value="Never Married" required><span>Never Married</span></label>
+                  <label class="radio-pill"><input type="radio" name="Marital Status" value="Divorced"><span>Divorced</span></label>
+                  <label class="radio-pill"><input type="radio" name="Marital Status" value="Widowed"><span>Widowed</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- B -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">B</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Personal Details</h3></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div class="field"><label for="height">Height</label><input id="height" name="Height" type="text" placeholder="e.g. 5 ft 6 in"></div>
+              <div class="field"><label for="education">Education</label><input id="education" name="Education" type="text" placeholder="e.g. B.Com, MBA"></div>
+              <div class="field"><label for="occupation">Occupation / Profession</label><input id="occupation" name="Occupation" type="text" placeholder="e.g. Teacher, Business"></div>
+              <div class="field"><label for="city">City / Current Location</label><input id="city" name="City" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
+              <div class="field"><label for="motherTongue">Mother Tongue</label><input id="motherTongue" name="Mother Tongue" type="text" placeholder="e.g. Urdu"></div>
+              <div class="field"><label for="languages">Languages Known</label><input id="languages" name="Languages Known" type="text" placeholder="e.g. Urdu, Hindi, English"></div>
+            </div>
+          </div>
+
+          <!-- C -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">C</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Religious Details &amp; Preference</h3>
+              <p class="text-xs tracking-widest text-amber2">OPTIONAL</p></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div class="field">
+                <label for="maslak">Maslak / Religious Background</label>
+                <select id="maslak" name="Maslak">
+                  <option value="">— Select (optional) —</option>
+                  <option>Sunni</option><option>Deobandi</option><option>Ahl-e-Hadith</option>
+                  <option>Ahl-e-Sunnat</option><option>Other</option><option>Prefer Not to Mention</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="maslakPref">Maslak Preference for Match</label>
+                <input id="maslakPref" name="Maslak Preference" type="text" placeholder="e.g. No specific preference">
+              </div>
+              <div class="field sm:col-span-2">
+                <label for="religiousNote">Religious / Maslak Preference — Details</label>
+                <textarea id="religiousNote" name="Religious Preference Details" rows="3" placeholder="You may mention any specific religious or maslak preference for the person you are looking for (optional)."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- D -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">D</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Family Details</h3></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div class="field"><label for="fatherOcc">Father's Occupation</label><input id="fatherOcc" name="Father Occupation" type="text" placeholder="e.g. Business"></div>
+              <div class="field"><label for="motherOcc">Mother's Occupation</label><input id="motherOcc" name="Mother Occupation" type="text" placeholder="e.g. Homemaker"></div>
+              <div class="field"><label for="brothers">Number of Brothers</label><input id="brothers" name="Brothers" type="number" min="0" max="20" placeholder="0"></div>
+              <div class="field"><label for="sisters">Number of Sisters</label><input id="sisters" name="Sisters" type="number" min="0" max="20" placeholder="0"></div>
+              <div class="field"><label for="familyLoc">Family Location</label><input id="familyLoc" name="Family Location" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
+              <div class="field">
+                <label>Family Type</label>
+                <div class="flex flex-wrap gap-3">
+                  <label class="radio-pill"><input type="radio" name="Family Type" value="Nuclear Family"><span>Nuclear Family</span></label>
+                  <label class="radio-pill"><input type="radio" name="Family Type" value="Joint Family"><span>Joint Family</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- E -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">E</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">About the Candidate</h3></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <div class="field">
+              <label for="aboutCandidate">Please tell us briefly about yourself / your son / daughter</label>
+              <textarea id="aboutCandidate" name="About Candidate" rows="5" placeholder="Write here..."></textarea>
+              <p class="mt-2 text-sm text-[#7C1D38]/70 italic">You may include personality, education, profession, family values or any other information you feel is important.</p>
+            </div>
+          </div>
+
+          <!-- F -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">F</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Match Preferences</h3></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div class="field"><label for="prefAge">Preferred Age Range</label><input id="prefAge" name="Preferred Age Range" type="text" placeholder="e.g. 25 – 30 years"></div>
+              <div class="field"><label for="prefLoc">Preferred Location</label><input id="prefLoc" name="Preferred Location" type="text" placeholder="e.g. Mumbai / Mira Road"></div>
+              <div class="field"><label for="prefEdu">Preferred Education</label><input id="prefEdu" name="Preferred Education" type="text" placeholder="e.g. Graduate"></div>
+              <div class="field"><label for="prefProf">Preferred Profession</label><input id="prefProf" name="Preferred Profession" type="text" placeholder="e.g. Job / Business"></div>
+              <div class="field sm:col-span-2">
+                <label for="otherPref">Any Other Important Preferences</label>
+                <textarea id="otherPref" name="Other Preferences" rows="4" placeholder="Write here..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- G -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">G</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Contact Details</h3>
+              <p class="text-xs tracking-widest text-amber2">KEPT PRIVATE</p></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div class="field"><label for="guardian">Parent / Guardian Name *</label><input id="guardian" name="Guardian Name" type="text" placeholder="Full name" required></div>
+              <div class="field"><label for="relation">Relationship with Candidate</label><input id="relation" name="Relationship" type="text" placeholder="e.g. Father, Mother, Self"></div>
+              <div class="field"><label for="mobile">Mobile Number *</label><input id="mobile" name="Mobile" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile number" required></div>
+              <div class="field"><label for="whatsapp">WhatsApp Number</label><input id="whatsapp" name="WhatsApp" type="tel" inputmode="numeric" placeholder="If different from mobile"></div>
+              <div class="field sm:col-span-2">
+                <label>Preferred Time to Contact</label>
+                <div class="flex flex-wrap gap-3">
+                  <label class="radio-pill"><input type="radio" name="Preferred Contact Time" value="Morning"><span>Morning</span></label>
+                  <label class="radio-pill"><input type="radio" name="Preferred Contact Time" value="Afternoon"><span>Afternoon</span></label>
+                  <label class="radio-pill"><input type="radio" name="Preferred Contact Time" value="Evening"><span>Evening</span></label>
+                  <label class="radio-pill"><input type="radio" name="Preferred Contact Time" value="Anytime"><span>Anytime</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- H -->
+          <div class="mb-9">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">H</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Profile Photo</h3>
+              <p class="text-xs tracking-widest text-amber2">OPTIONAL</p></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <label for="photo" class="block cursor-pointer rounded-2xl border-2 border-dashed border-gold/50 bg-white/60 hover:bg-white transition p-7 text-center">
+              <svg viewBox="0 0 24 24" class="w-9 h-9 mx-auto mb-3 text-burg" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.4"/><path d="M8.5 6l1.3-2h4.4L15.5 6"/></svg>
+              <span id="photoLabel" class="block text-wine font-medium">Tap to upload a photo (optional)</span>
+              <span class="block text-sm text-[#7C1D38]/65 mt-1">JPG / PNG</span>
+              <input id="photo" name="photo" type="file" accept="image/*" class="hidden">
+            </label>
+            <p class="mt-3 text-sm text-[#7C1D38]/80 bg-blush/30 border border-gold/25 rounded-xl px-4 py-3">
+              📌 You may also share a photograph privately on WhatsApp after registration.
+            </p>
+          </div>
+
+          <!-- I -->
+          <div class="mb-8">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="form-sec-badge">I</div>
+              <div><h3 class="font-serif text-2xl text-wine leading-tight">Consent</h3></div>
+            </div>
+            <div class="gold-line mb-6"></div>
+            <label class="flex items-start gap-3 p-4 rounded-2xl border border-gold/35 bg-white/70 cursor-pointer">
+              <input id="consent" type="checkbox" required class="mt-1 w-5 h-5 flex-none" style="accent-color:#E8735A">
+              <span class="text-[#4A1622]/85 leading-relaxed">I confirm that the information provided above is correct to the best of my knowledge and is being submitted for matrimonial matchmaking purposes.</span>
+            </label>
+            <p class="mt-3 text-sm text-[#7C1D38]/75 italic">Personal details will be handled with care and should not be displayed publicly without appropriate consent.</p>
+          </div>
+
+          <div id="formError" class="hidden mb-5 rounded-xl bg-[#8A2340]/10 border border-[#8A2340]/30 text-[#8A2340] px-4 py-3 text-sm"></div>
+
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button type="submit" class="btn btn-gold w-full sm:flex-1 py-4 text-[15px]">SUBMIT PROFILE</button>
+            <a href="https://wa.me/919594388960?text=Assalamu%20Alaikum%2C%20I%20need%20help%20with%20the%20registration%20form." target="_blank" class="btn btn-wine w-full sm:w-auto px-8 py-4 text-[14px]">NEED HELP? WHATSAPP</a>
+          </div>
+            <p class="mt-4 text-center text-xs tracking-wider text-[#7C1D38]/60">🔒 Your information is received privately and is never shown on this website.</p>
+        </form>
+
+        <!-- SUCCESS -->
+        <div id="successBox" class="hidden text-center py-8">
+          <div class="mx-auto w-20 h-20 rounded-full grid place-items-center mb-6" style="background:linear-gradient(135deg,#F0A04B,#E8735A)">
+            <svg viewBox="0 0 24 24" class="w-10 h-10 text-white" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3 class="font-serif text-3xl sm:text-4xl warm-text font-semibold mb-4">Thank You</h3>
+          <p class="text-lg text-[#4A1622]/85 max-w-xl mx-auto leading-relaxed">
+            Thank you for registering with <span class="text-burg font-medium">Noor-E-Nikah Rishta Services</span>.
+            Your profile has been received successfully. We will review your details and contact you if required.
+          </p>
+          <p class="font-serif italic text-2xl text-gold mt-5">JazakAllah Khair.</p>
+          <div class="divider-orn my-7"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a id="waSummary" href="#" target="_blank" class="btn btn-gold px-7 py-3.5 text-[13px]">SEND DETAILS ON WHATSAPP</a>
+            <button id="newEntry" class="btn btn-wine px-7 py-3.5 text-[13px]">REGISTER ANOTHER PROFILE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY CHOOSE US ============ -->
+<section id="why" class="relative py-20 sm:py-28 overflow-hidden" style="background:linear-gradient(180deg,#FFF3E8 0%,#FBEEE2 100%)">
+  <div class="absolute inset-0 pattern-geo-soft opacity-25"></div>
+  <div class="relative mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="text-center mb-14 reveal">
+      <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">OUR PROMISE</p>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold warm-text typewriter-heading">WHY CHOOSE US</h2>
+      <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="lux-card p-7 flex gap-4 reveal">
+        <div class="w-12 h-12 flex-none rounded-full grid place-items-center text-xl" style="background:linear-gradient(135deg,#FFD9A8,#F0A04B)">👤</div>
+        <div><h3 class="font-serif text-2xl text-wine mb-1">Personal Attention</h3>
+        <p class="text-[#4A1622]/75">Every family is guided personally — never treated as just another entry in a list.</p></div>
+      </div>
+      <div class="lux-card p-7 flex gap-4 reveal">
+        <div class="w-12 h-12 flex-none rounded-full grid place-items-center text-xl" style="background:linear-gradient(135deg,#FFD0BE,#E8735A)">🏠</div>
+        <div><h3 class="font-serif text-2xl text-wine mb-1">Family-Oriented Approach</h3>
+        <p class="text-[#4A1622]/75">We understand the values, expectations and comfort of Muslim families.</p></div>
+      </div>
+      <div class="lux-card p-7 flex gap-4 reveal">
+        <div class="w-12 h-12 flex-none rounded-full grid place-items-center text-xl" style="background:linear-gradient(135deg,#F4E3BC,#C9A227)">🔒</div>
+        <div><h3 class="font-serif text-2xl text-wine mb-1">Privacy &amp; Confidentiality</h3>
+        <p class="text-[#4A1622]/75">Details are shared only selectively and with due care.</p></div>
+      </div>
+      <div class="lux-card p-7 flex gap-4 reveal">
+        <div class="w-12 h-12 flex-none rounded-full grid place-items-center text-xl" style="background:linear-gradient(135deg,#F6C9C0,#C9436B)">🕌</div>
+        <div><h3 class="font-serif text-2xl text-wine mb-1">Respectful Matchmaking</h3>
+        <p class="text-[#4A1622]/75">Conversations are conducted with dignity, patience and Islamic etiquette.</p></div>
+      </div>
+      <div class="lux-card p-7 flex gap-4 reveal">
+        <div class="w-12 h-12 flex-none rounded-full grid place-items-center text-xl" style="background:linear-gradient(135deg,#FFE2B8,#F0A04B)">💌</div>
+        <div><h3 class="font-serif text-2xl text-wine mb-1">Suitable Profile Suggestions</h3>
+        <p class="text-[#4A1622]/75">Thoughtful shortlisting based on your stated preferences and background.</p></div>
+      </div>
+      <div class="reveal rounded-[22px] p-7 text-center flex flex-col justify-center items-center" style="background:linear-gradient(160deg,#5B1226,#8A2340)">
+        <p class="font-arab text-gold-pale text-lg mb-3">وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا</p>
+        <div class="gold-line w-24 my-2"></div>
+        <p class="text-cream/75 text-sm leading-relaxed">"And among His signs is that He created for you mates from among yourselves…"</p>
+        <p class="text-gold-light text-xs tracking-[.25em] mt-3">SURAH AR-RUM • 30:21</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section id="contact" class="relative py-20 sm:py-28 overflow-hidden" style="background:linear-gradient(160deg,#43101F 0%,#5B1226 50%,#7C1D38 100%)">
+  <div class="absolute inset-0 pattern-geo opacity-[.14]"></div>
+  <div class="absolute inset-0" style="background:radial-gradient(60% 45% at 50% 100%,rgba(240,160,75,.25),transparent 70%)"></div>
+
+  <div class="relative mx-auto max-w-4xl px-5 sm:px-8 text-center">
+    <div class="reveal mb-10">
+      <p class="text-[11px] tracking-[.35em] text-amber2 mb-3">WE ARE HERE FOR YOU</p>
+      <h2 class="font-serif text-3xl sm:text-5xl font-semibold gold-text typewriter-heading">CONTACT US</h2>
+      <div class="divider-orn mt-5"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold-light"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+    </div>
+
+    <div class="reveal rounded-[26px] p-[2px] max-w-2xl mx-auto" style="background:linear-gradient(160deg,#E8C979,#C9436B 55%,#E8C979)">
+      <div class="rounded-[24px] px-6 sm:px-10 py-10" style="background:linear-gradient(160deg,#FFF8F1,#FFEFE1)">
+        <div class="mx-auto w-20 h-20 rounded-full grid place-items-center mb-5 font-serif text-2xl text-cream" style="background:linear-gradient(135deg,#8A2340,#5B1226)">SK</div>
+        <h3 class="font-serif text-3xl text-wine">Seema Kadri</h3>
+        <p class="text-sm tracking-[.25em] text-amber2 mt-1">FOUNDER &amp; PERSONAL MATCHMAKER</p>
+
+        <div class="gold-line my-7"></div>
+
+        <div class="grid sm:grid-cols-2 gap-5 text-left">
+          <a href="tel:9594388960" class="flex items-center gap-4 p-4 rounded-2xl border border-gold/35 bg-white/70 hover:bg-white transition">
+            <span class="w-11 h-11 flex-none rounded-full grid place-items-center" style="background:linear-gradient(135deg,#FFD9A8,#F0A04B)">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 text-wine" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h3.5l1.6 4-2.2 1.6a12.4 12.4 0 006.5 6.5L16 13.9l4 1.6V19a2 2 0 01-2.2 2A16 16 0 013 6.2 2 2 0 015 4z" stroke-linejoin="round"/></svg>
+            </span>
+            <span><span class="block text-[11px] tracking-[.2em] text-[#7C1D38]/70">CALL</span>
+            <span class="block text-xl font-medium text-wine">9594388960</span></span>
+          </a>
+          <a href="https://wa.me/919594388960" target="_blank" class="flex items-center gap-4 p-4 rounded-2xl border border-gold/35 bg-white/70 hover:bg-white transition">
+            <span class="w-11 h-11 flex-none rounded-full grid place-items-center" style="background:linear-gradient(135deg,#FFCDBE,#E8735A)">
+              <svg viewBox="0 0 32 32" class="w-5 h-5 text-white" fill="currentColor"><path d="M16 3C8.8 3 3 8.8 3 16c0 2.3.6 4.5 1.7 6.4L3 29l6.8-1.8c1.9 1 4 1.6 6.2 1.6 7.2 0 13-5.8 13-13S23.2 3 16 3zm5.8 15.7c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0c-.3-.2-1.3-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2s0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.5s0-.4 0-.6c-.1-.2-.7-1.7-1-2.3s-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.7s1.2 3.1 1.4 3.3c.2.2 2.4 3.7 5.8 5.1.8.4 1.4.6 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.8.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+            </span>
+            <span><span class="block text-[11px] tracking-[.2em] text-[#7C1D38]/70">WHATSAPP</span>
+            <span class="block text-xl font-medium text-wine">9594388960</span></span>
+          </a>
+          <div class="sm:col-span-2 flex items-center gap-4 p-4 rounded-2xl border border-gold/35 bg-white/70">
+            <span class="w-11 h-11 flex-none rounded-full grid place-items-center" style="background:linear-gradient(135deg,#F4E3BC,#C9A227)">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 text-wine" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s7-6.1 7-11a7 7 0 10-14 0c0 4.9 7 11 7 11z" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6"/></svg>
+            </span>
+            <span><span class="block text-[11px] tracking-[.2em] text-[#7C1D38]/70">LOCATION</span>
+            <span class="block text-xl font-medium text-wine">Mumbai / Mira Road</span></span>
+          </div>
+        </div>
+
+        <div class="mt-8 flex flex-col sm:flex-row gap-3">
+          <a href="https://wa.me/919594388960?text=Assalamu%20Alaikum%2C%20I%20would%20like%20to%20enquire%20about%20a%20rishta." target="_blank" class="btn btn-gold flex-1 py-4 text-[14px]">MESSAGE ON WHATSAPP</a>
+          <a href="#register" class="btn btn-wine flex-1 py-4 text-[14px]">REGISTER A PROFILE</a>
+        </div>
+      </div>
+    </div>
+
+    <p class="reveal mt-8 text-cream/60 text-sm max-w-xl mx-auto">We respond personally. Candidate profiles and personal contact details are never published on this website.</p>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="relative overflow-hidden" style="background:linear-gradient(180deg,#43101F,#320A16)">
+  <div class="absolute inset-0 pattern-geo opacity-[.12]"></div>
+  <!-- top gold ornament -->
+  <div class="relative h-[3px]" style="background:linear-gradient(90deg,transparent,#C9A227,#F4E3BC,#C9A227,transparent)"></div>
+
+  <div class="relative mx-auto max-w-5xl px-5 sm:px-8 py-14 text-center">
+    <div class="mx-auto w-14 h-14 rounded-xl grid place-items-center mb-5" style="background:linear-gradient(135deg,#8A2340,#5B1226);border:1px solid rgba(232,201,121,.5)">
+      <svg viewBox="0 0 48 48" class="w-8 h-8"><g fill="none" stroke="#E8C979" stroke-width="2"><path d="M24 6c-6 4-9 9-9 15a9 9 0 0018 0c0-6-3-11-9-15z"/><circle cx="24" cy="21" r="3.2" fill="#F0A04B" stroke="none"/><path d="M12 40h24" stroke-linecap="round"/></g></svg>
+    </div>
+    <h3 class="font-serif text-2xl sm:text-3xl tracking-[.14em] gold-text font-semibold">NOOR-E-NIKAH RISHTA SERVICES</h3>
+    <p class="font-serif italic text-lg text-cream/80 mt-3">Connecting Hearts, Building Relationships</p>
+    <p class="font-arab text-gold-light text-xl mt-2">In Sha Allah &nbsp;•&nbsp; إن شاء الله</p>
+
+    <div class="divider-orn my-8"><span></span><svg viewBox="0 0 24 24" class="w-4 h-4 text-gold-light"><path fill="currentColor" d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg><span></span></div>
+
+    <nav class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-cream/65 text-sm">
+      <a href="#about" class="hover:text-gold-light transition">About</a>
+      <a href="#services" class="hover:text-gold-light transition">Services</a>
+      <a href="#process" class="hover:text-gold-light transition">How It Works</a>
+      <a href="#register" class="hover:text-gold-light transition">Register</a>
+      <a href="#why" class="hover:text-gold-light transition">Why Us</a>
+      <a href="#contact" class="hover:text-gold-light transition">Contact</a>
+    </nav>
+
+    <p class="mt-7 text-cream/50 text-sm">Seema Kadri • Mumbai / Mira Road • <a href="tel:9594388960" class="text-gold-light hover:underline">9594388960</a></p>
+    <p class="mt-4 text-cream/35 text-xs max-w-2xl mx-auto leading-relaxed">
+      Candidate profiles, photographs and personal contact information are kept strictly private and are not displayed publicly on this website.
+    </p>
+    <p class="mt-6 text-cream/30 text-xs">© <span id="yr"></span> Noor-E-Nikah Rishta Services. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- ============ FLOATING WHATSAPP ============ -->
+<a href="https://wa.me/919594388960?text=Assalamu%20Alaikum%2C%20I%20would%20like%20to%20know%20more%20about%20Noor-E-Nikah%20Rishta%20Services." target="_blank"
+   class="fab group flex items-center gap-3 pl-4 pr-5 py-3.5 rounded-full text-white font-medium shadow-2xl fab-pulse"
+   style="background:linear-gradient(135deg,#F0A04B,#E8735A 55%,#C9436B)" aria-label="WhatsApp us">
+  <svg viewBox="0 0 32 32" class="w-6 h-6" fill="currentColor"><path d="M16 3C8.8 3 3 8.8 3 16c0 2.3.6 4.5 1.7 6.4L3 29l6.8-1.8c1.9 1 4 1.6 6.2 1.6 7.2 0 13-5.8 13-13S23.2 3 16 3zm0 23.6c-2 0-3.9-.5-5.5-1.5l-.4-.2-4 1.1 1.1-3.9-.3-.4A10.5 10.5 0 015.5 16c0-5.8 4.7-10.5 10.5-10.5S26.5 10.2 26.5 16 21.8 26.6 16 26.6zm5.8-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7 0c-.3-.2-1.3-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2s0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.5s0-.4 0-.6c-.1-.2-.7-1.7-1-2.3s-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.7s1.2 3.1 1.4 3.3c.2.2 2.4 3.7 5.8 5.1.8.4 1.4.6 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5.3-.8.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+  <span class="text-sm tracking-wide hidden sm:inline">WhatsApp Us</span>
+</a>
+
+
+<script>
+/* ---------- year ---------- */
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+/* ---------- nav ---------- */
+const navbar = document.getElementById('navbar');
+const onScroll = () => navbar.classList.toggle('scrolled', window.scrollY > 40);
+onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
+
+const burger = document.getElementById('burger');
+const menu = document.getElementById('mobileMenu');
+let open = false;
+burger.addEventListener('click', () => {
+  open = !open;
+  menu.style.maxHeight = open ? menu.scrollHeight + 'px' : '0px';
+  navbar.classList.toggle('scrolled', open || window.scrollY > 40);
+});
+menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+  open = false; menu.style.maxHeight = '0px';
+}));
+
+/* ---------- reveal ---------- */
+const io = new IntersectionObserver((entries) => {
+  let delay = 0;
+  entries.forEach((e) => {
+    if(e.isIntersecting){
+      setTimeout(() => e.target.classList.add('in'), delay);
+      delay += 80;
+      io.unobserve(e.target);
+    }
+  });
+}, {threshold: 0.02, rootMargin: '0px 0px 0px 0px'});
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  /* ---------- DOB & Age Auto-calculation ---------- */
+  const dobInput = document.getElementById('dob');
+  const ageInput = document.getElementById('age');
+  
+  // set max date to today
+  const today = new Date().toISOString().split('T')[0];
+  dobInput.setAttribute('max', today);
+
+  function checkEligibility() {
+      const ageVal = parseInt(ageInput.value);
+      const genderEl = document.querySelector('input[name="Gender"]:checked');
+      const errBox = document.getElementById('formError');
+      
+      if (!isNaN(ageVal) && genderEl) {
+          const gender = genderEl.value;
+          if ( (gender === 'Female' && ageVal < 18) || (gender === 'Male' && ageVal < 21) ) {
+              const msg = `We're sorry, but matrimonial registration is available only after the minimum legal marriage age.\n\nWomen: 18+\nMen: 21+\n\nPlease check the date of birth entered.`;
+              let ageModal = document.getElementById('ageModal');
+              if (!ageModal) {
+                  const modalHTML = `
+                  <div id="ageModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 hidden backdrop-blur-sm transition-opacity duration-300">
+                      <div class="bg-cream p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 transform transition-all scale-95 opacity-0">
+                          <div class="flex items-center space-x-3 mb-4">
+                              <svg class="w-8 h-8 text-burg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                              <h3 class="text-xl font-serif font-bold text-wine">Not Eligible</h3>
+                          </div>
+                          <p class="text-wine/80 mb-6 whitespace-pre-line leading-relaxed" id="ageModalMsg"></p>
+                          <button onclick="document.getElementById('ageModal').classList.add('hidden')" class="w-full bg-burg text-white py-3 rounded-lg font-medium hover:bg-wine transition duration-200">OK, I Understand</button>
+                      </div>
+                  </div>`;
+                  document.body.insertAdjacentHTML('beforeend', modalHTML);
+                  ageModal = document.getElementById('ageModal');
+              }
+              document.getElementById('ageModalMsg').textContent = msg;
+              ageModal.classList.remove('hidden');
+              setTimeout(() => {
+                  ageModal.children[0].classList.remove('scale-95', 'opacity-0');
+                  ageModal.children[0].classList.add('scale-100', 'opacity-100');
+              }, 10);
+              return false; // Not eligible
+          }
+      }
+      return true; // Eligible
+  }
+
+  dobInput.addEventListener('change', () => {
+      const dobVal = dobInput.value;
+      if (!dobVal) {
+          ageInput.value = '';
+          return;
+      }
+      const dobDate = new Date(dobVal);
+      const todayDate = new Date();
+      let age = todayDate.getFullYear() - dobDate.getFullYear();
+      const m = todayDate.getMonth() - dobDate.getMonth();
+      if (m < 0 || (m === 0 && todayDate.getDate() < dobDate.getDate())) {
+          age--;
+      }
+      ageInput.value = age > 0 ? age : 0;
+      
+      checkEligibility();
+  });
+  
+  document.querySelectorAll('input[name="Gender"]').forEach(r => {
+      r.addEventListener('change', checkEligibility);
+  });
+
+  /* ---------- photo label & validation ---------- */
+  const photo = document.getElementById('photo');
+  photo.addEventListener('change', () => {
+    document.getElementById('photoLabel').textContent = photo.files.length
+      ? '✔ ' + photo.files[0].name : 'Tap to upload a photo (optional)';
+  });
+
+/* ---------- form ---------- */
+const STORE = 'noorEnikahSubmissions';
+const form = document.getElementById('rishtaForm');
+const errBox = document.getElementById('formError');
+  
+  form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errBox.classList.add('hidden');
+    
+      const required = [
+        ['registeringFor','Registering For'],['fullName','Full Name'],['age','Age'],
+        ['guardian','Parent / Guardian Name'],['mobile','Mobile Number']
+      ];
+      const missing = [];
+      required.forEach(([id,label]) => {
+        const el = document.getElementById(id);
+        if(!el.value.trim()){ missing.push(label); el.style.borderColor = '#C9436B'; }
+        else el.style.borderColor = '';
+      });
+      const genderInput = form.querySelector('input[name="Gender"]:checked');
+      if(!genderInput) missing.push('Gender');
+      if(!form.querySelector('input[name="Marital Status"]:checked')) missing.push('Marital Status');
+      if(!document.getElementById('consent').checked) missing.push('Consent confirmation');
+    
+      // Mobile Validation
+      const mobileEl = document.getElementById('mobile');
+      const rawMob = mobileEl.value.trim();
+      const mobRegex = /^[6-9]\d{9}$/;
+      if (!rawMob) {
+          // already pushed as missing
+      } else if (!mobRegex.test(rawMob)) {
+          errBox.textContent = 'Please enter a valid 10-digit Indian mobile number.';
+          errBox.classList.remove('hidden');
+          errBox.scrollIntoView({behavior:'smooth', block:'center'});
+          mobileEl.style.borderColor = '#C9436B';
+          return;
+      } else {
+          mobileEl.style.borderColor = '';
+      }
+    
+      if(missing.length){
+        errBox.textContent = 'Please complete: ' + missing.join(', ') + '.';
+        errBox.classList.remove('hidden');
+        errBox.scrollIntoView({behavior:'smooth', block:'center'});
+        return;
+      }
+  
+      // Age / Legal Eligibility Check
+      const age = parseInt(document.getElementById('age').value);
+      const gender = genderInput.value;
+      
+      if ( (gender === 'Female' && age < 18) || (gender === 'Male' && age < 21) ) {
+          const legalAge = gender === 'Female' ? 18 : 21;
+          const msg = `We're sorry, but matrimonial registration is available only after the minimum legal marriage age.\n\nWomen: 18+\nMen: 21+\n\nPlease check the date of birth entered.`;
+          
+          // Show Nice UI Modal for underage
+          let ageModal = document.getElementById('ageModal');
+          if (!ageModal) {
+              const modalHTML = `
+              <div id="ageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden backdrop-blur-sm transition-opacity duration-300">
+                  <div class="bg-cream p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 transform transition-all scale-95 opacity-0">
+                      <div class="flex items-center space-x-3 mb-4">
+                          <svg class="w-8 h-8 text-burg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                          <h3 class="text-xl font-serif font-bold text-wine">Not Eligible</h3>
+                      </div>
+                      <p class="text-wine/80 mb-6 whitespace-pre-line leading-relaxed" id="ageModalMsg"></p>
+                      <button onclick="document.getElementById('ageModal').classList.add('hidden')" class="w-full bg-burg text-white py-3 rounded-lg font-medium hover:bg-wine transition duration-200">OK, I Understand</button>
+                  </div>
+              </div>`;
+              document.body.insertAdjacentHTML('beforeend', modalHTML);
+              ageModal = document.getElementById('ageModal');
+          }
+          document.getElementById('ageModalMsg').textContent = msg;
+          ageModal.classList.remove('hidden');
+          // Add small delay for animation
+          setTimeout(() => {
+              ageModal.children[0].classList.remove('scale-95', 'opacity-0');
+              ageModal.children[0].classList.add('scale-100', 'opacity-100');
+          }, 10);
+          return;
+      }
+    
+      const data = { 'Submitted On': new Date().toLocaleString('en-IN') };
+    new FormData(form).forEach((v,k) => { if(k !== 'photo' && String(v).trim()) data[k] = v; });
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.textContent;
+    submitBtn.textContent = 'SAVING PROFILE...';
+    submitBtn.disabled = true;
+
+    // URGENT FIX: Prevent RLS violation if Admin is logged in on another tab!
+    // supabase-js shares localStorage. By default, if admin is logged in, this uses their token.
+    // Since Admin lacks an INSERT policy, it fails. We isolate the client to force anonymous mode.
+    const isolatedSupabase = window.supabase.createClient(
+        window.supabaseClient.supabaseUrl, 
+        window.supabaseClient.supabaseKey, 
+        { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    try {
+        let photoUrl = null;
+        if (photo.files.length > 0) {
+            const file = photo.files[0];
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const allowedExts = ['jpg', 'jpeg', 'png'];
+            
+            if (!allowedExts.includes(fileExt) || !file.type.startsWith('image/')) {
+                throw new Error("Invalid file type. Only JPG and PNG images are allowed.");
+            }
+            
+            if (file.size > 1 * 1024 * 1024) {
+                throw new Error("File is too large. Maximum allowed size is 1 MB.");
+            }
+            
+            submitBtn.textContent = 'UPLOADING PHOTO...';
+            const fileName = `profile_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+            
+            const { error: uploadError } = await isolatedSupabase.storage
+                .from('profile-photos')
+                .upload(fileName, file, { upsert: false });
+            
+            if (uploadError) throw uploadError;
+            
+            photoUrl = fileName;
+            data['Photo Attached'] = 'Yes (Uploaded)';
+        } else {
+            data['Photo Attached'] = 'No';
+        }
+
+        submitBtn.textContent = 'SAVING DATA...';
+        
+        const now = new Date();
+        const profileIdStr = 'NN-' + now.getFullYear() + '-' + String(Math.floor(Math.random()*10000)).padStart(4, '0');
+        
+        const supabaseData = {
+            profile_id: profileIdStr,
+            registering_for: data['Registering For'] || null,
+            full_name: data['Full Name'] || null,
+            gender: data['Gender'] || null,
+            date_of_birth: data['Date of Birth'] || null,
+            age: data['Age'] ? parseInt(data['Age']) : null,
+            marital_status: data['Marital Status'] || null,
+            height: data['Height'] || null,
+            education: data['Education'] || null,
+            occupation: data['Occupation'] || null,
+            city: data['City'] || null,
+            mother_tongue: data['Mother Tongue'] || null,
+            languages_known: data['Languages Known'] || null,
+            father_occupation: data['Father Occupation'] || null,
+            mother_occupation: data['Mother Occupation'] || null,
+            brothers: data['Brothers'] ? parseInt(data['Brothers']) : 0,
+            sisters: data['Sisters'] ? parseInt(data['Sisters']) : 0,
+            family_location: data['Family Location'] || null,
+            family_type: data['Family Type'] || null,
+            maslak: data['Maslak'] || null,
+            maslak_preference: data['Maslak Preference'] || null,
+            religious_preference_details: data['Religious Preference Details'] || null,
+            about_candidate: data['About Candidate'] || null,
+            preferred_age_range: data['Preferred Age Range'] || null,
+            preferred_location: data['Preferred Location'] || null,
+            preferred_education: data['Preferred Education'] || null,
+            preferred_profession: data['Preferred Profession'] || null,
+            other_preferences: data['Other Preferences'] || null,
+            guardian_name: data['Guardian Name'] || null,
+            relationship: data['Relationship'] || null,
+            mobile: data['Mobile'] ? String(data['Mobile']).replace(/\D/g, '') : null,
+            whatsapp: data['WhatsApp'] ? String(data['WhatsApp']).replace(/\D/g, '') : null,
+            preferred_contact_time: data['Preferred Contact Time'] || null,
+            photo_attached: data['Photo Attached'] || null,
+            photo_url: photoUrl,
+            status: 'New',
+            notes: []
+        };
+
+          const { error: dbError } = await isolatedSupabase.from('profiles').insert([supabaseData]);
+          if (dbError) throw dbError;
+
+        // whatsapp summary link for owner
+        let msg = '*NOOR-E-NIKAH - NEW PROFILE REGISTRATION*%0A%0A';
+        Object.keys(data).forEach(k => { msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A'; });
+        document.getElementById('waSummary').href = 'https://wa.me/919594388960?text=' + msg;
+      
+        form.classList.add('hidden');
+        const s = document.getElementById('successBox');
+        s.classList.remove('hidden');
+        document.getElementById('formCard').scrollIntoView({behavior:'smooth', block:'center'});
+
+      } catch (err) {
+          console.error("Supabase Error:", err);
+          errBox.textContent = "Unable to submit your registration right now. Please try again or contact us on WhatsApp.";
+          errBox.classList.remove('hidden');
+          errBox.scrollIntoView({behavior:'smooth', block:'center'});
+      } finally {
+        submitBtn.textContent = originalBtnText;
+        submitBtn.disabled = false;
+    }
+});
+
+document.getElementById('newEntry').addEventListener('click', () => {
+  form.reset();
+  document.getElementById('photoLabel').textContent = 'Tap to upload a photo (optional)';
+  document.getElementById('successBox').classList.add('hidden');
+  form.classList.remove('hidden');
+  document.getElementById('formCard').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+
+
+/* ---------- Typewriter Headings ---------- */
+const typeObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    const el = e.target;
+    if(e.isIntersecting) {
+      el.dataset.typingActive = "true";
+      if (!el.twState.isRunning) {
+        runTypewriter(el);
+      }
+    } else {
+      el.dataset.typingActive = "false";
+    }
+  });
+}, {threshold: 0.1}); // Starts when slightly visible
+
+document.querySelectorAll('.typewriter-heading').forEach(el => {
+  const text = el.getAttribute('data-text') || el.textContent.trim();
+  el.setAttribute('data-text', text);
+  el.classList.add('relative');
+  
+  // Detect gradient class
+  let gradientClass = '';
+  if (el.classList.contains('gold-text')) {
+      gradientClass = 'gold-text';
+      el.classList.remove('gold-text');
+  } else if (el.classList.contains('warm-text')) {
+      gradientClass = 'warm-text';
+      el.classList.remove('warm-text');
+  }
+  
+  // Create placeholder and visible overlay
+  const htmlStr = `
+    <span class="${gradientClass}" style="opacity: 0; color: transparent; pointer-events: none; user-select: none; display: inline-block;">${text}</span>
+    <span class="${gradientClass} absolute inset-0 pointer-events-none" aria-hidden="true" style="text-align: inherit;">
+      <span class="typer-span"></span><span class="tw-cursor">|</span>
+    </span>
+  `;
+  el.innerHTML = htmlStr;
+  
+  el.twState = { text: text, i: 0, isDeleting: false, isRunning: false, timeout: null };
+  typeObserver.observe(el);
+});
+
+function runTypewriter(el) {
+  if (el.dataset.typingActive !== "true") {
+    el.twState.isRunning = false;
+    return;
+  }
+  el.twState.isRunning = true;
+  
+  const state = el.twState;
+  const typer = el.querySelector('.typer-span');
+  let delay = 0;
+  
+  if (!state.isDeleting) {
+    if (state.i < state.text.length) {
+      typer.textContent = state.text.substring(0, state.i + 1);
+      state.i++;
+      delay = 90 + Math.random() * 50; // 90-140ms (slow, elegant typing)
+    } else {
+      state.isDeleting = true;
+      delay = 3000; // 3 SECONDS hold so the user can easily read the heading!
+    }
+  } else {
+    if (state.i > 0) {
+      typer.textContent = state.text.substring(0, state.i - 1);
+      state.i--;
+      delay = 50 + Math.random() * 30; // 50-80ms (smooth, natural erasing)
+    } else {
+      state.isDeleting = false;
+      delay = 1000; // 1 second pause before typing again
+    }
+  }
+  
+  clearTimeout(state.timeout);
+  state.timeout = setTimeout(() => runTypewriter(el), delay);
+}
+</script>
+</body>
+</html>

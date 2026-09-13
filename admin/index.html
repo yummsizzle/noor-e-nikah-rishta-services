@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Admin Dashboard | Noor-E-Nikah</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@400;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script>
@@ -23,6 +24,7 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" class="fixed inset-0 z-[120] flex items-center justify-center bg-wine" style="background: linear-gradient(135deg, #5B1226, #430D1C);">
   <div class="bg-white/95 backdrop-blur-md p-10 max-w-md w-full relative overflow-hidden rounded-[24px] shadow-2xl border border-gold/30">
+    <img src="/assets/logo.png" alt="Noor-E-Nikah Logo" class="mx-auto h-20 w-auto mb-6 object-contain">
     <h2 class="font-serif text-3xl font-semibold text-wine mb-2 text-center">Admin Login</h2>
     <form id="loginForm" class="space-y-5 mt-8">
       <div>
@@ -50,7 +52,8 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
 <!-- SIDEBAR -->
 <aside id="sidebar" class="w-[280px] md:w-[290px] bg-wine text-cream flex-shrink-0 flex flex-col fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-50">
-  <div class="p-8 text-center border-b border-gold/10">
+  <div class="p-8 text-center border-b border-gold/10 flex flex-col items-center justify-center">
+    <img src="/assets/logo.png" alt="Noor-E-Nikah Logo" class="mx-auto h-20 w-auto object-contain mb-3">
     <h1 class="font-serif text-[28px] font-semibold text-gold-lt tracking-widest">NOOR-E-NIKAH</h1>
     <p class="text-[10px] tracking-[0.25em] text-cream/70 mt-2 uppercase">Rishta Services</p>
     <div class="w-12 h-[1px] bg-gold-lt/40 mx-auto mt-4 mb-2"></div>

@@ -5,7 +5,7 @@ const fieldMapToDb = {
     'Occupation': 'occupation', 'City': 'city', 'Mother Tongue': 'mother_tongue', 'Languages Known': 'languages_known',
     'Father Occupation': 'father_occupation', 'Mother Occupation': 'mother_occupation', 'Brothers': 'brothers',
     'Sisters': 'sisters', 'Family Location': 'family_location', 'Family Type': 'family_type', 'Maslak': 'maslak',
-    'Maslak Preference': 'maslak_preference', 'Religious Preference Details': 'religious_preference_details',
+    'Maslak Preference': 'maslak_preference',
     'About Candidate': 'about_candidate', 'Preferred Age Range': 'preferred_age_range', 'Preferred Location': 'preferred_location',
     'Preferred Education': 'preferred_education', 'Preferred Profession': 'preferred_profession', 'Other Preferences': 'other_preferences',
     'Guardian Name': 'guardian_name', 'Relationship': 'relationship', 'Mobile': 'mobile', 'WhatsApp': 'whatsapp',

@@ -25,25 +25,51 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 <div id="loginScreen" class="fixed inset-0 z-[120] flex items-center justify-center bg-wine" style="background: linear-gradient(135deg, #5B1226, #430D1C);">
   <div class="bg-white/95 backdrop-blur-md p-10 max-w-md w-full relative overflow-hidden rounded-[24px] shadow-2xl border border-gold/30">
     <img src="/assets/logo.png" alt="Noor-E-Nikah Logo" class="mx-auto h-20 w-auto mb-6 object-contain">
-    <h2 class="font-serif text-3xl font-semibold text-wine mb-2 text-center">Admin Login</h2>
-    <form id="loginForm" class="space-y-5 mt-8">
-      <div>
-        <input type="email" id="adminEmail" placeholder="Enter Admin Email" class="w-full bg-[#FAF8F5] border border-gold/40 rounded-xl pl-4 pr-4 py-3.5 text-left text-lg focus:border-wine focus:outline-none transition text-wine placeholder-wine/40">
-      </div>
-      <div class="relative w-full">
-        <input type="password" id="adminPassword" placeholder="Enter Password" class="w-full bg-[#FAF8F5] border border-gold/40 rounded-xl pl-4 pr-12 py-3.5 text-left text-lg focus:border-wine focus:outline-none transition text-wine placeholder-wine/40">
-        <button type="button" id="togglePasswordBtn" aria-label="Show password" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-wine/70 hover:text-wine focus:outline-none flex items-center justify-center h-full">
-          <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        </button>
-      </div>
-      <div class="flex justify-center w-full">
-          <p id="loginError" class="text-[#C9436B] bg-[#FAF8F5] px-3 py-2 rounded-lg text-sm hidden font-medium text-center border border-[#C9436B]/20 w-full"></p>
-      </div>
-      <button type="submit" class="btn-wine w-full py-3.5 rounded-xl font-medium shadow-md">ACCESS DASHBOARD</button>
-    </form>
+    <!-- LOGIN VIEW -->
+    <div id="loginBox">
+      <h2 class="font-serif text-3xl font-semibold text-wine mb-2 text-center">Admin Login</h2>
+      <form id="loginForm" class="space-y-4 mt-6">
+        <div>
+          <input type="email" id="adminEmail" placeholder="Enter Admin Email" class="w-full bg-[#FAF8F5] border border-gold/40 rounded-xl pl-4 pr-4 py-3.5 text-left text-lg focus:border-wine focus:outline-none transition text-wine placeholder-wine/40">
+        </div>
+        <div class="relative w-full">
+          <input type="password" id="adminPassword" placeholder="Enter Password" class="w-full bg-[#FAF8F5] border border-gold/40 rounded-xl pl-4 pr-12 py-3.5 text-left text-lg focus:border-wine focus:outline-none transition text-wine placeholder-wine/40">
+          <button type="button" id="togglePasswordBtn" aria-label="Show password" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-wine/70 hover:text-wine focus:outline-none flex items-center justify-center h-full">
+            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex justify-end pt-0.5">
+          <button type="button" id="forgotPasswordLink" class="text-xs font-medium text-wine/70 hover:text-wine hover:underline transition">Forgot Password?</button>
+        </div>
+        <div class="flex justify-center w-full">
+            <p id="loginError" class="text-[#C9436B] bg-[#FAF8F5] px-3 py-2 rounded-lg text-sm hidden font-medium text-center border border-[#C9436B]/20 w-full"></p>
+        </div>
+        <button type="submit" class="btn-wine w-full py-3.5 rounded-xl font-medium shadow-md">ACCESS DASHBOARD</button>
+      </form>
+    </div>
+
+    <!-- FORGOT PASSWORD VIEW -->
+    <div id="forgotPasswordBox" class="hidden">
+      <h2 class="font-serif text-3xl font-semibold text-wine mb-2 text-center">Reset Password</h2>
+      <p class="text-xs text-wine/70 text-center mb-6">Enter your registered admin email address and we will send you a password reset link.</p>
+      <form id="forgotPasswordForm" class="space-y-4">
+        <div>
+          <input type="email" id="forgotEmail" placeholder="Enter Registered Email" class="w-full bg-[#FAF8F5] border border-gold/40 rounded-xl px-4 py-3.5 text-left text-lg focus:border-wine focus:outline-none transition text-wine placeholder-wine/40">
+        </div>
+        <div class="flex justify-center w-full">
+          <p id="forgotMsg" class="px-3 py-2.5 rounded-lg text-xs leading-relaxed hidden font-medium text-center border w-full"></p>
+        </div>
+        <button type="submit" id="sendResetBtn" class="btn-wine w-full py-3.5 rounded-xl font-medium shadow-md">SEND RESET LINK</button>
+        <div class="text-center pt-2">
+          <button type="button" id="backToLoginBtn" class="text-xs font-medium text-wine/70 hover:text-wine hover:underline transition inline-flex items-center gap-1">
+            &larr; Back to Login
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 

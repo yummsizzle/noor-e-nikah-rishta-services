@@ -201,6 +201,30 @@ function saveData() { /* Removed in favor of direct Supabase updates */ }
 // Initialization
 async function initializeAuth() {
     console.log("[ADMIN DEBUG] initializeAuth started");
+
+    // Safety check: Never allow password recovery link to open admin dashboard directly
+    if (window.location.hash && (window.location.hash.includes('type=recovery') || window.location.hash.includes('error_code='))) {
+        console.log("[ADMIN DEBUG] Recovery hash detected on admin page, redirecting to reset-password.html");
+        window.location.href = '/admin/reset-password.html' + window.location.hash;
+        return;
+    }
+
+    // Check for prefilled email from password reset completion
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillEmail = urlParams.get('email');
+    if (prefillEmail) {
+        const emailInput = document.getElementById('adminEmail');
+        const pwdInput = document.getElementById('adminPassword');
+        if (emailInput) emailInput.value = prefillEmail;
+        if (pwdInput) {
+            pwdInput.value = '';
+            setTimeout(() => pwdInput.focus(), 150);
+        }
+        if (window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
     // Check existing session on page load (handles refresh)
     const { data: { session }, error } = await window.supabaseClient.auth.getSession();
     
@@ -229,6 +253,11 @@ async function initializeAuth() {
 
     // Listen for future auth state changes
     window.supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+            console.log("[ADMIN DEBUG] PASSWORD_RECOVERY event received, redirecting to reset-password.html");
+            window.location.href = '/admin/reset-password.html' + window.location.hash;
+            return;
+        }
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             console.log("[ADMIN DEBUG] Auth state changed to", event, "UID:", session?.user?.id);
             const loginScreen = document.getElementById('loginScreen');
@@ -339,6 +368,118 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         btn.disabled = false;
     }
 });
+
+// Forgot Password UI toggle & submission
+const forgotLink = document.getElementById('forgotPasswordLink');
+const backToLoginBtn = document.getElementById('backToLoginBtn');
+const loginBox = document.getElementById('loginBox');
+const forgotPasswordBox = document.getElementById('forgotPasswordBox');
+const forgotEmail = document.getElementById('forgotEmail');
+const adminEmail = document.getElementById('adminEmail');
+const forgotMsg = document.getElementById('forgotMsg');
+
+if (forgotLink) {
+    forgotLink.addEventListener('click', () => {
+        if (adminEmail && adminEmail.value.trim() && forgotEmail) {
+            forgotEmail.value = adminEmail.value.trim();
+        }
+        if (loginBox) loginBox.classList.add('hidden');
+        if (forgotPasswordBox) forgotPasswordBox.classList.remove('hidden');
+        if (forgotMsg) forgotMsg.classList.add('hidden');
+        const loginError = document.getElementById('loginError');
+        if (loginError) loginError.classList.add('hidden');
+        if (forgotEmail) setTimeout(() => forgotEmail.focus(), 100);
+    });
+}
+
+if (backToLoginBtn) {
+    backToLoginBtn.addEventListener('click', () => {
+        if (forgotPasswordBox) forgotPasswordBox.classList.add('hidden');
+        if (loginBox) loginBox.classList.remove('hidden');
+        if (forgotMsg) forgotMsg.classList.add('hidden');
+        const loginError = document.getElementById('loginError');
+        if (loginError) loginError.classList.add('hidden');
+        if (adminEmail) setTimeout(() => adminEmail.focus(), 100);
+    });
+}
+
+const forgotForm = document.getElementById('forgotPasswordForm');
+const sendResetBtn = document.getElementById('sendResetBtn');
+
+if (forgotForm) {
+    forgotForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (forgotEmail?.value || '').trim();
+        if (forgotMsg) {
+            forgotMsg.classList.add('hidden');
+            forgotMsg.className = "px-3 py-2.5 rounded-lg text-xs leading-relaxed font-medium text-center border w-full";
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+            if (forgotMsg) {
+                forgotMsg.textContent = 'Please enter a valid email address.';
+                forgotMsg.classList.remove('hidden');
+                forgotMsg.classList.add('text-[#C9436B]', 'bg-[#FAF8F5]', 'border-[#C9436B]/20');
+            }
+            return;
+        }
+
+        if (!window.supabaseClient) {
+            if (forgotMsg) {
+                forgotMsg.textContent = 'Supabase client is not initialized.';
+                forgotMsg.classList.remove('hidden');
+                forgotMsg.classList.add('text-[#C9436B]', 'bg-[#FAF8F5]', 'border-[#C9436B]/20');
+            }
+            return;
+        }
+
+        const origText = sendResetBtn ? sendResetBtn.textContent : 'SEND RESET LINK';
+        if (sendResetBtn) {
+            sendResetBtn.textContent = 'SENDING LINK...';
+            sendResetBtn.disabled = true;
+        }
+
+        try {
+            const redirectUrl = `${window.location.origin}/admin/reset-password.html`;
+            const { data, error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: redirectUrl
+            });
+
+            if (error) {
+                console.warn("[FORGOT PASSWORD] error:", error.message);
+                const isRateLimit = error.status === 429 || error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('seconds');
+                if (forgotMsg) {
+                    if (isRateLimit) {
+                        forgotMsg.textContent = error.message;
+                    } else {
+                        forgotMsg.textContent = 'Unable to send reset link: ' + error.message;
+                    }
+                    forgotMsg.classList.remove('hidden');
+                    forgotMsg.classList.add('text-[#C9436B]', 'bg-[#FAF8F5]', 'border-[#C9436B]/20');
+                }
+            } else {
+                if (forgotMsg) {
+                    forgotMsg.textContent = 'If an account exists for this email address, a password reset link will be sent. Please check your inbox and spam folder.';
+                    forgotMsg.classList.remove('hidden');
+                    forgotMsg.classList.add('text-wine', 'bg-[#FAF8F5]', 'border-gold/40');
+                }
+            }
+        } catch (err) {
+            console.error("[FORGOT PASSWORD] unexpected error:", err);
+            if (forgotMsg) {
+                forgotMsg.textContent = 'An unexpected error occurred. Please try again later.';
+                forgotMsg.classList.remove('hidden');
+                forgotMsg.classList.add('text-[#C9436B]', 'bg-[#FAF8F5]', 'border-[#C9436B]/20');
+            }
+        } finally {
+            if (sendResetBtn) {
+                sendResetBtn.textContent = origText;
+                sendResetBtn.disabled = false;
+            }
+        }
+    });
+}
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
     showDialog('info', 'Logout', 'Are you sure you want to logout?', async () => {

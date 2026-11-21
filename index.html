@@ -129,6 +129,20 @@ tailwind.config = {
   .radio-pill input{accent-color:#E8735A;width:1.05rem;height:1.05rem}
   .radio-pill:has(input:checked){background:linear-gradient(135deg,#FFE7D2,#FFD9CF);border-color:#E8735A;
     box-shadow:0 6px 18px -10px rgba(232,115,90,.9);font-weight:500}
+
+  /* whatsapp compact same-as-mobile checkbox */
+  .field .checkbox-row{display:flex!important;align-items:center!important;gap:8px!important;
+    margin-top:8px!important;margin-bottom:0!important;padding:0!important;border:none!important;
+    background:transparent!important;width:fit-content!important;cursor:pointer!important;
+    user-select:none!important;text-transform:none!important;letter-spacing:normal!important;
+    font-size:.88rem!important;font-weight:500!important;color:#7C1D38!important}
+  .field .checkbox-row input[type="checkbox"]{display:inline-block!important;width:18px!important;height:18px!important;
+    min-width:18px!important;min-height:18px!important;max-width:18px!important;max-height:18px!important;
+    margin:0!important;padding:0!important;border:1.5px solid rgba(138,35,64,.4)!important;
+    border-radius:4px!important;background:#FFFDF9!important;accent-color:#7C1D38!important;
+    cursor:pointer!important;box-shadow:none!important;outline:none!important;flex-shrink:0!important}
+  .field .checkbox-row span{display:inline!important;margin:0!important;padding:0!important;
+    line-height:1.2!important;text-transform:none!important;color:#7C1D38!important;white-space:nowrap!important}
   .form-sec-badge{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
     background:linear-gradient(135deg,#5B1226,#8A2340);color:#F4E3BC;font-family:'Cormorant Garamond',serif;font-size:1.25rem;
     box-shadow:0 8px 20px -12px rgba(91,18,38,.9);flex:none}
@@ -148,9 +162,29 @@ tailwind.config = {
   ::-webkit-scrollbar{width:10px}
   ::-webkit-scrollbar-track{background:#FBEEE2}
   ::-webkit-scrollbar-thumb{background:linear-gradient(#8A2340,#5B1226);border-radius:10px}
+
+  /* custom height combobox dropdown scrollbar */
+  #heightOptionList::-webkit-scrollbar { width: 5px; }
+  #heightOptionList::-webkit-scrollbar-track { background: rgba(197, 168, 128, 0.1); }
+  #heightOptionList::-webkit-scrollbar-thumb { background: rgba(124, 29, 56, 0.35); border-radius: 4px; }
+  #heightOptionList::-webkit-scrollbar-thumb:hover { background: rgba(124, 29, 56, 0.6); }
+  #heightOptionList { scrollbar-width: thin; scrollbar-color: rgba(124, 29, 56, 0.35) transparent; }
+
+  /* Quran Quote Card scrollbar in Why Choose Us */
+  .quran-card-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232, 201, 121, 0.4) transparent;
+  }
+  .quran-card-scroll::-webkit-scrollbar { width: 4px; }
+  .quran-card-scroll::-webkit-scrollbar-track { background: transparent; }
+  .quran-card-scroll::-webkit-scrollbar-thumb { background: rgba(232, 201, 121, 0.35); border-radius: 4px; }
+  .quran-card-scroll::-webkit-scrollbar-thumb:hover { background: rgba(232, 201, 121, 0.7); }
 </style>
 </head>
 <body class="font-sans antialiased">
+
+<!-- Mobile Menu Backdrop -->
+<div id="mobileMenuBackdrop" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0 pointer-events-none lg:hidden" aria-hidden="true"></div>
 
 <!-- ============ NAV ============ -->
 <header id="nav" class="fixed top-0 inset-x-0 z-50 transition-all duration-500">
@@ -171,6 +205,7 @@ tailwind.config = {
           <a href="#process" class="navlink px-4 py-2 text-[13px] tracking-widest">HOW IT WORKS</a>
           <a href="#why" class="navlink px-4 py-2 text-[13px] tracking-widest">WHY US</a>
           <a href="#contact" class="navlink px-4 py-2 text-[13px] tracking-widest">CONTACT</a>
+          <button type="button" onclick="openDevModal()" class="navlink dev-nav-btn px-4 py-2 text-[13px] tracking-widest uppercase cursor-pointer" title="About Developer">ABOUT DEVELOPER</button>
           <a href="#register" class="btn btn-gold ml-3 px-6 py-2.5 text-[13px]">REGISTER A PROFILE</a>
         </nav>
 
@@ -179,7 +214,7 @@ tailwind.config = {
         </button>
       </div>
 
-      <div id="mobileMenu" class="lg:hidden overflow-hidden max-h-0 transition-all duration-500">
+      <div id="mobileMenu" class="lg:hidden overflow-hidden max-h-0 transition-all duration-500" style="overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
         <div class="px-4 pb-4 pt-1 grid gap-1">
           <a href="#about" class="mlink">About Us</a>
           <a href="#services" class="mlink">Our Services</a>
@@ -188,6 +223,10 @@ tailwind.config = {
           <a href="#why" class="mlink">Why Choose Us</a>
           <a href="#contact" class="mlink">Contact Us</a>
           <a href="https://wa.me/919594388960?text=Assalamu%20Alaikum%2C%20I%20came%20across%20Noor-E-Nikah%20Rishta%20Services%20and%20would%20like%20to%20know%20more%20about%20your%20matchmaking%20services%20and%20the%20registration%20process.%20Please%20guide%20me%20regarding%20the%20suitable%20rishta%20options.%20JazakAllah%20Khair." target="_blank" class="btn btn-gold w-full py-3 mt-2 text-sm">WHATSAPP</a>
+          <button type="button" onclick="openDevModal()" class="mlink text-left flex items-center justify-between w-full mt-2 font-medium tracking-wide cursor-pointer">
+            <span>ABOUT DEVELOPER</span>
+            <span class="text-xs text-gold">✦</span>
+          </button>
         </div>
       </div>
     </div>
@@ -207,6 +246,137 @@ tailwind.config = {
   .mlink{display:block;padding:.85rem 1rem;border-radius:12px;font-size:1rem;color:#5B1226;background:rgba(255,255,255,.7);
     border:1px solid rgba(201,162,39,.25)}
   #navbar:not(.scrolled) .mlink{color:#FFEFDD;background:rgba(91,18,38,.5);border-color:rgba(232,201,121,.3)}
+  @keyframes devNavPulse {
+    0%, 100% { opacity: .85; }
+    50% { opacity: 1; text-shadow: 0 0 10px rgba(232, 201, 121, 0.55); }
+  }
+  .dev-nav-btn {
+    animation: devNavPulse 3.5s ease-in-out infinite;
+    position: relative;
+  }
+  .dev-nav-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 16px;
+    right: 16px;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent, #E8C979, transparent);
+    opacity: 0;
+    transform: scaleX(0.6);
+    transition: 0.3s ease;
+  }
+  .dev-nav-btn:hover::after {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  #navbar.scrolled .dev-nav-btn {
+    animation: none;
+  }
+  #navbar.scrolled .dev-nav-btn::after {
+    background: linear-gradient(90deg, transparent, #C9A227, transparent);
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.96) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .animate-modal-in {
+    animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* ============================================================
+     About Developer Modal - Responsive Layout & Proportions
+     ============================================================ */
+  .dev-modal-card {
+    width: min(92vw, 490px);
+    max-height: calc(100dvh - 22px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 162, 39, 0.28) transparent;
+  }
+  .dev-modal-card::-webkit-scrollbar {
+    width: 4px;
+  }
+  .dev-modal-card::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dev-modal-card::-webkit-scrollbar-thumb {
+    background: rgba(201, 162, 39, 0.28);
+    border-radius: 4px;
+  }
+
+  /* Consistent, authentic Social Media Button Sizing */
+  .dev-social-btn {
+    width: 36px !important;
+    height: 36px !important;
+    flex-shrink: 0;
+  }
+  .dev-social-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  @media (min-width: 640px) {
+    .dev-social-btn {
+      width: 38px !important;
+      height: 38px !important;
+    }
+    .dev-social-btn svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+  }
+
+  /* Condition B: Medium-height screens (height <= 720px) */
+  /* Gently tighten vertical margins to keep full card in view without shrinking elements */
+  @media (max-height: 720px) {
+    #devModal { padding: 0.65rem !important; }
+    .dev-modal-card {
+      padding: 0.85rem 1.25rem !important;
+    }
+    .dev-modal-card .dev-header { margin-bottom: 0.35rem !important; }
+    .dev-modal-card .dev-logo-wrap { width: 4.1rem !important; height: 4.1rem !important; margin-bottom: 0.25rem !important; }
+    .dev-modal-card .dev-name { font-size: 1.35rem !important; }
+    .dev-modal-card .dev-cards-grid { margin-top: 0.45rem !important; margin-bottom: 0.45rem !important; gap: 0.35rem !important; }
+    .dev-modal-card .dev-stat-card { padding: 0.35rem 0.2rem !important; }
+    .dev-modal-card .dev-expertise-box { padding: 0.45rem 0.65rem !important; margin-bottom: 0.45rem !important; }
+    .dev-modal-card .dev-social-wrap { margin-top: 0.4rem !important; margin-bottom: 0.4rem !important; }
+    .dev-modal-card .dev-social-btn { width: 34px !important; height: 34px !important; }
+    .dev-modal-card .dev-social-btn svg { width: 17px !important; height: 17px !important; }
+    .dev-modal-card .dev-cta-btn { padding: 0.62rem 1.25rem !important; margin-top: 0.4rem !important; }
+  }
+
+  /* Condition C: Very short screens (height <= 600px) */
+  /* Proportional compact adjustment + graceful scrolling container so nothing clips */
+  @media (max-height: 600px) {
+    #devModal { padding: 0.5rem !important; }
+    .dev-modal-card {
+      padding: 0.75rem 1rem !important;
+      border-radius: 20px !important;
+    }
+    .dev-modal-card .dev-header { margin-bottom: 0.3rem !important; }
+    .dev-modal-card .dev-logo-wrap { width: 3.75rem !important; height: 3.75rem !important; margin-bottom: 0.2rem !important; }
+    .dev-modal-card .dev-name { font-size: 1.25rem !important; }
+    .dev-modal-card .dev-intro { font-size: 0.75rem !important; line-height: 1.35 !important; }
+    .dev-modal-card .dev-cards-grid { margin-top: 0.35rem !important; margin-bottom: 0.35rem !important; gap: 0.3rem !important; }
+    .dev-modal-card .dev-stat-card { padding: 0.3rem 0.15rem !important; }
+    .dev-modal-card .dev-expertise-box { padding: 0.4rem 0.6rem !important; margin-bottom: 0.35rem !important; }
+    .dev-modal-card .dev-social-wrap { margin-top: 0.35rem !important; margin-bottom: 0.35rem !important; }
+    .dev-modal-card .dev-social-btn { width: 32px !important; height: 32px !important; }
+    .dev-modal-card .dev-social-btn svg { width: 16px !important; height: 16px !important; }
+    .dev-modal-card .dev-cta-btn { padding: 0.55rem 1rem !important; margin-top: 0.35rem !important; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dev-nav-btn, .animate-modal-in {
+      animation: none !important;
+    }
+    .dev-nav-btn::after {
+      transition: none !important;
+    }
+  }
 </style>
 
 <!-- ============ HERO ============ -->
@@ -591,7 +761,68 @@ tailwind.config = {
             </div>
             <div class="gold-line mb-6"></div>
             <div class="grid sm:grid-cols-2 gap-5">
-              <div class="field"><label for="height">Height</label><input id="height" name="Height" type="text" placeholder="e.g. 5 ft 6 in"></div>
+              <div class="field relative" id="heightContainer">
+                <label for="height" class="flex items-center justify-between">
+                  <span>Height</span>
+                </label>
+                <div class="relative">
+                  <input 
+                    id="height" 
+                    name="Height" 
+                    type="text" 
+                    placeholder="Enter height (e.g. 5 ft 6 in or 168 cm)" 
+                    autocomplete="off" 
+                    class="w-full pr-10"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-autocomplete="list"
+                    aria-controls="heightDropdown"
+                    aria-haspopup="listbox"
+                  >
+                  <button 
+                    type="button" 
+                    id="heightToggleBtn" 
+                    tabindex="-1"
+                    aria-label="Toggle height suggestions" 
+                    class="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-wine/50 hover:text-wine transition focus:outline-none"
+                  >
+                    <svg id="heightChevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Custom Accessible Combobox Suggestion Panel -->
+                <div 
+                  id="heightDropdown" 
+                  class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFDF9] border border-gold/40 rounded-xl shadow-xl overflow-hidden"
+                  style="box-shadow: 0 12px 28px -6px rgba(91,18,38,0.18), 0 6px 12px -4px rgba(91,18,38,0.1);"
+                  role="listbox"
+                >
+                  <!-- Suggestion Category Filters -->
+                  <div class="flex items-center justify-between px-3 py-2 bg-[#FAF8F5] border-b border-gold/20 text-xs select-none">
+                    <span class="font-semibold text-wine text-[11px] uppercase tracking-wider">Suggestions</span>
+                    <div class="flex gap-1">
+                      <button type="button" class="height-filter-tab px-2 py-0.5 rounded text-[10px] font-semibold transition bg-wine text-white" data-filter="all">All</button>
+                      <button type="button" class="height-filter-tab px-2 py-0.5 rounded text-[10px] font-semibold transition text-wine/70 hover:bg-wine/10" data-filter="ft">Ft / In</button>
+                      <button type="button" class="height-filter-tab px-2 py-0.5 rounded text-[10px] font-semibold transition text-wine/70 hover:bg-wine/10" data-filter="cm">Cm</button>
+                    </div>
+                  </div>
+
+                  <!-- Scrollable Options List -->
+                  <div id="heightOptionList" class="max-h-[210px] overflow-y-auto divide-y divide-gold/15 py-1">
+                    <!-- Dynamic suggestions rendered here -->
+                  </div>
+
+                  <!-- Footer Tip -->
+                  <div class="px-3 py-2 bg-blush/20 border-t border-gold/20 text-[11px] text-wine/75 flex items-center justify-between select-none">
+                    <span class="truncate">💡 Select a suggestion or type manually.</span>
+                    <button type="button" id="heightCloseBtn" class="text-[10px] font-bold text-wine hover:underline ml-2 flex-shrink-0">Close</button>
+                  </div>
+                </div>
+
+                <p class="mt-1 text-xs text-[#7C1D38]/60">Select a suggested height or enter your own height manually.</p>
+              </div>
               <div class="field"><label for="education">Education</label><input id="education" name="Education" type="text" placeholder="e.g. B.Com, MBA"></div>
               <div class="field"><label for="occupation">Occupation / Profession</label><input id="occupation" name="Occupation" type="text" placeholder="e.g. Teacher, Business"></div>
               <div class="field"><label for="city">City / Current Location</label><input id="city" name="City" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
@@ -613,15 +844,14 @@ tailwind.config = {
                 <label for="maslak">Maslak / Religious Background</label>
                 <select id="maslak" name="Maslak">
                   <option value="">— Select (optional) —</option>
-                  <option>Sunni</option><option>Deobandi</option><option>Ahl-e-Hadith</option>
-                  <option>Ahl-e-Sunnat</option><option>Other</option><option>Prefer Not to Mention</option>
+                  <option>Sunni</option><option>Deobandi</option><option>Ahle Hadees</option>
+                  <option>Ahle Sunnat</option><option>Other</option><option>Prefer not to say</option>
                 </select>
               </div>
               <div class="field">
                 <label for="maslakPref">Maslak Preference for Match</label>
-                <input id="maslakPref" name="Maslak Preference" type="text" placeholder="e.g. No specific preference">
+                <input id="maslakPref" name="Maslak Preference" type="text" placeholder="e.g. Any Maslak / Same Maslak / Sunni / Open to all">
               </div>
-              
             </div>
           </div>
 
@@ -633,10 +863,14 @@ tailwind.config = {
             </div>
             <div class="gold-line mb-6"></div>
             <div class="grid sm:grid-cols-2 gap-5">
+              <div class="field sm:col-span-2">
+                <label for="surnameBiradari">Surname / Biradari</label>
+                <input id="surnameBiradari" name="Surname / Biradari" type="text" placeholder="e.g. Shaikh, Khan, Memon, Ansari, Sayyed, Qureshi">
+              </div>
               <div class="field"><label for="fatherOcc">Father's Occupation</label><input id="fatherOcc" name="Father Occupation" type="text" placeholder="e.g. Business"></div>
               <div class="field"><label for="motherOcc">Mother's Occupation</label><input id="motherOcc" name="Mother Occupation" type="text" placeholder="e.g. Homemaker"></div>
-              <div class="field"><label for="brothers">Number of Brothers</label><input id="brothers" name="Brothers" type="number" min="0" max="20" placeholder="0"></div>
-              <div class="field"><label for="sisters">Number of Sisters</label><input id="sisters" name="Sisters" type="number" min="0" max="20" placeholder="0"></div>
+              <div class="field"><label for="brothers">Number of Brothers</label><input id="brothers" name="Brothers" type="number" min="0" max="20" step="1" placeholder="e.g. 1"></div>
+              <div class="field"><label for="sisters">Number of Sisters</label><input id="sisters" name="Sisters" type="number" min="0" max="20" step="1" placeholder="e.g. 1"></div>
               <div class="field"><label for="familyLoc">Family Location</label><input id="familyLoc" name="Family Location" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
               <div class="field">
                 <label>Family Type</label>
@@ -652,13 +886,13 @@ tailwind.config = {
           <div class="mb-9">
             <div class="flex items-center gap-3 mb-5">
               <div class="form-sec-badge">E</div>
-              <div><h3 class="font-serif text-2xl text-wine leading-tight">About the Candidate</h3></div>
+              <div><h3 id="aboutCandidateHeading" class="font-serif text-2xl text-wine leading-tight">About the Candidate</h3></div>
             </div>
             <div class="gold-line mb-6"></div>
             <div class="field">
-              <label for="aboutCandidate">Please tell us briefly about yourself / your son / daughter</label>
+              <label id="aboutCandidateLabel" for="aboutCandidate">Please tell us briefly about yourself / your son / daughter</label>
               <textarea id="aboutCandidate" name="About Candidate" rows="5" placeholder="Write here..."></textarea>
-              <p class="mt-2 text-sm text-[#7C1D38]/70 italic">You may include personality, education, profession, family values or any other information you feel is important.</p>
+              <p id="aboutCandidateHelp" class="mt-2 text-sm text-[#7C1D38]/70 italic">You may include personality, education, profession, family values or any other information you feel is important.</p>
             </div>
           </div>
 
@@ -693,7 +927,18 @@ tailwind.config = {
               <div class="field"><label for="guardian">Parent / Guardian Name *</label><input id="guardian" name="Guardian Name" type="text" placeholder="Full name" required></div>
               <div class="field"><label for="relation">Relationship with Candidate</label><input id="relation" name="Relationship" type="text" placeholder="e.g. Father, Mother, Self"></div>
               <div class="field"><label for="mobile">Mobile Number *</label><input id="mobile" name="Mobile" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile number" required></div>
-              <div class="field"><label for="whatsapp">WhatsApp Number</label><input id="whatsapp" name="WhatsApp" type="tel" inputmode="numeric" placeholder="If different from mobile"></div>
+              <div class="field">
+                <label for="whatsapp">WhatsApp Number</label>
+                <input id="whatsapp" name="WhatsApp" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit WhatsApp number">
+                <label class="checkbox-row">
+                  <input type="checkbox" id="sameAsMobile">
+                  <span>Same as mobile number</span>
+                </label>
+              </div>
+              <div class="field sm:col-span-2">
+                <label for="emailAddress">Email Address</label>
+                <input id="emailAddress" name="Email Address" type="email" autocomplete="email" placeholder="e.g. name@example.com (optional)">
+              </div>
               <div class="field sm:col-span-2">
                 <label>Preferred Time to Contact</label>
                 <div class="flex flex-wrap gap-3">
@@ -710,17 +955,40 @@ tailwind.config = {
           <div class="mb-9">
             <div class="flex items-center gap-3 mb-5">
               <div class="form-sec-badge">H</div>
-              <div><h3 class="font-serif text-2xl text-wine leading-tight">Profile Photo</h3>
-              <p class="text-xs tracking-widest text-amber2">OPTIONAL</p></div>
+              <div>
+                <h3 class="font-serif text-2xl text-wine leading-tight">Profile Photo</h3>
+                <p class="text-xs tracking-widest text-amber2">OPTIONAL</p>
+              </div>
             </div>
             <div class="gold-line mb-6"></div>
-            <label for="photo" class="block cursor-pointer rounded-2xl border-2 border-dashed border-gold/50 bg-white/60 hover:bg-white transition p-7 text-center">
-              <svg viewBox="0 0 24 24" class="w-9 h-9 mx-auto mb-3 text-burg" fill="none" stroke="currentColor" stroke-width="1.5">
-                <rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.4"/><path d="M8.5 6l1.3-2h4.4L15.5 6"/></svg>
+
+            <!-- Upload Guidelines Card -->
+            <div class="mb-4 p-4 rounded-xl bg-white/70 border border-gold/30 text-sm">
+              <div class="flex items-center gap-2 mb-1 text-wine font-semibold">
+                <svg class="w-4 h-4 text-burg flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Profile Photo — Maximum file size: 1 MB</span>
+              </div>
+              <p class="text-wine/80 leading-relaxed mb-2">
+                Please upload a photo of 1 MB or less. If your photo is larger than 1 MB, we will try to compress it automatically before uploading.
+              </p>
+              <p class="text-xs text-[#7C1D38]/70 italic">
+                Tip: Use a JPG or JPEG photo for easier compression.
+              </p>
+            </div>
+
+            <!-- Upload Dropzone -->
+            <label for="photo" class="block cursor-pointer rounded-2xl border-2 border-dashed border-gold/50 bg-white/60 hover:bg-white transition p-6 text-center">
+              <svg viewBox="0 0 24 24" class="w-9 h-9 mx-auto mb-2 text-burg" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.4"/><path d="M8.5 6l1.3-2h4.4L15.5 6"/>
+              </svg>
               <span id="photoLabel" class="block text-wine font-medium">Tap to upload a photo (optional)</span>
-              <span class="block text-sm text-[#7C1D38]/65 mt-1">JPG / PNG</span>
-              <input id="photo" name="photo" type="file" accept="image/*" class="hidden">
+              <span id="photoSubtext" class="block text-xs text-[#7C1D38]/65 mt-1">Supports JPG / PNG • Max 1 MB</span>
+              <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/jpg" class="hidden">
             </label>
+
+            <!-- Compression Status / Error Area -->
+            <div id="photoStatus" class="hidden mt-3 text-sm px-4 py-2.5 rounded-xl transition-all"></div>
+
             <p class="mt-3 text-sm text-[#7C1D38]/80 bg-blush/30 border border-gold/25 rounded-xl px-4 py-3">
               📌 You may also share a photograph privately on WhatsApp after registration.
             </p>
@@ -807,11 +1075,18 @@ tailwind.config = {
         <div><h3 class="font-serif text-2xl text-wine mb-1">Suitable Profile Suggestions</h3>
         <p class="text-[#4A1622]/75">Thoughtful shortlisting based on your stated preferences and background.</p></div>
       </div>
-      <div class="reveal rounded-[22px] p-7 text-center flex flex-col justify-center items-center" style="background:linear-gradient(160deg,#5B1226,#8A2340)">
-        <p class="font-arab text-gold-pale text-lg mb-3">وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا</p>
-        <div class="gold-line w-24 my-2"></div>
-        <p class="text-cream/75 text-sm leading-relaxed">"And among His signs is that He created for you mates from among yourselves…"</p>
-        <p class="text-gold-light text-xs tracking-[.25em] mt-3">SURAH AR-RUM • 30:21</p>
+      <!-- Quranic Verse Rotation Card (Card 6 in Why Choose Us) -->
+      <div id="quranQuoteCard" class="reveal rounded-[22px] p-5 sm:p-6 text-center flex flex-col justify-between items-center relative overflow-hidden h-[320px] shadow-sm border border-gold/25" style="background:linear-gradient(160deg,#5B1226,#8A2340)">
+        <div id="quranVerseContent" class="w-full flex-1 flex flex-col overflow-y-auto quran-card-scroll pr-1 transition-opacity duration-700 ease-in-out">
+          <div class="my-auto w-full flex flex-col items-center py-1">
+            <p id="quranArabicText" class="font-arab text-gold-pale text-[16px] sm:text-[17px] leading-relaxed mb-2 text-center w-full" dir="rtl">وَمِنْ ءَايَـٰتِهِۦٓ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَٰجًا لِّتَسْكُنُوٓا۟ إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً ۚ إِنَّ فِى ذَٰلِكَ لَـَٔايَـٰتٍ لِّقَوْمٍ يَتَفَكَّرُونَ</p>
+            <div class="gold-line w-16 my-2 flex-shrink-0"></div>
+            <p id="quranEnglishText" class="text-cream/80 text-[12px] sm:text-[12.5px] leading-relaxed max-w-sm text-center font-normal">“And of His signs is that He created for you from yourselves mates that you may find tranquility in them; and He placed between you affection and mercy. Indeed in that are signs for a people who give thought.”</p>
+          </div>
+        </div>
+        <div class="w-full pt-2.5 mt-1 border-t border-gold/15 flex-shrink-0">
+          <p id="quranRefText" class="text-gold-light text-[10px] sm:text-[11px] tracking-[.22em] uppercase font-semibold text-center">SURAH AR-RUM • 30:21</p>
+        </div>
       </div>
     </div>
   </div>
@@ -900,9 +1175,221 @@ tailwind.config = {
       Candidate profiles, photographs and personal contact information are kept strictly private and are not displayed publicly on this website.
     </p>
     <p class="mt-6 text-cream/30 text-xs">© <span id="yr"></span> Noor-E-Nikah Rishta Services. All rights reserved.</p>
+    <p class="mt-3 text-cream/40 text-xs">
+      <button type="button" onclick="openDevModal()" class="inline-flex items-center gap-1.5 hover:text-gold-light transition group cursor-pointer focus:outline-none" aria-label="About Developer - AI MetaWorld">
+        <span>Developed by</span>
+        <span class="text-gold-light font-medium group-hover:underline">AI MetaWorld</span>
+        <span class="text-[10px] text-gold-light/70 group-hover:translate-x-0.5 transition-transform">↗</span>
+      </button>
+    </p>
   </div>
 </footer>
 
+
+<!-- ============ ABOUT DEVELOPER MODAL ============ -->
+<div id="devModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="devModalTitle">
+  <!-- Backdrop -->
+  <div id="devModalBackdrop" class="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-300"></div>
+
+  <!-- Modal Container -->
+  <div id="devModalCard" class="dev-modal-card relative z-10 w-full max-w-[490px] rounded-[24px] sm:rounded-[28px] border border-[#3E3222] bg-[#0E0E12] p-5 sm:p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_-10px_rgba(201,162,39,0.18)] text-white animate-modal-in flex flex-col justify-between">
+    
+    <!-- Top Header: Badge, Available Pill, Close Button -->
+    <div class="dev-header flex items-center justify-between gap-2 mb-3 sm:mb-3.5">
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1C1811] border border-[#534327] text-[#D8B467] text-[10.5px] sm:text-[11.5px] font-semibold tracking-wider uppercase shadow-inner">
+          <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-[#D8B467]" aria-hidden="true">
+            <path d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z"/>
+          </svg>
+          <span>ABOUT DEVELOPER</span>
+        </div>
+        <!-- Available Pill -->
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#071D12] border border-[#144A2F] text-emerald-400 text-[10.5px] sm:text-[11.5px] font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Available</span>
+        </div>
+      </div>
+
+      <!-- Close (X) Button -->
+      <button type="button" onclick="closeDevModal()" class="w-8 h-8 rounded-full bg-[#1A1A22] border border-white/10 hover:border-gold/40 text-gray-400 hover:text-white flex items-center justify-center transition shadow-sm cursor-pointer shrink-0" aria-label="Close modal">
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Developer Avatar / Logo -->
+    <div class="flex flex-col items-center text-center">
+      <div class="dev-logo-wrap relative rounded-full p-[2.5px] bg-gradient-to-tr from-[#9B783E] via-[#F3D794] to-[#6E5025] shadow-[0_0_24px_rgba(218,165,32,0.32)] mb-2 sm:mb-2.5 shrink-0" style="width: 4.75rem; height: 4.75rem;">
+        <div class="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center">
+          <img src="/assets/ai-metaworld-logo.png" alt="AI MetaWorld Logo" class="w-full h-full object-cover">
+        </div>
+      </div>
+
+      <!-- Developer Name & Designation -->
+      <h3 id="devModalTitle" class="dev-name text-xl sm:text-2xl font-bold tracking-tight text-[#F7F2E4] font-sans leading-tight">Sohel Shaikh</h3>
+      <p class="dev-role text-xs sm:text-[13px] font-medium text-[#C5A358] tracking-wide mt-0.5">Founder of AI MetaWorld</p>
+
+      <!-- Introduction Quote -->
+      <p class="dev-intro text-xs sm:text-[12.5px] text-gray-300/90 leading-snug sm:leading-relaxed italic max-w-sm mx-auto mt-1.5 sm:mt-2 px-1">
+        “I build premium AI-powered digital experiences, modern websites, and creative solutions that help brands grow and stand out.”
+      </p>
+    </div>
+
+    <!-- Achievement Cards (4 in a row) -->
+    <div class="dev-cards-grid grid grid-cols-4 gap-2 sm:gap-2.5 my-3 sm:my-3.5">
+      <!-- Card 1 -->
+      <div class="dev-stat-card bg-[#141419] border border-[#2B2318] rounded-xl py-2 px-1.5 sm:py-2.5 sm:px-2 text-center flex flex-col items-center justify-center hover:border-[#6B532C] hover:bg-[#181820] transition">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-[#D8B467] mb-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+        <div class="dev-stat-num text-[13px] sm:text-[15px] font-bold text-white leading-tight">15+</div>
+        <div class="dev-stat-lbl text-[8.5px] sm:text-[9.5px] text-gray-400 leading-tight mt-0.5">Projects Completed</div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="dev-stat-card bg-[#141419] border border-[#2B2318] rounded-xl py-2 px-1.5 sm:py-2.5 sm:px-2 text-center flex flex-col items-center justify-center hover:border-[#6B532C] hover:bg-[#181820] transition">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-[#D8B467] mb-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <div class="dev-stat-num text-[13px] sm:text-[15px] font-bold text-white leading-tight">8+</div>
+        <div class="dev-stat-lbl text-[8.5px] sm:text-[9.5px] text-gray-400 leading-tight mt-0.5">Happy Clients</div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="dev-stat-card bg-[#141419] border border-[#2B2318] rounded-xl py-2 px-1.5 sm:py-2.5 sm:px-2 text-center flex flex-col items-center justify-center hover:border-[#6B532C] hover:bg-[#181820] transition">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-[#D8B467] mb-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <div class="dev-stat-num text-[13px] sm:text-[15px] font-bold text-white leading-tight">24/7</div>
+        <div class="dev-stat-lbl text-[8.5px] sm:text-[9.5px] text-gray-400 leading-tight mt-0.5">Support Available</div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="dev-stat-card bg-[#141419] border border-[#2B2318] rounded-xl py-2 px-1.5 sm:py-2.5 sm:px-2 text-center flex flex-col items-center justify-center hover:border-[#6B532C] hover:bg-[#181820] transition">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-[#D8B467] mb-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="6"/>
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+        </svg>
+        <div class="dev-stat-num text-[13px] sm:text-[15px] font-bold text-white leading-tight">100%</div>
+        <div class="dev-stat-lbl text-[8.5px] sm:text-[9.5px] text-gray-400 leading-tight mt-0.5">Client Satisfaction</div>
+      </div>
+    </div>
+
+    <!-- Core Expertise Section -->
+    <div class="dev-expertise-box bg-[#131318]/90 border border-[#2B2318] rounded-xl sm:rounded-2xl p-3 sm:p-3.5 mb-3 sm:mb-3.5">
+      <div class="dev-expertise-title flex items-center gap-1.5 text-[10.5px] sm:text-[11.5px] font-bold tracking-widest text-[#C5A358] uppercase mb-2 font-mono">
+        <span>&lt;/&gt;</span>
+        <span>CORE EXPERTISE</span>
+      </div>
+      <div class="flex flex-wrap gap-1.5 sm:gap-2">
+        <span class="dev-tag px-2.5 py-1 rounded-md sm:rounded-lg bg-[#1B1B22] border border-[#342C21] text-[#E0D8C8] text-[10.5px] sm:text-[11.5px] font-medium hover:border-[#C5A358] hover:text-white transition">Web Development</span>
+        <span class="dev-tag px-2.5 py-1 rounded-md sm:rounded-lg bg-[#1B1B22] border border-[#342C21] text-[#E0D8C8] text-[10.5px] sm:text-[11.5px] font-medium hover:border-[#C5A358] hover:text-white transition">AI Solutions</span>
+        <span class="dev-tag px-2.5 py-1 rounded-md sm:rounded-lg bg-[#1B1B22] border border-[#342C21] text-[#E0D8C8] text-[10.5px] sm:text-[11.5px] font-medium hover:border-[#C5A358] hover:text-white transition">UI/UX Design</span>
+        <span class="dev-tag px-2.5 py-1 rounded-md sm:rounded-lg bg-[#1B1B22] border border-[#342C21] text-[#E0D8C8] text-[10.5px] sm:text-[11.5px] font-medium hover:border-[#C5A358] hover:text-white transition">Branding</span>
+        <span class="dev-tag px-2.5 py-1 rounded-md sm:rounded-lg bg-[#1B1B22] border border-[#342C21] text-[#E0D8C8] text-[10.5px] sm:text-[11.5px] font-medium hover:border-[#C5A358] hover:text-white transition">Power BI Dashboards</span>
+        <span class="dev-tag px-2.5 py-1 rounded-md sm:rounded-lg bg-[#1B1B22] border border-[#342C21] text-[#E0D8C8] text-[10.5px] sm:text-[11.5px] font-medium hover:border-[#C5A358] hover:text-white transition">React &amp; Supabase</span>
+      </div>
+    </div>
+
+    <!-- Social Media Section -->
+    <div class="dev-social-wrap text-center my-2 sm:my-3">
+      <div class="dev-social-title text-[9.5px] sm:text-[10.5px] font-bold tracking-[0.18em] text-[#8E8675] uppercase mb-2 sm:mb-2.5">
+        CONNECT WITH DEVELOPER
+      </div>
+      
+      <!-- 8 Authentic Social Icons Row -->
+      <div class="flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap">
+        <!-- 1. Website (Globe) -->
+        <a href="https://ai-metaworld.vercel.app/" target="_blank" rel="noopener noreferrer" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#1A1813] border border-[#C5A358]/40 hover:border-[#F4E3BC] hover:bg-[#252016] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="Developer Website" title="Website">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="#E5C178" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </a>
+
+        <!-- 2. GitHub -->
+        <a href="https://github.com/Sohel-shaikh-dev" target="_blank" rel="noopener noreferrer" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#18181F] border border-white/20 hover:border-white/50 hover:bg-[#242430] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="GitHub Profile" title="GitHub">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="#FFFFFF">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+        </a>
+
+        <!-- 3. LinkedIn -->
+        <a href="https://www.linkedin.com/in/sohel-shaikhh/" target="_blank" rel="noopener noreferrer" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#0A66C2] border border-[#0A66C2] hover:bg-[#084e96] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="LinkedIn Profile" title="LinkedIn">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="#FFFFFF">
+            <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+          </svg>
+        </a>
+
+        <!-- 4. Instagram -->
+        <a href="https://www.instagram.com/ai_metaworld/" target="_blank" rel="noopener noreferrer" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#1E1420] border border-[#DD2A7B]/40 hover:border-[#DD2A7B] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="Instagram Profile" title="Instagram">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5">
+            <defs>
+              <linearGradient id="instaGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#FFD600"/>
+                <stop offset="25%" stop-color="#FF0069"/>
+                <stop offset="50%" stop-color="#D300C5"/>
+                <stop offset="75%" stop-color="#7638FA"/>
+                <stop offset="100%" stop-color="#4F5BD5"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="url(#instaGrad)" stroke-width="2"/>
+            <circle cx="12" cy="12" r="4" fill="none" stroke="url(#instaGrad)" stroke-width="2"/>
+            <circle cx="17.5" cy="6.5" r="1.2" fill="url(#instaGrad)"/>
+          </svg>
+        </a>
+
+        <!-- 5. YouTube -->
+        <a href="https://www.youtube.com/@Aimetaworld" target="_blank" rel="noopener noreferrer" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#FF0000] border border-[#FF0000] hover:bg-[#D90000] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="YouTube Channel" title="YouTube">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="#FFFFFF">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+        </a>
+
+        <!-- 6. Facebook -->
+        <a href="https://www.facebook.com/share/1asBpmQEbw/" target="_blank" rel="noopener noreferrer" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#1877F2] border border-[#1877F2] hover:bg-[#1465cf] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="Facebook Page" title="Facebook">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="#FFFFFF">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+        </a>
+
+        <!-- 7. Threads -->
+        <a href="https://www.threads.com/@ai_metaworld" target="_blank" rel="noopener noreferrer" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#1C1C24] border border-white/20 hover:border-white/50 hover:bg-[#252530] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="Threads Profile" title="Threads">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="#FFFFFF">
+            <path d="M12.186 24h-.007c-3.581-.024-6.334-1.214-8.182-3.535C2.26 18.23 1.5 15.34 1.5 11.9 1.5 8.528 2.27 5.67 3.8 3.447 5.65 1.18 8.448.016 12.13.016c3.705 0 6.495 1.157 8.293 3.438 1.785 2.264 2.077 5.258 2.077 8.446 0 .54-.438.978-.978.978-.54 0-.978-.438-.978-.978 0-2.883-.245-5.46-1.62-7.208-1.536-1.948-3.957-2.72-6.794-2.72-3.14 0-5.495.962-7.001 2.86-1.393 1.756-2.073 4.29-2.073 7.068 0 3.012.64 5.516 1.854 7.24 1.488 2.113 3.834 2.923 6.976 2.943 2.502.016 4.707-.723 6.05-2.022.38-.368.995-.35 1.363.03.368.38.35.995-.03 1.363-1.666 1.61-4.238 2.52-7.076 2.5zM12.04 18.988c-2.45 0-4.484-.798-5.727-2.247-1.127-1.314-1.63-3.08-1.455-5.105.34-3.918 3.473-6.666 7.234-6.666 2.203 0 4.09.835 5.176 2.292 1.05 1.408 1.344 3.328.85 5.55-.428 1.93-1.677 3.45-3.427 4.17-.79.324-1.66.49-2.58.49l-.071.516zm.052-1.956c1.64 0 3.076-.81 3.748-2.114.502-.976.544-2.176.118-3.38-.415-1.173-1.392-1.943-2.612-1.943-2.61 0-4.78 1.92-5.02 4.678-.12 1.385.22 2.59.98 3.478.85.992 1.83 1.28 2.786 1.28z"/>
+          </svg>
+        </a>
+
+        <!-- 8. Email -->
+        <a href="mailto:aimetaworldd@gmail.com" class="dev-social-btn w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-[#1A1813] border border-[#C5A358]/40 hover:border-[#F4E3BC] hover:bg-[#252016] hover:scale-105 flex items-center justify-center transition shadow-sm" aria-label="Email Developer" title="Email">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="#E5C178" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Call-to-Action Button -->
+    <a href="https://ai-metaworld.vercel.app/" target="_blank" rel="noopener noreferrer" class="dev-cta-btn w-full py-3 sm:py-3.5 px-6 rounded-xl sm:rounded-2xl font-bold tracking-wider text-xs sm:text-[13px] uppercase text-[#150F02] bg-gradient-to-r from-[#ECC880] via-[#D8AA4E] to-[#B88326] shadow-[0_10px_25px_-5px_rgba(216,170,78,0.35)] hover:shadow-[0_15px_30px_-5px_rgba(216,170,78,0.5)] hover:brightness-110 active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-2 mt-2.5 sm:mt-3 shrink-0">
+      <span>LET'S BUILD SOMETHING AMAZING</span>
+      <span class="text-sm sm:text-base font-bold">↗</span>
+    </a>
+
+    <!-- Bottom Brand Watermark -->
+    <div class="dev-credit text-center text-[9.5px] sm:text-[10.5px] text-[#6E624E] tracking-wider mt-2 sm:mt-2.5 shrink-0">
+      AI MetaWorld • Premium Websites • AI Solutions
+    </div>
+  </div>
+</div>
 <!-- ============ FLOATING WHATSAPP ============ -->
 <a href="https://wa.me/919594388960?text=Assalamu%20Alaikum%2C%20I%20came%20across%20Noor-E-Nikah%20Rishta%20Services%20and%20would%20like%20to%20know%20more%20about%20your%20matchmaking%20services%20and%20the%20registration%20process.%20Please%20guide%20me%20regarding%20the%20suitable%20rishta%20options.%20JazakAllah%20Khair." target="_blank"
    class="fab group flex items-center gap-3 pl-4 pr-5 py-3.5 rounded-full text-white font-medium shadow-2xl fab-pulse"
@@ -916,22 +1403,158 @@ tailwind.config = {
 /* ---------- year ---------- */
 document.getElementById('yr').textContent = new Date().getFullYear();
 
-/* ---------- nav ---------- */
+/* ---------- unified scroll lock & mobile menu controller ---------- */
 const navbar = document.getElementById('navbar');
-const onScroll = () => navbar.classList.toggle('scrolled', window.scrollY > 40);
-onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
-
 const burger = document.getElementById('burger');
 const menu = document.getElementById('mobileMenu');
-let open = false;
-burger.addEventListener('click', () => {
-  open = !open;
-  menu.style.maxHeight = open ? menu.scrollHeight + 'px' : '0px';
-  navbar.classList.toggle('scrolled', open || window.scrollY > 40);
+const mobileMenuBackdrop = document.getElementById('mobileMenuBackdrop');
+
+let isMobileMenuOpen = false;
+let isBodyScrollLocked = false;
+let lockedScrollY = 0;
+
+function lockBodyScroll() {
+  if (isBodyScrollLocked) return;
+  lockedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${lockedScrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
+  isBodyScrollLocked = true;
+}
+
+function unlockBodyScroll(restorePosition = true) {
+  if (!isBodyScrollLocked) return;
+  const targetY = lockedScrollY;
+
+  // Temporarily disable smooth scrolling on html so restoration is instant
+  const root = document.documentElement;
+  const prevBehavior = root.style.scrollBehavior;
+  root.style.scrollBehavior = 'auto';
+
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  root.style.overflow = '';
+  isBodyScrollLocked = false;
+
+  if (restorePosition) {
+    window.scrollTo(0, targetY);
+  }
+
+  requestAnimationFrame(() => {
+    root.style.scrollBehavior = prevBehavior;
+  });
+}
+
+const onScroll = () => {
+  if (!isBodyScrollLocked) {
+    navbar.classList.toggle('scrolled', window.scrollY > 40);
+  }
+};
+onScroll();
+window.addEventListener('scroll', onScroll, { passive: true });
+
+function openMobileMenu() {
+  if (isMobileMenuOpen) return;
+  isMobileMenuOpen = true;
+  lockBodyScroll();
+
+  if (mobileMenuBackdrop) {
+    mobileMenuBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+    mobileMenuBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+  }
+
+  // Allow internal menu scrolling on short viewports
+  menu.style.maxHeight = `${menu.scrollHeight + 10}px`;
+  menu.style.overflowY = 'auto';
+
+  navbar.classList.add('scrolled');
+  if (burger) {
+    burger.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function closeMobileMenu(restorePosition = true, keepBodyLocked = false) {
+  if (!isMobileMenuOpen) return;
+  isMobileMenuOpen = false;
+
+  menu.style.maxHeight = '0px';
+  menu.style.overflowY = 'hidden';
+
+  if (mobileMenuBackdrop) {
+    mobileMenuBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+    mobileMenuBackdrop.classList.add('opacity-0', 'pointer-events-none');
+  }
+
+  if (burger) {
+    burger.setAttribute('aria-expanded', 'false');
+  }
+
+  navbar.classList.toggle('scrolled', lockedScrollY > 40);
+
+  if (!keepBodyLocked) {
+    unlockBodyScroll(restorePosition);
+  }
+}
+
+function toggleMobileMenu() {
+  if (isMobileMenuOpen) {
+    closeMobileMenu(true);
+  } else {
+    openMobileMenu();
+  }
+}
+
+if (burger) {
+  burger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMobileMenu();
+  });
+}
+
+if (mobileMenuBackdrop) {
+  mobileMenuBackdrop.addEventListener('click', () => {
+    closeMobileMenu(true);
+  });
+  mobileMenuBackdrop.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+  }, { passive: false });
+}
+
+// Navigation links inside mobile menu
+if (menu) {
+  menu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const href = a.getAttribute('href');
+      if (href && href.startsWith('#')) {
+        e.preventDefault();
+        closeMobileMenu(false); // unlock without snapping back to lockedScrollY
+        const targetEl = document.querySelector(href);
+        if (targetEl) {
+          setTimeout(() => {
+            targetEl.scrollIntoView({ behavior: 'smooth' });
+          }, 60);
+        }
+      } else {
+        closeMobileMenu(true);
+      }
+    });
+  });
+}
+
+// Auto-close when resized to desktop breakpoint
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 1024 && isMobileMenuOpen) {
+    closeMobileMenu(true);
+  }
 });
-menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-  open = false; menu.style.maxHeight = '0px';
-}));
 
 /* ---------- reveal ---------- */
 const io = new IntersectionObserver((entries) => {
@@ -1013,17 +1636,541 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
       r.addEventListener('change', checkEligibility);
   });
 
+  /* ---------- format bytes helper ---------- */
+  function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  /* ---------- client-side image compression ---------- */
+  async function compressImageTo1MB(file) {
+    if (file.size <= 1024 * 1024) {
+      return { file, originalSize: file.size, finalSize: file.size, compressed: false };
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read image file."));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Unsupported or corrupted image format."));
+        img.onload = async () => {
+          try {
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 1600; // retain sharp portrait clarity
+
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Step down JPEG quality until under 1 MB
+            let quality = 0.85;
+            let blob = null;
+
+            while (quality >= 0.4) {
+              blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+              if (blob && blob.size <= 1024 * 1024) {
+                break;
+              }
+              quality -= 0.15;
+            }
+
+            // If still > 1MB, scale down further to 1200px
+            if (!blob || blob.size > 1024 * 1024) {
+              const canvas2 = document.createElement('canvas');
+              canvas2.width = Math.round(width * 0.75);
+              canvas2.height = Math.round(height * 0.75);
+              const ctx2 = canvas2.getContext('2d');
+              ctx2.drawImage(img, 0, 0, canvas2.width, canvas2.height);
+              blob = await new Promise(res => canvas2.toBlob(res, 'image/jpeg', 0.7));
+            }
+
+            if (blob && blob.size <= 1024 * 1024) {
+              const baseName = file.name.replace(/\.[^/.]+$/, "");
+              const compressedFile = new File([blob], baseName + ".jpg", { type: 'image/jpeg' });
+              resolve({
+                file: compressedFile,
+                originalSize: file.size,
+                finalSize: blob.size,
+                compressed: true
+              });
+            } else {
+              reject(new Error("Your photo is larger than 1 MB and could not be compressed automatically. Please choose a smaller photo or compress it and try again."));
+            }
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- Custom Height Combobox & Suggestions ---------- */
+  function validateHeight(inputVal) {
+    if (!inputVal) return { valid: true, value: '' };
+    const raw = String(inputVal).trim();
+    if (!raw) return { valid: true, value: '' };
+
+    // 1. Feet & Inches formats
+    // Handles: 5 ft 6 in, 5ft 6in, 5ft6in, 5 ft 6, 5'6", 5'6, 5' 6", 5 ft, 6 ft 0 in, 5 6, etc.
+    const ftInRegex = /^(\d)\s*(?:ft|feet|'|foot)?(?:\s*(\d{1,2}(?:\.\d+)?)\s*(?:in|inches|inch|")?)?$/i;
+    const hasFtMarker = raw.toLowerCase().includes('ft') || raw.toLowerCase().includes('feet') || 
+                        raw.toLowerCase().includes('foot') || raw.includes("'") || 
+                        raw.toLowerCase().includes('in') || raw.includes('"');
+
+    if (hasFtMarker || /^\d\s+\d{1,2}(?:\.\d+)?$/.test(raw) || /^\d\s*'\s*\d{1,2}(?:\.\d+)?"?$/.test(raw)) {
+      const match = raw.match(ftInRegex);
+      if (match) {
+        const ft = parseInt(match[1], 10);
+        const inch = match[2] !== undefined ? parseFloat(match[2]) : 0;
+        if (ft < 3 || ft > 7 || (ft === 7 && inch > 6)) {
+          return { valid: false, error: 'Please enter a realistic height between 3 ft and 7 ft 6 in.' };
+        }
+        if (inch < 0 || inch > 11.9) {
+          return { valid: false, error: 'Inches must be between 0 and 11 (e.g. 5 ft 6 in).' };
+        }
+        return { valid: true, value: raw };
+      }
+    }
+
+    // 2. Centimetre formats: e.g. "168 cm", "168cm", "168 cms", "168"
+    const cmRegex = /^(\d{2,3}(?:\.\d+)?)\s*(?:cm|cms)?$/i;
+    const matchCm = raw.match(cmRegex);
+    if (matchCm) {
+      const cm = parseFloat(matchCm[1]);
+      if (cm < 90 || cm > 240) {
+        return { valid: false, error: 'Please enter a realistic height between 90 cm and 240 cm.' };
+      }
+      return { valid: true, value: raw };
+    }
+
+    return { 
+      valid: false, 
+      error: 'Please enter height in a valid format, such as "5 ft 6 in" or "168 cm".' 
+    };
+  }
+
+  const heightInput = document.getElementById('height');
+  const heightDropdown = document.getElementById('heightDropdown');
+  const heightOptionList = document.getElementById('heightOptionList');
+  const heightChevron = document.getElementById('heightChevron');
+  const heightToggleBtn = document.getElementById('heightToggleBtn');
+  const heightCloseBtn = document.getElementById('heightCloseBtn');
+  const heightContainer = document.getElementById('heightContainer');
+  const heightFilterTabs = document.querySelectorAll('.height-filter-tab');
+
+  let activeHeightFilter = 'all';
+  let highlightedHeightIndex = -1;
+
+  const HEIGHT_SUGGESTIONS = [
+    // Feet & Inches
+    { type: 'ft', value: '4 ft 10 in', sub: '~147 cm' },
+    { type: 'ft', value: '4 ft 11 in', sub: '~150 cm' },
+    { type: 'ft', value: '5 ft 0 in',  sub: '~152 cm' },
+    { type: 'ft', value: '5 ft 1 in',  sub: '~155 cm' },
+    { type: 'ft', value: '5 ft 2 in',  sub: '~157 cm' },
+    { type: 'ft', value: '5 ft 3 in',  sub: '~160 cm' },
+    { type: 'ft', value: '5 ft 4 in',  sub: '~163 cm' },
+    { type: 'ft', value: '5 ft 5 in',  sub: '~165 cm' },
+    { type: 'ft', value: '5 ft 6 in',  sub: '~168 cm' },
+    { type: 'ft', value: '5 ft 7 in',  sub: '~170 cm' },
+    { type: 'ft', value: '5 ft 8 in',  sub: '~173 cm' },
+    { type: 'ft', value: '5 ft 9 in',  sub: '~175 cm' },
+    { type: 'ft', value: '5 ft 10 in', sub: '~178 cm' },
+    { type: 'ft', value: '5 ft 11 in', sub: '~180 cm' },
+    { type: 'ft', value: '6 ft 0 in',  sub: '~183 cm' },
+    { type: 'ft', value: '6 ft 1 in',  sub: '~185 cm' },
+    { type: 'ft', value: '6 ft 2 in',  sub: '~188 cm' },
+    // Centimetres
+    { type: 'cm', value: '150 cm', sub: '~4 ft 11 in' },
+    { type: 'cm', value: '152 cm', sub: '~5 ft 0 in' },
+    { type: 'cm', value: '155 cm', sub: '~5 ft 1 in' },
+    { type: 'cm', value: '157 cm', sub: '~5 ft 2 in' },
+    { type: 'cm', value: '160 cm', sub: '~5 ft 3 in' },
+    { type: 'cm', value: '163 cm', sub: '~5 ft 4 in' },
+    { type: 'cm', value: '165 cm', sub: '~5 ft 5 in' },
+    { type: 'cm', value: '168 cm', sub: '~5 ft 6 in' },
+    { type: 'cm', value: '170 cm', sub: '~5 ft 7 in' },
+    { type: 'cm', value: '173 cm', sub: '~5 ft 8 in' },
+    { type: 'cm', value: '175 cm', sub: '~5 ft 9 in' },
+    { type: 'cm', value: '178 cm', sub: '~5 ft 10 in' },
+    { type: 'cm', value: '180 cm', sub: '~5 ft 11 in' },
+    { type: 'cm', value: '183 cm', sub: '~6 ft 0 in' },
+    { type: 'cm', value: '185 cm', sub: '~6 ft 1 in' },
+    { type: 'cm', value: '188 cm', sub: '~6 ft 2 in' }
+  ];
+
+  function getFilteredHeightSuggestions() {
+    const rawQuery = (heightInput?.value || '').trim().toLowerCase();
+    const cleanQuery = rawQuery.replace(/[\s\-_'".]/g, '');
+
+    return HEIGHT_SUGGESTIONS.filter(item => {
+      if (activeHeightFilter !== 'all' && item.type !== activeHeightFilter) {
+        return false;
+      }
+      if (!cleanQuery) return true;
+      const cleanVal = item.value.toLowerCase().replace(/[\s\-_'".]/g, '');
+      const cleanSub = item.sub.toLowerCase().replace(/[\s\-_'".~]/g, '');
+      return cleanVal.includes(cleanQuery) || cleanSub.includes(cleanQuery);
+    });
+  }
+
+  function renderHeightSuggestions() {
+    if (!heightOptionList) return;
+    const items = getFilteredHeightSuggestions();
+    const query = (heightInput?.value || '').trim();
+
+    if (items.length === 0) {
+      const escapedQuery = query
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+      heightOptionList.innerHTML = `
+        <div class="px-4 py-3 text-center text-xs text-wine/80">
+          <div class="font-medium text-wine mb-1">Custom Height: "${escapedQuery}"</div>
+          <div class="text-[11px] text-wine/60">No direct suggestions. Your custom height will be preserved and accepted.</div>
+        </div>
+      `;
+      highlightedHeightIndex = -1;
+      return;
+    }
+
+    const currentVal = query.toLowerCase();
+    heightOptionList.innerHTML = items.map((item, idx) => {
+      const isSelected = currentVal === item.value.toLowerCase();
+      const isHighlighted = idx === highlightedHeightIndex;
+      let activeClasses = 'text-[#3B1119] hover:bg-wine/10 hover:text-wine';
+      if (isSelected) {
+        activeClasses = 'bg-wine/15 text-wine font-semibold';
+      } else if (isHighlighted) {
+        activeClasses = 'bg-wine/10 text-wine';
+      }
+
+      return `
+        <div 
+          class="height-option px-3.5 py-2.5 cursor-pointer text-sm flex items-center justify-between transition-colors ${activeClasses}"
+          data-value="${item.value}"
+          data-index="${idx}"
+          role="option"
+          aria-selected="${isSelected}"
+        >
+          <span class="font-medium">${item.value}</span>
+          <span class="text-[11px] text-wine/50">${item.sub}</span>
+        </div>
+      `;
+    }).join('');
+
+    if (highlightedHeightIndex >= 0) {
+      const activeEl = heightOptionList.querySelector(`[data-index="${highlightedHeightIndex}"]`);
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }
+
+  function openHeightDropdown() {
+    if (!heightDropdown) return;
+    highlightedHeightIndex = -1;
+    renderHeightSuggestions();
+    heightDropdown.classList.remove('hidden');
+    heightInput?.setAttribute('aria-expanded', 'true');
+    if (heightChevron) {
+      heightChevron.classList.add('rotate-180');
+    }
+  }
+
+  function closeHeightDropdown() {
+    if (!heightDropdown) return;
+    heightDropdown.classList.add('hidden');
+    heightInput?.setAttribute('aria-expanded', 'false');
+    if (heightChevron) {
+      heightChevron.classList.remove('rotate-180');
+    }
+    highlightedHeightIndex = -1;
+  }
+
+  function toggleHeightDropdown() {
+    if (heightDropdown?.classList.contains('hidden')) {
+      openHeightDropdown();
+      heightInput?.focus();
+    } else {
+      closeHeightDropdown();
+    }
+  }
+
+  if (heightInput) {
+    heightInput.addEventListener('focus', openHeightDropdown);
+    heightInput.addEventListener('click', openHeightDropdown);
+    heightInput.addEventListener('input', () => {
+      openHeightDropdown();
+      heightInput.style.borderColor = '';
+    });
+    heightInput.addEventListener('keydown', (e) => {
+      const isOpen = heightDropdown && !heightDropdown.classList.contains('hidden');
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (!isOpen) {
+          openHeightDropdown();
+          return;
+        }
+        const items = getFilteredHeightSuggestions();
+        if (items.length > 0) {
+          highlightedHeightIndex = (highlightedHeightIndex + 1) % items.length;
+          renderHeightSuggestions();
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!isOpen) {
+          openHeightDropdown();
+          return;
+        }
+        const items = getFilteredHeightSuggestions();
+        if (items.length > 0) {
+          highlightedHeightIndex = (highlightedHeightIndex - 1 + items.length) % items.length;
+          renderHeightSuggestions();
+        }
+      } else if (e.key === 'Enter') {
+        if (isOpen) {
+          e.preventDefault();
+          const items = getFilteredHeightSuggestions();
+          if (highlightedHeightIndex >= 0 && items[highlightedHeightIndex]) {
+            heightInput.value = items[highlightedHeightIndex].value;
+            heightInput.style.borderColor = '';
+          }
+          closeHeightDropdown();
+        }
+      } else if (e.key === 'Escape') {
+        if (isOpen) {
+          e.preventDefault();
+          closeHeightDropdown();
+        }
+      }
+    });
+  }
+
+  if (heightToggleBtn) {
+    heightToggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleHeightDropdown();
+    });
+  }
+
+  if (heightCloseBtn) {
+    heightCloseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeHeightDropdown();
+    });
+  }
+
+  if (heightFilterTabs) {
+    heightFilterTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        activeHeightFilter = tab.dataset.filter;
+        heightFilterTabs.forEach(t => {
+          if (t === tab) {
+            t.className = 'height-filter-tab px-2 py-0.5 rounded text-[10px] font-semibold transition bg-wine text-white';
+          } else {
+            t.className = 'height-filter-tab px-2 py-0.5 rounded text-[10px] font-semibold transition text-wine/70 hover:bg-wine/10';
+          }
+        });
+        highlightedHeightIndex = -1;
+        renderHeightSuggestions();
+        heightInput?.focus();
+      });
+    });
+  }
+
+  if (heightOptionList) {
+    heightOptionList.addEventListener('click', (e) => {
+      const option = e.target.closest('.height-option');
+      if (option) {
+        const val = option.dataset.value;
+        if (val) {
+          heightInput.value = val;
+          heightInput.style.borderColor = '';
+          closeHeightDropdown();
+          heightInput.dispatchEvent(new Event('input', { bubbles: true }));
+          heightInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (heightContainer && !heightContainer.contains(e.target)) {
+      closeHeightDropdown();
+    }
+  });
+
+  document.addEventListener('touchstart', (e) => {
+    if (heightContainer && !heightContainer.contains(e.target)) {
+      closeHeightDropdown();
+    }
+  }, { passive: true });
+
   /* ---------- photo label & validation ---------- */
+  let processedPhotoFile = null;
   const photo = document.getElementById('photo');
-  photo.addEventListener('change', () => {
-    document.getElementById('photoLabel').textContent = photo.files.length
-      ? '✔ ' + photo.files[0].name : 'Tap to upload a photo (optional)';
+  const photoLabel = document.getElementById('photoLabel');
+  const photoSubtext = document.getElementById('photoSubtext');
+  const photoStatus = document.getElementById('photoStatus');
+
+  photo.addEventListener('change', async () => {
+    if (!photo.files || photo.files.length === 0) {
+      processedPhotoFile = null;
+      if (photoLabel) photoLabel.textContent = 'Tap to upload a photo (optional)';
+      if (photoSubtext) photoSubtext.textContent = 'Supports JPG / PNG • Max 1 MB';
+      if (photoStatus) {
+        photoStatus.className = 'hidden';
+        photoStatus.textContent = '';
+      }
+      return;
+    }
+
+    const file = photo.files[0];
+    const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+    const validExts = ['jpg', 'jpeg', 'png'];
+
+    if (!validExts.includes(fileExt) && !file.type.startsWith('image/')) {
+      processedPhotoFile = null;
+      photo.value = '';
+      if (photoLabel) photoLabel.textContent = 'Tap to upload a photo (optional)';
+      if (photoStatus) {
+        photoStatus.className = 'mt-3 text-sm px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700';
+        photoStatus.textContent = '❌ Invalid file type. Please select a JPG or PNG photo.';
+      }
+      return;
+    }
+
+    if (file.size <= 1024 * 1024) {
+      // Photo is already <= 1 MB
+      processedPhotoFile = file;
+      if (photoLabel) photoLabel.textContent = '✔ ' + file.name;
+      if (photoSubtext) photoSubtext.textContent = `Size: ${formatBytes(file.size)} • Ready for upload`;
+      if (photoStatus) {
+        photoStatus.className = 'mt-3 text-sm px-4 py-2.5 rounded-xl bg-green-50 border border-green-200 text-green-800';
+        photoStatus.textContent = `✔ Photo selected: ${file.name} (${formatBytes(file.size)}) — Ready for upload.`;
+      }
+    } else {
+      // Photo is > 1 MB -> automatically compress
+      if (photoLabel) photoLabel.textContent = 'Compressing ' + file.name + '...';
+      if (photoStatus) {
+        photoStatus.className = 'mt-3 text-sm px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900';
+        photoStatus.textContent = `🔄 Photo is ${formatBytes(file.size)}. Compressing automatically to under 1 MB...`;
+      }
+
+      try {
+        const result = await compressImageTo1MB(file);
+        processedPhotoFile = result.file;
+        if (photoLabel) photoLabel.textContent = '✔ ' + result.file.name;
+        if (photoSubtext) photoSubtext.textContent = `Compressed: ${formatBytes(result.originalSize)} ➔ ${formatBytes(result.finalSize)}`;
+        if (photoStatus) {
+          photoStatus.className = 'mt-3 text-sm px-4 py-2.5 rounded-xl bg-green-50 border border-green-200 text-green-800';
+          photoStatus.textContent = `✔ Compressed successfully from ${formatBytes(result.originalSize)} to ${formatBytes(result.finalSize)} (under 1 MB limit) — Ready for upload.`;
+        }
+      } catch (compErr) {
+        processedPhotoFile = null;
+        photo.value = '';
+        if (photoLabel) photoLabel.textContent = 'Tap to upload a photo (optional)';
+        if (photoSubtext) photoSubtext.textContent = 'Supports JPG / PNG • Max 1 MB';
+        if (photoStatus) {
+          photoStatus.className = 'mt-3 text-sm px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700';
+          photoStatus.textContent = compErr.message || 'Your photo is larger than 1 MB and could not be compressed automatically. Please choose a smaller photo or compress it and try again.';
+        }
+      }
+    }
   });
 
 /* ---------- form ---------- */
 const STORE = 'noorEnikahSubmissions';
 const form = document.getElementById('rishtaForm');
 const errBox = document.getElementById('formError');
+
+/* ---------- dynamic about candidate text ---------- */
+const registeringForEl = document.getElementById('registeringFor');
+const aboutHeading = document.getElementById('aboutCandidateHeading');
+const aboutLabel = document.getElementById('aboutCandidateLabel');
+const aboutTextarea = document.getElementById('aboutCandidate');
+const aboutHelp = document.getElementById('aboutCandidateHelp');
+
+function updateAboutCandidateText() {
+  const val = (registeringForEl?.value || '').trim();
+  if (val === 'My Son') {
+    if (aboutHeading) aboutHeading.textContent = 'About My Son';
+    if (aboutLabel) aboutLabel.textContent = 'Please tell us briefly about your son';
+    if (aboutTextarea) aboutTextarea.placeholder = "Describe your son's personality, education, profession, values, hobbies, and nature...";
+    if (aboutHelp) aboutHelp.textContent = 'You may include his personality, religious inclination, profession, lifestyle, and what makes him special.';
+  } else if (val === 'My Daughter') {
+    if (aboutHeading) aboutHeading.textContent = 'About My Daughter';
+    if (aboutLabel) aboutLabel.textContent = 'Please tell us briefly about your daughter';
+    if (aboutTextarea) aboutTextarea.placeholder = "Describe your daughter's personality, education, profession, values, hobbies, and nature...";
+    if (aboutHelp) aboutHelp.textContent = 'You may include her personality, religious inclination, education, hobbies, and what makes her special.';
+  } else if (val === 'Myself') {
+    if (aboutHeading) aboutHeading.textContent = 'About Myself';
+    if (aboutLabel) aboutLabel.textContent = 'Please tell us briefly about yourself';
+    if (aboutTextarea) aboutTextarea.placeholder = 'Describe your personality, values, lifestyle, interests, career aspirations, and outlook on life...';
+    if (aboutHelp) aboutHelp.textContent = 'You may include your personality, values, profession, hobbies, and what kind of life partner you are seeking.';
+  } else {
+    if (aboutHeading) aboutHeading.textContent = 'About the Candidate';
+    if (aboutLabel) aboutLabel.textContent = 'Please tell us briefly about yourself / your son / daughter';
+    if (aboutTextarea) aboutTextarea.placeholder = 'Write here...';
+    if (aboutHelp) aboutHelp.textContent = 'You may include personality, education, profession, family values or any other information you feel is important.';
+  }
+}
+
+if (registeringForEl) {
+  registeringForEl.addEventListener('change', updateAboutCandidateText);
+  updateAboutCandidateText();
+}
+
+/* ---------- whatsapp same as mobile ---------- */
+const mobileEl = document.getElementById('mobile');
+const whatsappEl = document.getElementById('whatsapp');
+const sameAsMobileCb = document.getElementById('sameAsMobile');
+
+if (sameAsMobileCb && mobileEl && whatsappEl) {
+  sameAsMobileCb.addEventListener('change', () => {
+    if (sameAsMobileCb.checked) {
+      whatsappEl.value = mobileEl.value;
+      whatsappEl.readOnly = true;
+      whatsappEl.classList.add('bg-wine/5', 'cursor-not-allowed');
+    } else {
+      whatsappEl.value = '';
+      whatsappEl.readOnly = false;
+      whatsappEl.classList.remove('bg-wine/5', 'cursor-not-allowed');
+    }
+  });
+
+  mobileEl.addEventListener('input', () => {
+    if (sameAsMobileCb.checked) {
+      whatsappEl.value = mobileEl.value;
+    }
+  });
+}
   
   form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1045,8 +2192,7 @@ const errBox = document.getElementById('formError');
       if(!document.getElementById('consent').checked) missing.push('Consent confirmation');
     
       // Mobile Validation
-      const mobileEl = document.getElementById('mobile');
-      const rawMob = mobileEl.value.trim();
+      const rawMob = mobileEl ? mobileEl.value.trim() : '';
       const mobRegex = /^[6-9]\d{9}$/;
       if (!rawMob) {
           // already pushed as missing
@@ -1054,10 +2200,44 @@ const errBox = document.getElementById('formError');
           errBox.textContent = 'Please enter a valid 10-digit Indian mobile number.';
           errBox.classList.remove('hidden');
           errBox.scrollIntoView({behavior:'smooth', block:'center'});
-          mobileEl.style.borderColor = '#C9436B';
+          if (mobileEl) mobileEl.style.borderColor = '#C9436B';
           return;
       } else {
-          mobileEl.style.borderColor = '';
+          if (mobileEl) mobileEl.style.borderColor = '';
+      }
+
+      // Optional Email Address Validation
+      const emailEl = document.getElementById('emailAddress');
+      const rawEmail = (emailEl?.value || '').trim();
+      if (rawEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(rawEmail)) {
+          errBox.textContent = 'Please enter a valid email address or leave it blank.';
+          errBox.classList.remove('hidden');
+          errBox.scrollIntoView({behavior:'smooth', block:'center'});
+          emailEl.style.borderColor = '#C9436B';
+          return;
+        } else {
+          emailEl.style.borderColor = '';
+        }
+      }
+
+      // Optional Height Validation
+      const heightInput = document.getElementById('height');
+      const rawHeight = (heightInput?.value || '').trim();
+      if (rawHeight) {
+        const heightCheck = validateHeight(rawHeight);
+        if (!heightCheck.valid) {
+          errBox.textContent = heightCheck.error;
+          errBox.classList.remove('hidden');
+          errBox.scrollIntoView({behavior:'smooth', block:'center'});
+          if (heightInput) heightInput.style.borderColor = '#C9436B';
+          return;
+        } else {
+          if (heightInput) heightInput.style.borderColor = '';
+        }
+      } else {
+        if (heightInput) heightInput.style.borderColor = '';
       }
     
       if(missing.length){
@@ -1121,30 +2301,38 @@ const errBox = document.getElementById('formError');
 
     try {
         let photoUrl = null;
-        if (photo.files.length > 0) {
-            const file = photo.files[0];
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            const allowedExts = ['jpg', 'jpeg', 'png'];
-            
-            if (!allowedExts.includes(fileExt) || !file.type.startsWith('image/')) {
-                throw new Error("Invalid file type. Only JPG and PNG images are allowed.");
-            }
-            
-            if (file.size > 1 * 1024 * 1024) {
-                throw new Error("File is too large. Maximum allowed size is 1 MB.");
-            }
-            
+        const uploadFile = processedPhotoFile || (photo.files && photo.files.length > 0 ? photo.files[0] : null);
+
+        if (uploadFile) {
             submitBtn.textContent = 'UPLOADING PHOTO...';
+            const fileExt = (uploadFile.name.split('.').pop() || 'jpg').toLowerCase();
             const fileName = `profile_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
             
-            const { error: uploadError } = await isolatedSupabase.storage
-                .from('profile-photos')
-                .upload(fileName, file, { upsert: false });
-            
-            if (uploadError) throw uploadError;
-            
-            photoUrl = fileName;
-            data['Photo Attached'] = 'Yes (Uploaded)';
+            try {
+                const { error: uploadError } = await isolatedSupabase.storage
+                    .from('profile-photos')
+                    .upload(fileName, uploadFile, { upsert: false });
+                
+                if (uploadError) {
+                    uploadError.isStorage = true;
+                    throw uploadError;
+                }
+                
+                photoUrl = fileName;
+                data['Photo Attached'] = 'Yes (Uploaded)';
+            } catch (storageErr) {
+                console.error("[Storage Upload Error Diagnostics]:", {
+                    operation: 'storage_upload',
+                    bucket: 'profile-photos',
+                    message: storageErr.message || 'Storage upload failed',
+                    code: storageErr.code || storageErr.statusCode || null,
+                    details: storageErr.details || null
+                });
+                
+                // Photo is optional: do not prevent profile registration if storage bucket is unavailable
+                photoUrl = null;
+                data['Photo Attached'] = 'No (Photo share via WhatsApp pending)';
+            }
         } else {
             data['Photo Attached'] = 'No';
         }
@@ -1154,15 +2342,25 @@ const errBox = document.getElementById('formError');
         const now = new Date();
         const profileIdStr = 'NN-' + now.getFullYear() + '-' + String(Math.floor(Math.random()*10000)).padStart(4, '0');
         
+        const resolvedWhatsApp = (data['WhatsApp'] || (sameAsMobileCb?.checked ? data['Mobile'] : null));
+
+        const parseIntegerOrNull = (val) => {
+            if (val === undefined || val === null) return null;
+            const s = String(val).trim();
+            if (s === '') return null;
+            const n = parseInt(s, 10);
+            return (!isNaN(n) && n >= 0) ? n : null;
+        };
+
         const supabaseData = {
             profile_id: profileIdStr,
             registering_for: data['Registering For'] || null,
             full_name: data['Full Name'] || null,
             gender: data['Gender'] || null,
             date_of_birth: data['Date of Birth'] || null,
-            age: data['Age'] ? parseInt(data['Age']) : null,
+            age: data['Age'] ? parseInt(data['Age'], 10) : null,
             marital_status: data['Marital Status'] || null,
-            height: data['Height'] || null,
+            height: rawHeight || null,
             education: data['Education'] || null,
             occupation: data['Occupation'] || null,
             city: data['City'] || null,
@@ -1170,10 +2368,11 @@ const errBox = document.getElementById('formError');
             languages_known: data['Languages Known'] || null,
             father_occupation: data['Father Occupation'] || null,
             mother_occupation: data['Mother Occupation'] || null,
-            brothers: data['Brothers'] ? parseInt(data['Brothers']) : 0,
-            sisters: data['Sisters'] ? parseInt(data['Sisters']) : 0,
+            brothers: parseIntegerOrNull(data['Brothers']),
+            sisters: parseIntegerOrNull(data['Sisters']),
             family_location: data['Family Location'] || null,
             family_type: data['Family Type'] || null,
+            surname_biradari: data['Surname / Biradari'] || null,
             maslak: data['Maslak'] || null,
             maslak_preference: data['Maslak Preference'] || null,
             about_candidate: data['About Candidate'] || null,
@@ -1185,7 +2384,8 @@ const errBox = document.getElementById('formError');
             guardian_name: data['Guardian Name'] || null,
             relationship: data['Relationship'] || null,
             mobile: data['Mobile'] ? String(data['Mobile']).replace(/\D/g, '') : null,
-            whatsapp: data['WhatsApp'] ? String(data['WhatsApp']).replace(/\D/g, '') : null,
+            whatsapp: (resolvedWhatsApp && String(resolvedWhatsApp).replace(/\D/g, '')) ? String(resolvedWhatsApp).replace(/\D/g, '') : null,
+            email: data['Email Address'] || null,
             preferred_contact_time: data['Preferred Contact Time'] || null,
             photo_attached: data['Photo Attached'] || null,
             photo_url: photoUrl,
@@ -1193,8 +2393,22 @@ const errBox = document.getElementById('formError');
             notes: []
         };
 
-          const { error: dbError } = await isolatedSupabase.from('profiles').insert([supabaseData]);
-          if (dbError) throw dbError;
+        // Resilient insert: supports both updated schema and pre-migration fallback
+        let insertPayload = { ...supabaseData };
+        let { error: dbError } = await isolatedSupabase.from('profiles').insert([insertPayload]);
+
+        if (dbError && dbError.message && (
+            dbError.message.includes('surname_biradari') || 
+            dbError.message.includes('email')
+        )) {
+            console.warn("Database schema pending new columns. Retrying insert without unmigrated columns.", dbError);
+            delete insertPayload.surname_biradari;
+            delete insertPayload.email;
+            const retryRes = await isolatedSupabase.from('profiles').insert([insertPayload]);
+            if (retryRes.error) throw retryRes.error;
+        } else if (dbError) {
+            throw dbError;
+        }
 
         // whatsapp summary link for owner
         let msg = '*NOOR-E-NIKAH - NEW PROFILE REGISTRATION*%0A%0A';
@@ -1207,8 +2421,24 @@ const errBox = document.getElementById('formError');
         document.getElementById('formCard').scrollIntoView({behavior:'smooth', block:'center'});
 
       } catch (err) {
-          console.error("Supabase Error:", err);
-          errBox.textContent = "Unable to submit your registration right now. Please try again or contact us on WhatsApp.";
+          const safeDiagnostic = {
+              operation: err.isStorage ? 'photo_upload' : 'database_insert',
+              message: err.message || 'Unknown error',
+              code: err.code || err.statusCode || null,
+              details: err.details || null,
+              hint: err.hint || null
+          };
+          console.error("[Registration Error Diagnostics]:", safeDiagnostic);
+
+          let userMsg = "Unable to submit your registration right now. Please try again or contact us on WhatsApp.";
+          if (err.isStorage) {
+              userMsg = err.message || "Could not upload profile photo. Please try submitting without a photo or contact us on WhatsApp.";
+          } else if (err.code === '42501') {
+              userMsg = "Registration submission permission issue (RLS). Please contact us on WhatsApp.";
+          } else if (err.message && !err.message.includes('object Object')) {
+              userMsg = `Unable to submit registration (${err.message}). Please try again or contact us on WhatsApp.`;
+          }
+          errBox.textContent = userMsg;
           errBox.classList.remove('hidden');
           errBox.scrollIntoView({behavior:'smooth', block:'center'});
       } finally {
@@ -1219,7 +2449,30 @@ const errBox = document.getElementById('formError');
 
 document.getElementById('newEntry').addEventListener('click', () => {
   form.reset();
+  processedPhotoFile = null;
+  const photoStatus = document.getElementById('photoStatus');
+  if (photoStatus) {
+    photoStatus.className = 'hidden';
+    photoStatus.textContent = '';
+  }
+  if (sameAsMobileCb) sameAsMobileCb.checked = false;
+  if (whatsappEl) {
+    whatsappEl.value = '';
+    whatsappEl.readOnly = false;
+    whatsappEl.classList.remove('bg-wine/5', 'cursor-not-allowed');
+  }
+  const heightInput = document.getElementById('height');
+  if (heightInput) {
+    heightInput.value = '';
+    heightInput.style.borderColor = '';
+  }
+  if (typeof closeHeightDropdown === 'function') {
+    closeHeightDropdown();
+  }
+  updateAboutCandidateText();
   document.getElementById('photoLabel').textContent = 'Tap to upload a photo (optional)';
+  const photoSubtext = document.getElementById('photoSubtext');
+  if (photoSubtext) photoSubtext.textContent = 'Supports JPG / PNG • Max 1 MB';
   document.getElementById('successBox').classList.add('hidden');
   form.classList.remove('hidden');
   document.getElementById('formCard').scrollIntoView({behavior:'smooth', block:'start'});
@@ -1227,6 +2480,173 @@ document.getElementById('newEntry').addEventListener('click', () => {
 
 
 
+
+/* ---------- about developer modal ---------- */
+const devModal = document.getElementById('devModal');
+const devModalBackdrop = document.getElementById('devModalBackdrop');
+let lastFocusedElement = null;
+
+function openDevModal() {
+  if (!devModal) return;
+  lastFocusedElement = document.activeElement;
+
+  // If mobile menu was open, close it while keeping body scroll locked for the modal
+  if (isMobileMenuOpen) {
+    closeMobileMenu(false, true);
+  } else {
+    lockBodyScroll();
+  }
+
+  devModal.classList.remove('hidden');
+  devModal.classList.add('flex');
+
+  // Accessibility: focus modal close button
+  setTimeout(() => {
+    const closeBtn = devModal.querySelector('button[aria-label="Close modal"]');
+    if (closeBtn) closeBtn.focus();
+  }, 50);
+}
+
+function closeDevModal() {
+  if (!devModal) return;
+  devModal.classList.add('hidden');
+  devModal.classList.remove('flex');
+
+  // Unlock body scroll and return to previous position
+  unlockBodyScroll(true);
+
+  if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+    lastFocusedElement.focus();
+  }
+}
+
+if (devModal) {
+  devModal.addEventListener('click', (e) => {
+    const card = document.getElementById('devModalCard');
+    if (card && !card.contains(e.target)) {
+      closeDevModal();
+    }
+  });
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (devModal && !devModal.classList.contains('hidden')) {
+      closeDevModal();
+    } else if (isMobileMenuOpen) {
+      closeMobileMenu(true);
+    }
+  }
+});
+
+// ==========================================
+// Quranic Verse Rotation in Why Choose Us Card
+// ==========================================
+(function initQuranVerseRotation() {
+  const verses = [
+    {
+      ref: "SURAH AR-RUM • 30:21",
+      arabic: "وَمِنْ ءَايَـٰتِهِۦٓ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَٰجًا لِّتَسْكُنُوٓا۟ إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً ۚ إِنَّ فِى ذَٰلِكَ لَـَٔايَـٰتٍ لِّقَوْمٍ يَتَفَكَّرُونَ",
+      english: "“And of His signs is that He created for you from yourselves mates that you may find tranquility in them; and He placed between you affection and mercy. Indeed in that are signs for a people who give thought.”"
+    },
+    {
+      ref: "SURAH AN-NISA • 4:1",
+      arabic: "يَـٰٓأَيُّهَا ٱلنَّاسُ ٱتَّقُوا۟ رَبَّكُمُ ٱلَّذِى خَلَقَكُم مِّن نَّفْسٍ وَٰحِدَةٍ وَخَلَقَ مِنْهَا زَوْجَهَا وَبَثَّ مِنْهُمَا رِجَالًا كَثِيرًا وَنِسَآءً ۚ وَٱتَّقُوا۟ ٱللَّهَ ٱلَّذِى تَسَآءَلُونَ بِهِۦ وَٱلْأَرْحَامَ ۚ إِنَّ ٱللَّهَ كَانَ عَلَيْكُمْ رَقِيبًا",
+      english: "“O mankind, fear your Lord, who created you from one soul and created from it its mate and dispersed from both of them many men and women. And fear Allah, through whom you ask one another, and the wombs. Indeed Allah is ever, over you, an Observer.”"
+    },
+    {
+      ref: "SURAH AL-A'RAF • 7:189",
+      arabic: "۞ هُوَ ٱلَّذِى خَلَقَكُم مِّن نَّفْسٍ وَٰحِدَةٍ وَجَعَلَ مِنْهَا زَوْجَهَا لِيَسْكُنَ إِلَيْهَا ۖ فَلَمَّا تَغَشَّىٰهَا حَمَلَتْ حَمْلًا خَفِيفًا فَمَرَّتْ بِهِۦ ۖ فَلَمَّآ أَثْقَلَت دَّعَوَا ٱللَّهَ رَبَّهُمَا لَئِنْ ءَاتَيْتَنَا صَـٰلِحًا لَّنَكُونَنَّ مِنَ ٱلشَّـٰكِرِينَ",
+      english: "“It is He who created you from one soul and created from it its mate that he might dwell in security with her. And when he covers her, she carries a light burden and continues therein. And when it becomes heavy, they both invoke Allah, their Lord, 'If You should give us a good [child], we will surely be among the grateful.'”"
+    },
+    {
+      ref: "SURAH AL-FURQAN • 25:74",
+      arabic: "وَٱلَّذِينَ يَقُولُونَ رَبَّنَا هَبْ لَنَا مِنْ أَزْوَٰجِنَا وَذُرِّيَّـٰتِنَا قُرَّةَ أَعْيُنٍ وَٱجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا",
+      english: "“And those who say, 'Our Lord, grant us from among our wives and offspring comfort to our eyes and make us an example for the righteous.'”"
+    },
+    {
+      // Excerpt from Surah Al-Baqarah 2:187 (not the complete Ayah)
+      ref: "SURAH AL-BAQARAH • 2:187",
+      arabic: "هُنَّ لِبَاسٌ لَّكُمْ وَأَنتُمْ لِبَاسٌ لَّهُنَّ",
+      english: "“They are clothing for you and you are clothing for them.”"
+    }
+  ];
+
+  let currentIdx = 0;
+  let rotationTimer = null;
+  const ROTATION_INTERVAL = 12000; // ~12 seconds per verse
+
+  const arabicEl = document.getElementById('quranArabicText');
+  const englishEl = document.getElementById('quranEnglishText');
+  const refEl = document.getElementById('quranRefText');
+  const contentWrapper = document.getElementById('quranVerseContent');
+  const cardEl = document.getElementById('quranQuoteCard');
+
+  if (!arabicEl || !englishEl || !refEl || !contentWrapper || !cardEl) return;
+
+  function updateVerse(idx) {
+    const v = verses[idx];
+    arabicEl.textContent = v.arabic;
+    englishEl.textContent = v.english;
+    refEl.textContent = v.ref;
+    contentWrapper.scrollTop = 0;
+  }
+
+  function advanceVerse() {
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const nextIdx = (currentIdx + 1) % verses.length;
+
+    if (prefersReducedMotion) {
+      currentIdx = nextIdx;
+      updateVerse(currentIdx);
+      return;
+    }
+
+    // Gentle 600ms fade-out
+    contentWrapper.style.opacity = '0';
+
+    setTimeout(() => {
+      currentIdx = nextIdx;
+      updateVerse(currentIdx);
+      // Gentle 600ms fade-in
+      contentWrapper.style.opacity = '1';
+    }, 600);
+  }
+
+  function startRotation() {
+    stopRotation();
+    rotationTimer = setInterval(advanceVerse, ROTATION_INTERVAL);
+  }
+
+  function stopRotation() {
+    if (rotationTimer) {
+      clearInterval(rotationTimer);
+      rotationTimer = null;
+    }
+  }
+
+  // Respect user reading: pause on hover / touch
+  cardEl.addEventListener('mouseenter', stopRotation);
+  cardEl.addEventListener('mouseleave', startRotation);
+  cardEl.addEventListener('touchstart', stopRotation, { passive: true });
+  cardEl.addEventListener('touchend', startRotation, { passive: true });
+
+  // Expose global helpers for automated testing & accessibility
+  window.__setQuranVerse = function(idx) {
+    currentIdx = idx % verses.length;
+    updateVerse(currentIdx);
+    contentWrapper.style.opacity = '1';
+  };
+  window.__getQuranVerseIndex = function() {
+    return currentIdx;
+  };
+  window.__stopQuranRotation = stopRotation;
+  window.__startQuranRotation = startRotation;
+  window.__quranVerses = verses;
+
+  // Start automatic rotation
+  startRotation();
+})();
 </script>
 </body>
 </html>

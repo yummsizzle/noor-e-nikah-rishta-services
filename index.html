@@ -770,7 +770,7 @@ tailwind.config = {
                     id="height" 
                     name="Height" 
                     type="text" 
-                    placeholder="Enter height (e.g. 5 ft 6 in or 168 cm)" 
+                    placeholder="Enter height (e.g. 5.5, 5 ft 6 in, or 168 cm)" 
                     autocomplete="off" 
                     class="w-full pr-10"
                     role="combobox"
@@ -821,7 +821,7 @@ tailwind.config = {
                   </div>
                 </div>
 
-                <p class="mt-1 text-xs text-[#7C1D38]/60">Select a suggested height or enter your own height manually.</p>
+                <p class="mt-1 text-xs text-[#7C1D38]/60">Select a suggested height or enter your height in feet (e.g. 5 or 5.5).</p>
               </div>
               <div class="field"><label for="education">Education</label><input id="education" name="Education" type="text" placeholder="e.g. B.Com, MBA"></div>
               <div class="field"><label for="occupation">Occupation / Profession</label><input id="occupation" name="Occupation" type="text" placeholder="e.g. Teacher, Business"></div>
@@ -871,7 +871,7 @@ tailwind.config = {
               <div class="field"><label for="motherOcc">Mother's Occupation</label><input id="motherOcc" name="Mother Occupation" type="text" placeholder="e.g. Homemaker"></div>
               <div class="field"><label for="brothers">Number of Brothers</label><input id="brothers" name="Brothers" type="number" min="0" max="20" step="1" placeholder="e.g. 1"></div>
               <div class="field"><label for="sisters">Number of Sisters</label><input id="sisters" name="Sisters" type="number" min="0" max="20" step="1" placeholder="e.g. 1"></div>
-              <div class="field"><label for="familyLoc">Family Location</label><input id="familyLoc" name="Family Location" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
+              <div class="field"><label for="nativePlace">Native Place</label><input id="nativePlace" name="Native Place" type="text" placeholder="e.g. Village / City, District, State"></div>
               <div class="field">
                 <label>Family Type</label>
                 <div class="flex flex-wrap gap-3">
@@ -1729,8 +1729,35 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
     const raw = String(inputVal).trim();
     if (!raw) return { valid: true, value: '' };
 
-    // 1. Feet & Inches formats
-    // Handles: 5 ft 6 in, 5ft 6in, 5ft6in, 5 ft 6, 5'6", 5'6, 5' 6", 5 ft, 6 ft 0 in, 5 6, etc.
+    // 1. Simple numeric feet entries (e.g. 4, 5, 6, 7, 5.5, 5.8) or with simple feet unit (e.g. 5 ft, 5.5 ft, 5')
+    const numericFeetRegex = /^(\d+(?:\.\d+)?)\s*(?:ft|feet|foot|')?$/i;
+    const matchNumericFeet = raw.match(numericFeetRegex);
+
+    if (matchNumericFeet) {
+      const feetVal = parseFloat(matchNumericFeet[1]);
+      
+      // Acceptable range for manual numeric feet values: 3 through 8 inclusive
+      if (feetVal >= 3 && feetVal <= 8) {
+        // Preserve entered value in a consistent and readable format without mangling
+        const hasUnit = raw.toLowerCase().includes('ft') || raw.toLowerCase().includes('feet') || 
+                        raw.toLowerCase().includes('foot') || raw.includes("'");
+        const formattedVal = hasUnit ? raw : `${matchNumericFeet[1]} ft`;
+        return { valid: true, value: formattedVal };
+      }
+
+      // Check if it's an explicit centimeter value entered without 'cm' (e.g. 90 to 240)
+      if (feetVal >= 90 && feetVal <= 240 && !raw.toLowerCase().includes('ft') && !raw.includes("'")) {
+        return { valid: true, value: `${matchNumericFeet[1]} cm` };
+      }
+
+      // Out of realistic range (e.g. 15, 50, 999, or < 3)
+      return {
+        valid: false,
+        error: 'Please enter height in feet between 3 and 8, for example 5 or 5.5 (or select from suggestions).'
+      };
+    }
+
+    // 2. Feet & Inches formats (e.g. "5 ft 6 in", "5'6\"", "5 ft 6", "6 ft 0 in", "5 6")
     const ftInRegex = /^(\d)\s*(?:ft|feet|'|foot)?(?:\s*(\d{1,2}(?:\.\d+)?)\s*(?:in|inches|inch|")?)?$/i;
     const hasFtMarker = raw.toLowerCase().includes('ft') || raw.toLowerCase().includes('feet') || 
                         raw.toLowerCase().includes('foot') || raw.includes("'") || 
@@ -1741,8 +1768,8 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
       if (match) {
         const ft = parseInt(match[1], 10);
         const inch = match[2] !== undefined ? parseFloat(match[2]) : 0;
-        if (ft < 3 || ft > 7 || (ft === 7 && inch > 6)) {
-          return { valid: false, error: 'Please enter a realistic height between 3 ft and 7 ft 6 in.' };
+        if (ft < 3 || ft > 8 || (ft === 8 && inch > 0)) {
+          return { valid: false, error: 'Please enter height in feet between 3 and 8 (e.g. 5 or 5.5).' };
         }
         if (inch < 0 || inch > 11.9) {
           return { valid: false, error: 'Inches must be between 0 and 11 (e.g. 5 ft 6 in).' };
@@ -1751,8 +1778,8 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
       }
     }
 
-    // 2. Centimetre formats: e.g. "168 cm", "168cm", "168 cms", "168"
-    const cmRegex = /^(\d{2,3}(?:\.\d+)?)\s*(?:cm|cms)?$/i;
+    // 3. Centimetre formats with explicit unit: e.g. "168 cm", "168cm", "168 cms"
+    const cmRegex = /^(\d{2,3}(?:\.\d+)?)\s*(?:cm|cms)$/i;
     const matchCm = raw.match(cmRegex);
     if (matchCm) {
       const cm = parseFloat(matchCm[1]);
@@ -1762,9 +1789,10 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
       return { valid: true, value: raw };
     }
 
+    // 4. Any impossible, negative, or non-numeric values
     return { 
       valid: false, 
-      error: 'Please enter height in a valid format, such as "5 ft 6 in" or "168 cm".' 
+      error: 'Please enter height in feet between 3 and 8, for example 5 or 5.5 (or select from suggestions).' 
     };
   }
 
@@ -2224,7 +2252,7 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
 
       // Optional Height Validation
       const heightInput = document.getElementById('height');
-      const rawHeight = (heightInput?.value || '').trim();
+      let rawHeight = (heightInput?.value || '').trim();
       if (rawHeight) {
         const heightCheck = validateHeight(rawHeight);
         if (!heightCheck.valid) {
@@ -2234,7 +2262,13 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
           if (heightInput) heightInput.style.borderColor = '#C9436B';
           return;
         } else {
-          if (heightInput) heightInput.style.borderColor = '';
+          if (heightInput) {
+            heightInput.style.borderColor = '';
+            if (heightCheck.value) {
+              rawHeight = heightCheck.value;
+              heightInput.value = heightCheck.value;
+            }
+          }
         }
       } else {
         if (heightInput) heightInput.style.borderColor = '';
@@ -2340,7 +2374,38 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
         submitBtn.textContent = 'SAVING DATA...';
         
         const now = new Date();
-        const profileIdStr = 'NN-' + now.getFullYear() + '-' + String(Math.floor(Math.random()*10000)).padStart(4, '0');
+        const currentYear = now.getFullYear();
+        let profileIdStr = null;
+        let reservationTokenStr = null;
+
+        // Atomic database sequence allocation via Supabase RPC (with one-time reservation ownership token)
+        try {
+            const { data: rpcRes, error: rpcErr } = await isolatedSupabase.rpc('get_next_profile_id', { p_year: currentYear });
+            if (rpcErr) {
+                throw rpcErr;
+            }
+            if (
+                rpcRes && 
+                typeof rpcRes === 'object' && 
+                typeof rpcRes.profile_id === 'string' && 
+                rpcRes.profile_id.trim().startsWith('NN-') &&
+                typeof rpcRes.reservation_token === 'string' &&
+                rpcRes.reservation_token.trim().length > 0
+            ) {
+                profileIdStr = rpcRes.profile_id.trim();
+                reservationTokenStr = rpcRes.reservation_token.trim();
+            } else {
+                throw new Error("Invalid Profile ID allocation payload received from database.");
+            }
+        } catch (e) {
+            console.error("[Profile ID Allocation Error]:", e);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
+            alert("Unable to allocate a registration Profile ID at this time. Please check your internet connection and try submitting again in a moment.");
+            return;
+        }
+        
+        data['Profile ID'] = profileIdStr;
         
         const resolvedWhatsApp = (data['WhatsApp'] || (sameAsMobileCb?.checked ? data['Mobile'] : null));
 
@@ -2352,8 +2417,11 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             return (!isNaN(n) && n >= 0) ? n : null;
         };
 
+        const nativePlaceVal = data['Native Place'] || data['Family Location'] || null;
+
         const supabaseData = {
             profile_id: profileIdStr,
+            reservation_token: reservationTokenStr,
             registering_for: data['Registering For'] || null,
             full_name: data['Full Name'] || null,
             gender: data['Gender'] || null,
@@ -2370,7 +2438,8 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             mother_occupation: data['Mother Occupation'] || null,
             brothers: parseIntegerOrNull(data['Brothers']),
             sisters: parseIntegerOrNull(data['Sisters']),
-            family_location: data['Family Location'] || null,
+            native_place: nativePlaceVal,
+            family_location: nativePlaceVal,
             family_type: data['Family Type'] || null,
             surname_biradari: data['Surname / Biradari'] || null,
             maslak: data['Maslak'] || null,
@@ -2393,26 +2462,22 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             notes: []
         };
 
-        // Resilient insert: supports both updated schema and pre-migration fallback
-        let insertPayload = { ...supabaseData };
-        let { error: dbError } = await isolatedSupabase.from('profiles').insert([insertPayload]);
+        // Atomic and secure single-attempt insert containing profile_id and reservation_token
+        const { error: dbError } = await isolatedSupabase.from('profiles').insert([supabaseData]);
 
-        if (dbError && dbError.message && (
-            dbError.message.includes('surname_biradari') || 
-            dbError.message.includes('email')
-        )) {
-            console.warn("Database schema pending new columns. Retrying insert without unmigrated columns.", dbError);
-            delete insertPayload.surname_biradari;
-            delete insertPayload.email;
-            const retryRes = await isolatedSupabase.from('profiles').insert([insertPayload]);
-            if (retryRes.error) throw retryRes.error;
-        } else if (dbError) {
+        if (dbError) {
+            console.error("[Database Insert Error]:", dbError);
             throw dbError;
         }
 
         // whatsapp summary link for owner
         let msg = '*NOOR-E-NIKAH - NEW PROFILE REGISTRATION*%0A%0A';
-        Object.keys(data).forEach(k => { msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A'; });
+        msg += '*Profile ID:* ' + encodeURIComponent(profileIdStr) + '%0A';
+        Object.keys(data).forEach(k => { 
+            if (k !== 'Profile ID') {
+                msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A'; 
+            }
+        });
         document.getElementById('waSummary').href = 'https://wa.me/919594388960?text=' + msg;
       
         form.classList.add('hidden');

@@ -6,7 +6,7 @@ const fieldMapToDb = {
     'Father Occupation': 'father_occupation', "Father's Occupation": 'father_occupation',
     'Mother Occupation': 'mother_occupation', "Mother's Occupation": 'mother_occupation',
     'Brothers': 'brothers', 'Sisters': 'sisters',
-    'Family Location': 'family_location', 'Family Type': 'family_type',
+    'Native Place': 'native_place', 'Family Location': 'family_location', 'Family Type': 'family_type',
     'Surname / Biradari': 'surname_biradari',
     'Maslak': 'maslak', 'Maslak / Religious Background': 'maslak',
     'Maslak Preference': 'maslak_preference', 'Religious Preference': 'maslak_preference',
@@ -27,6 +27,8 @@ const STORE = 'noorEnikahSubmissions';
 let profiles = [];
 window.getProfiles = () => profiles;
 window.setProfiles = (val) => { profiles = val; };
+window.getCurrentView = () => currentView;
+window.getListType = () => listType;
 
 // Supabase Data Mapping
 
@@ -60,7 +62,9 @@ function convertFromDb(row) {
     uiData['Maslak Preference'] = row.maslak_preference || uiData['Maslak Preference'] || '';
     uiData['Religious Preference'] = row.maslak_preference || uiData['Religious Preference'] || '';
     uiData['Email Address'] = row.email || uiData['Email Address'] || '';
-    uiData['Residential Address'] = row.family_location || uiData['Family Location'] || row.city || uiData['City'] || '';
+    uiData['Native Place'] = row.native_place || row.family_location || uiData['Native Place'] || uiData['Family Location'] || '';
+    uiData['Family Location'] = uiData['Native Place'];
+    uiData['Residential Address'] = row.native_place || row.family_location || uiData['Native Place'] || row.city || uiData['City'] || '';
 
     return uiData;
 }
@@ -82,6 +86,7 @@ let isEditMode = false;
 
 // Custom UI Dialog
 function showDialog(type, title, message, onConfirm = null, showInput = false, inputType = 'textarea', options = [], initialValue = '', confirmBtnText = 'Confirm', cancelBtnText = 'Cancel') {
+    lockModalScroll();
     let inputHtml = '';
     if (showInput) {
         if (inputType === 'select') {
@@ -103,13 +108,13 @@ function showDialog(type, title, message, onConfirm = null, showInput = false, i
 
     const dialogHTML = `
     <div id="tempDialog" class="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-0 md:p-4">
-        <div class="absolute inset-0 bg-[#320A16]/60 backdrop-blur-sm" onclick="document.getElementById('tempDialog').remove()"></div>
+        <div class="absolute inset-0 bg-[#320A16]/60 backdrop-blur-sm" onclick="closeTempDialog()"></div>
         <div class="relative bg-ivory w-full max-w-sm rounded-t-[24px] md:rounded-[20px] shadow-2xl p-6 border border-gold/20 flex flex-col items-center text-center animate-slide-up md:animate-none">
             <h3 class="font-serif text-2xl text-wine font-semibold mb-2">${title}</h3>
             <p class="text-wine/70 text-sm mb-6 leading-relaxed">${message}</p>
             ${inputHtml}
             <div class="flex flex-col md:flex-row w-full gap-3">
-                <button onclick="document.getElementById('tempDialog').remove()" class="w-full py-3.5 md:py-3 bg-[#FAF8F5] border border-gold/20 text-wine rounded-xl text-[16px] md:text-sm font-medium hover:bg-white transition">${cancelBtnText}</button>
+                <button onclick="closeTempDialog()" class="w-full py-3.5 md:py-3 bg-[#FAF8F5] border border-gold/20 text-wine rounded-xl text-[16px] md:text-sm font-medium hover:bg-white transition">${cancelBtnText}</button>
                 <button id="dialogConfirmBtn" class="w-full py-3.5 md:py-3 ${confirmBtnClass} rounded-xl text-[16px] md:text-sm font-medium shadow-md transition">${confirmBtnText}</button>
             </div>
         </div>
@@ -126,9 +131,15 @@ function showDialog(type, title, message, onConfirm = null, showInput = false, i
     }
     document.getElementById('dialogConfirmBtn').onclick = () => {
         let val = showInput ? document.getElementById('dialogInput').value : true;
-        document.getElementById('tempDialog').remove();
+        closeTempDialog();
         if(onConfirm) onConfirm(val);
     };
+}
+
+function closeTempDialog() {
+    const el = document.getElementById('tempDialog');
+    if (el) el.remove();
+    unlockModalScroll();
 }
 
 // Data Load (Supabase)
@@ -615,89 +626,341 @@ function navigate(view) {
     }
 }
 
-// Dashboard
+// Modal & Body Scroll Lock Helpers
+function lockModalScroll() {
+    document.body.classList.add('overflow-hidden');
+}
+
+function unlockModalScroll() {
+    const openModals = [
+        'profileModal', 'filterModal', 'followUpModal', 
+        'deleteQueryModal', 'shareWhatsAppModal', 'tempDialog'
+    ].some(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('hidden');
+    });
+    if (!openModals) {
+        document.body.classList.remove('overflow-hidden');
+    }
+}
+
+function openFilterModal() {
+    populateFilters();
+    lockModalScroll();
+    const m = document.getElementById('filterModal');
+    if (m) m.classList.remove('hidden');
+}
+
+function closeFilterModal() {
+    const m = document.getElementById('filterModal');
+    if (m) m.classList.add('hidden');
+    unlockModalScroll();
+}
+
+function openFollowUpModal() {
+    lockModalScroll();
+    const m = document.getElementById('followUpModal');
+    if (m) m.classList.remove('hidden');
+}
+
+function closeFollowUpModal() {
+    const m = document.getElementById('followUpModal');
+    if (m) m.classList.add('hidden');
+    unlockModalScroll();
+}
+
+function closeShareModal() {
+    const m = document.getElementById('shareWhatsAppModal');
+    if (m) m.classList.add('hidden');
+    unlockModalScroll();
+}
+
+// Dashboard Engine & KPI Cards
 function initDashboard() {
     updateSidebarBadges();
     
-    const kpiContainer = document.querySelector('#view-dashboard .grid');
-    if (kpiContainer) {
-        const pendingCount = profiles.filter(p => p.status === 'New').length;
-        const shortCount = profiles.filter(p => p.status === 'Shortlisted').length;
-        const fuCount = profiles.filter(p => p.status === 'Follow Up').length;
-        
-        // 2 cols on small mobile, up to 4 on lg
-        kpiContainer.className = "grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5";
-        kpiContainer.innerHTML = `
-            <div class="glass-card p-4 md:p-6">
-                <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5">${profiles.length}</h3>
-                <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Total Profiles</p>
-            </div>
-            <div class="glass-card p-4 md:p-6">
-                <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5">${pendingCount}</h3>
-                <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Pending Review</p>
-            </div>
-            <div class="glass-card p-4 md:p-6">
-                <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5">${shortCount}</h3>
-                <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Shortlisted</p>
-            </div>
-            <div class="glass-card p-4 md:p-6">
-                <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5">${fuCount}</h3>
-                <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Follow Up Due</p>
-            </div>
-        `;
+    const pendingCount = profiles.filter(p => p.status === 'New').length;
+    const shortCount = profiles.filter(p => p.status === 'Shortlisted').length;
+    const fuCount = profiles.filter(p => p.status === 'Follow Up').length;
+
+    // Update KPI Card Numbers
+    const elTotal = document.getElementById('statTotal');
+    const elPending = document.getElementById('statPending');
+    const elShort = document.getElementById('statShortlisted');
+    const elFu = document.getElementById('statFollowUp');
+
+    if (elTotal) elTotal.textContent = profiles.length;
+    if (elPending) elPending.textContent = pendingCount;
+    if (elShort) elShort.textContent = shortCount;
+    if (elFu) elFu.textContent = fuCount;
+
+    // Ensure Dashboard Search Input is bound
+    const searchInput = document.getElementById('dashSearchInput');
+    if (searchInput && !searchInput.dataset.bound) {
+        searchInput.dataset.bound = 'true';
+        searchInput.addEventListener('input', () => {
+            renderDashboardRecent();
+        });
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                clearDashSearch();
+            }
+        });
     }
-    
-    let dashData = profiles.slice().reverse().slice(0, 10);
-    
-    // Desktop Table
+
+    renderDashboardRecent();
+}
+
+function getDashboardRecentProfiles() {
+    let list = [...profiles];
+
+    // 1. Advanced Filters (Status, Gender, City, Surname, Maslak, Age range, Reg dates)
+    if (activeFilters.status && activeFilters.status !== 'All') {
+        list = list.filter(p => p.status === activeFilters.status);
+    }
+    if (activeFilters.gender && activeFilters.gender !== 'All') {
+        list = list.filter(p => p.Gender === activeFilters.gender);
+    }
+    if (activeFilters.city && activeFilters.city !== 'All') {
+        list = list.filter(p => p.City === activeFilters.city);
+    }
+    if (activeFilters.surname && activeFilters.surname !== 'All') {
+        list = list.filter(p => p['Surname / Biradari'] === activeFilters.surname);
+    }
+    if (activeFilters.maslak && activeFilters.maslak !== 'All') {
+        list = list.filter(p => (p['Maslak'] === activeFilters.maslak || p['Maslak / Religious Background'] === activeFilters.maslak));
+    }
+    if (activeFilters.minAge) {
+        list = list.filter(p => parseInt(p.Age, 10) >= parseInt(activeFilters.minAge, 10));
+    }
+    if (activeFilters.maxAge) {
+        list = list.filter(p => parseInt(p.Age, 10) <= parseInt(activeFilters.maxAge, 10));
+    }
+    if (activeFilters.regFrom) {
+        list = list.filter(p => p.createdAt && new Date(p.createdAt.split('T')[0]) >= new Date(activeFilters.regFrom));
+    }
+    if (activeFilters.regTo) {
+        list = list.filter(p => p.createdAt && new Date(p.createdAt.split('T')[0]) <= new Date(activeFilters.regTo));
+    }
+
+    // 2. Multi-field Dashboard Search Query
+    const searchInput = document.getElementById('dashSearchInput');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    if (query) {
+        list = list.filter(p => {
+            const searchableFields = [
+                p['Full Name'],
+                p.profileId,
+                p.Gender,
+                p.Age ? String(p.Age) : '',
+                p.City,
+                p['Native Place'],
+                p['Family Location'],
+                p.Education,
+                p.Occupation,
+                p['Marital Status'],
+                p.Mobile,
+                p.WhatsApp,
+                p['Guardian Name'],
+                p.Relationship,
+                p.status,
+                p.createdAt ? p.createdAt.split('T')[0] : '',
+                p['Mother Tongue'],
+                p['Languages Known'],
+                p['Surname / Biradari'],
+                p.Maslak,
+                p['Maslak / Religious Background'],
+                p['Email Address'],
+                p['Registering For']
+            ];
+
+            return searchableFields.some(val => {
+                if (val === undefined || val === null) return false;
+                return String(val).toLowerCase().includes(query);
+            });
+        });
+    }
+
+    // 3. Newest-registration-first sort order
+    list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    // When no search & no filter, show newest 10 records.
+    // When search or filter is applied, return all matching records in newest-first order.
+    const isFiltered = query.length > 0 || Object.values(activeFilters).some(v => v && v !== 'All');
+    return isFiltered ? list : list.slice(0, 10);
+}
+
+function renderDashboardRecent() {
+    const dashData = getDashboardRecentProfiles();
+    const searchInput = document.getElementById('dashSearchInput');
+    const query = searchInput ? searchInput.value.trim() : '';
+    const hasFilter = Object.values(activeFilters).some(v => v && v !== 'All');
+    const isFiltered = query.length > 0 || hasFilter;
+
+    // Search clear button visibility
+    const clearBtn = document.getElementById('dashSearchClearBtn');
+    if (clearBtn) {
+        if (query) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+    }
+
+    // Filter active indicator dot on Dashboard Filter Button
+    const filterDot = document.getElementById('dashActiveFilterDot');
+    if (filterDot) {
+        if (hasFilter) filterDot.classList.remove('hidden');
+        else filterDot.classList.add('hidden');
+    }
+
+    // Results count badge
+    const badge = document.getElementById('dashResultsCountBadge');
+    if (badge) {
+        if (isFiltered) {
+            badge.textContent = `${dashData.length} match${dashData.length === 1 ? '' : 'es'}`;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    // Dashboard active filters banner
+    const banner = document.getElementById('dashActiveFiltersBanner');
+    if (banner) {
+        if (hasFilter) {
+            let pillsHtml = '<span class="text-wine/60 font-medium mr-1">Active Filters:</span>';
+            for (let k in activeFilters) {
+                const v = activeFilters[k];
+                if (v && v !== 'All') {
+                    pillsHtml += `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-gold/30 rounded-lg text-wine font-medium"><span>${k}: <b>${v}</b></span><button onclick="removeDashboardFilter('${k}')" class="text-wine/40 hover:text-wine ml-0.5" title="Remove filter">✕</button></span>`;
+                }
+            }
+            pillsHtml += `<button onclick="clearFilters()" class="text-wine font-bold underline ml-2 hover:opacity-80">Clear All</button>`;
+            banner.innerHTML = pillsHtml;
+            banner.classList.remove('hidden');
+        } else {
+            banner.classList.add('hidden');
+            banner.innerHTML = '';
+        }
+    }
+
+    // Render Desktop Table Body
     const tbody = document.getElementById('dashTableBody');
-    if(tbody) {
-        tbody.innerHTML = dashData.map(p => {
-            const idx = profiles.indexOf(p);
-            return `<tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
-                <td class="p-4 text-[12px] text-wine/60">${p.createdAt.split('T')[0]}</td>
-                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']||'-'}</p></td>
-                <td class="p-4 text-[13px] text-wine/80">${p.Gender||'-'} / ${p.Age||'-'}</td>
-                <td class="p-4 text-[13px] text-wine/80">${p.City||'-'}</td>
-                <td class="p-4">${getStatusBadge(p)}</td>
-                <td class="p-4 text-right flex justify-end items-center gap-1.5">
-                    <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine hover:bg-wine/5 shadow-sm">View</button>
-                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        <span>Delete</span>
-                    </button>
-                </td>
-            </tr>`;
-        }).join('');
+    if (tbody) {
+        if (dashData.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-wine/60 bg-[#FAF8F5]/50">
+                        <div class="flex flex-col items-center justify-center gap-2">
+                            <p class="font-medium text-[15px] text-wine">No matching registrations found</p>
+                            <p class="text-xs text-wine/50">Try adjusting your search keywords or clearing active filters.</p>
+                            ${isFiltered ? '<button onclick="clearDashAllSearchAndFilters()" class="mt-2 px-3 py-1.5 bg-wine text-white rounded-lg text-xs font-semibold hover:bg-wine/90 transition shadow-sm">Clear Search & Filters</button>' : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML = dashData.map(p => {
+                const idx = profiles.indexOf(p);
+                return `<tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+                    <td class="p-4 text-[12px] text-wine/60">${p.createdAt ? p.createdAt.split('T')[0] : '—'}</td>
+                    <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']||'-'}</p></td>
+                    <td class="p-4 text-[13px] text-wine/80">${p.Gender||'-'} / ${p.Age ? p.Age + ' yrs' : '-'}</td>
+                    <td class="p-4 text-[13px] text-wine/80">${p.City||'-'}</td>
+                    <td class="p-4">${getStatusBadge(p)}</td>
+                    <td class="p-4 text-right flex justify-end items-center gap-1.5">
+                        <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine hover:bg-wine/5 shadow-sm">View</button>
+                        <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            <span>Delete</span>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
     }
-    
-    // Mobile Cards
+
+    // Render Mobile Cards
     const mobCont = document.getElementById('dashMobileCards');
-    if(mobCont) {
-        mobCont.innerHTML = dashData.map(p => {
-            const idx = profiles.indexOf(p);
-            return `<div class="p-5 flex flex-col gap-3">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-serif font-bold text-wine text-[17px] leading-tight">${p['Full Name']||'-'}</h4>
-                        <p class="text-[10px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId}</p>
+    if (mobCont) {
+        if (dashData.length === 0) {
+            mobCont.innerHTML = `
+                <div class="p-8 text-center text-wine/60">
+                    <p class="font-medium text-[15px] text-wine">No matching registrations</p>
+                    <p class="text-xs text-wine/50 mt-1">Try another search keyword or reset filters.</p>
+                    ${isFiltered ? '<button onclick="clearDashAllSearchAndFilters()" class="mt-3 px-4 py-2 bg-wine text-white rounded-xl text-xs font-semibold hover:bg-wine/90 transition shadow-sm">Clear Search & Filters</button>' : ''}
+                </div>
+            `;
+        } else {
+            mobCont.innerHTML = dashData.map(p => {
+                const idx = profiles.indexOf(p);
+                return `<div class="p-4 md:p-5 border-b border-gold/10 last:border-b-0 flex flex-col gap-2.5">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-serif font-bold text-wine text-[17px] leading-tight">${p['Full Name']||'-'}</h4>
+                            <p class="text-[10px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId || '—'}</p>
+                        </div>
+                        ${getStatusBadge(p)}
                     </div>
-                    ${getStatusBadge(p)}
-                </div>
-                <div class="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-wine/70">
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.Gender||'-'} • ${p.Age||'-'}</span>
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.City||'-'}</span>
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.createdAt.split('T')[0]}</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 mt-1">
-                    <button onclick="viewProfile(${idx})" class="py-3 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm active:scale-[0.98] transition">View Details</button>
-                    <button onclick="openDeleteQueryModal(${idx})" class="py-3 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-xl text-[12px] uppercase font-bold shadow-sm active:scale-[0.98] transition inline-flex items-center justify-center gap-1.5">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        <span>Delete</span>
-                    </button>
-                </div>
-            </div>`;
-        }).join('');
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-wine/70">
+                        <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.Gender||'-'} • ${p.Age ? p.Age + ' yrs' : '-'}</span>
+                        <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.City||'-'}</span>
+                        <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.createdAt ? p.createdAt.split('T')[0] : '—'}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <button onclick="viewProfile(${idx})" class="py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm active:scale-[0.98] transition">View Details</button>
+                        <button onclick="openDeleteQueryModal(${idx})" class="py-2.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-xl text-[12px] uppercase font-bold shadow-sm active:scale-[0.98] transition inline-flex items-center justify-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            <span>Delete</span>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+}
+
+function clearDashSearch() {
+    const input = document.getElementById('dashSearchInput');
+    if (input) {
+        input.value = '';
+        renderDashboardRecent();
+        input.focus();
+    }
+}
+
+function clearDashAllSearchAndFilters() {
+    const input = document.getElementById('dashSearchInput');
+    if (input) input.value = '';
+    clearFilters();
+}
+
+function openDashboardFilter() {
+    openFilterModal();
+}
+
+function removeDashboardFilter(key) {
+    if (activeFilters[key]) {
+        delete activeFilters[key];
+        const inputMap = {
+            gender: 'fltGender',
+            status: 'fltStatus',
+            city: 'fltCity',
+            minAge: 'fltMinAge',
+            maxAge: 'fltMaxAge',
+            surname: 'fltSurname',
+            maslak: 'fltMaslak',
+            regFrom: 'fltRegFrom',
+            regTo: 'fltRegTo'
+        };
+        const elId = inputMap[key];
+        if (elId) {
+            const el = document.getElementById(elId);
+            if (el) {
+                if (el.tagName === 'SELECT') el.value = 'All';
+                else el.value = '';
+            }
+        }
+        applyFilters();
     }
 }
 
@@ -752,39 +1015,48 @@ function populateFilters() {
     const getOptions = (key) => [...new Set(profiles.map(p=>p[key]).filter(Boolean))].sort();
     const maslakOptions = [...new Set(profiles.map(p=>p['Maslak'] || p['Maslak / Religious Background']).filter(Boolean))].sort();
     
-    document.getElementById('fltCity').innerHTML = '<option value="All">All</option>' + getOptions('City').map(c=>`<option value="${c}">${c}</option>`).join('');
-    document.getElementById('fltSurname').innerHTML = '<option value="All">All</option>' + getOptions('Surname / Biradari').map(c=>`<option value="${c}">${c}</option>`).join('');
-    document.getElementById('fltMaslak').innerHTML = '<option value="All">All</option>' + maslakOptions.map(c=>`<option value="${c}">${c}</option>`).join('');
+    const cityEl = document.getElementById('fltCity');
+    const surnameEl = document.getElementById('fltSurname');
+    const maslakEl = document.getElementById('fltMaslak');
+
+    if (cityEl) cityEl.innerHTML = '<option value="All">All</option>' + getOptions('City').map(c=>`<option value="${c}">${c}</option>`).join('');
+    if (surnameEl) surnameEl.innerHTML = '<option value="All">All</option>' + getOptions('Surname / Biradari').map(c=>`<option value="${c}">${c}</option>`).join('');
+    if (maslakEl) maslakEl.innerHTML = '<option value="All">All</option>' + maslakOptions.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 
 function applyFilters() {
     activeFilters = {
-        gender: document.getElementById('fltGender').value,
-        status: document.getElementById('fltStatus').value,
-        city: document.getElementById('fltCity').value,
-        minAge: document.getElementById('fltMinAge').value,
-        maxAge: document.getElementById('fltMaxAge').value,
-        surname: document.getElementById('fltSurname').value,
-        maslak: document.getElementById('fltMaslak').value,
-        regFrom: document.getElementById('fltRegFrom').value,
-        regTo: document.getElementById('fltRegTo').value
+        gender: document.getElementById('fltGender') ? document.getElementById('fltGender').value : 'All',
+        status: document.getElementById('fltStatus') ? document.getElementById('fltStatus').value : 'All',
+        city: document.getElementById('fltCity') ? document.getElementById('fltCity').value : 'All',
+        minAge: document.getElementById('fltMinAge') ? document.getElementById('fltMinAge').value : '',
+        maxAge: document.getElementById('fltMaxAge') ? document.getElementById('fltMaxAge').value : '',
+        surname: document.getElementById('fltSurname') ? document.getElementById('fltSurname').value : 'All',
+        maslak: document.getElementById('fltMaslak') ? document.getElementById('fltMaslak').value : 'All',
+        regFrom: document.getElementById('fltRegFrom') ? document.getElementById('fltRegFrom').value : '',
+        regTo: document.getElementById('fltRegTo') ? document.getElementById('fltRegTo').value : ''
     };
     currentPage = 1;
     selectedProfileIds.clear();
-    document.getElementById('filterModal').classList.add('hidden');
-    renderListView();
+    closeFilterModal();
+    if (currentView === 'dashboard') {
+        renderDashboardRecent();
+    } else {
+        renderListView();
+    }
 }
 function clearFilters() {
     activeFilters = {};
-    document.getElementById('fltGender').value = 'All';
-    document.getElementById('fltStatus').value = 'All';
-    document.getElementById('fltCity').value = 'All';
-    document.getElementById('fltMinAge').value = '';
-    document.getElementById('fltMaxAge').value = '';
-    document.getElementById('fltSurname').value = 'All';
-    document.getElementById('fltMaslak').value = 'All';
-    document.getElementById('fltRegFrom').value = '';
-    document.getElementById('fltRegTo').value = '';
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    setVal('fltGender', 'All');
+    setVal('fltStatus', 'All');
+    setVal('fltCity', 'All');
+    setVal('fltMinAge', '');
+    setVal('fltMaxAge', '');
+    setVal('fltSurname', 'All');
+    setVal('fltMaslak', 'All');
+    setVal('fltRegFrom', '');
+    setVal('fltRegTo', '');
     currentPage = 1;
     selectedProfileIds.clear();
     applyFilters();
@@ -1007,28 +1279,89 @@ function updateSelectionUI(filtered = getFilteredProfiles(), pagedProfiles = nul
     }
 }
 
-// Dropdown UI Handlers
+// Dropdown UI Handlers & Responsive Clamping
+function positionDropdownSafely(menuEl, buttonEl) {
+    if (!menuEl || !buttonEl) return;
+    
+    // Clear any previous inline styles to measure natural dimensions
+    menuEl.style.left = '';
+    menuEl.style.right = '';
+    menuEl.style.width = '';
+    menuEl.style.maxWidth = '';
+
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+        const parentRect = buttonEl.parentElement.getBoundingClientRect();
+        const maxAllowedWidth = Math.min(270, window.innerWidth - 24);
+        menuEl.style.width = maxAllowedWidth + 'px';
+        menuEl.style.maxWidth = 'calc(100vw - 24px)';
+        
+        let targetViewportLeft = parentRect.right - maxAllowedWidth;
+        if (targetViewportLeft < 12) {
+            targetViewportLeft = 12;
+        }
+        if (targetViewportLeft + maxAllowedWidth > window.innerWidth - 12) {
+            targetViewportLeft = window.innerWidth - 12 - maxAllowedWidth;
+        }
+        
+        const relativeLeft = targetViewportLeft - parentRect.left;
+        menuEl.style.left = relativeLeft + 'px';
+        menuEl.style.right = 'auto';
+    } else {
+        menuEl.style.left = 'auto';
+        menuEl.style.right = '0';
+        menuEl.style.width = '';
+        menuEl.style.maxWidth = '';
+    }
+}
+
 function toggleExportDropdown(e) {
     if (e) e.stopPropagation();
     const expMenu = document.getElementById('exportDropdownMenu');
     const shrMenu = document.getElementById('shareDropdownMenu');
+    const btn = document.getElementById('exportDropdownBtn');
     if (shrMenu) shrMenu.classList.add('hidden');
-    if (expMenu) expMenu.classList.toggle('hidden');
+    if (expMenu) {
+        const willOpen = expMenu.classList.contains('hidden');
+        if (willOpen) {
+            positionDropdownSafely(expMenu, btn);
+            expMenu.classList.remove('hidden');
+        } else {
+            expMenu.classList.add('hidden');
+        }
+    }
 }
 
 function toggleShareDropdown(e) {
     if (e) e.stopPropagation();
     const expMenu = document.getElementById('exportDropdownMenu');
     const shrMenu = document.getElementById('shareDropdownMenu');
+    const btn = document.getElementById('shareDropdownBtn');
     if (expMenu) expMenu.classList.add('hidden');
-    if (shrMenu) shrMenu.classList.toggle('hidden');
+    if (shrMenu) {
+        const willOpen = shrMenu.classList.contains('hidden');
+        if (willOpen) {
+            positionDropdownSafely(shrMenu, btn);
+            shrMenu.classList.remove('hidden');
+        } else {
+            shrMenu.classList.add('hidden');
+        }
+    }
 }
 
 function closeAllDropdowns() {
     const expMenu = document.getElementById('exportDropdownMenu');
     const shrMenu = document.getElementById('shareDropdownMenu');
-    if (expMenu) expMenu.classList.add('hidden');
-    if (shrMenu) shrMenu.classList.add('hidden');
+    if (expMenu) {
+        expMenu.classList.add('hidden');
+        expMenu.style.left = '';
+        expMenu.style.right = '';
+    }
+    if (shrMenu) {
+        shrMenu.classList.add('hidden');
+        shrMenu.style.left = '';
+        shrMenu.style.right = '';
+    }
 }
 
 document.addEventListener('click', (e) => {
@@ -1036,6 +1369,10 @@ document.addEventListener('click', (e) => {
         !e.target.closest('#shareDropdownBtn') && !e.target.closest('#shareDropdownMenu')) {
         closeAllDropdowns();
     }
+});
+
+window.addEventListener('resize', () => {
+    closeAllDropdowns();
 });
 
 // CSV Export Engine
@@ -1063,7 +1400,7 @@ const CSV_COLUMNS = [
     { key: "Mother's Occupation", label: "Mother's Occupation" },
     { key: 'Brothers', label: 'Brothers' },
     { key: 'Sisters', label: 'Sisters' },
-    { key: 'Family Location', label: 'Family Location' },
+    { key: 'Native Place', label: 'Native Place' },
     { key: 'Family Type', label: 'Family Type' },
     { key: 'Maslak', label: 'Maslak' },
     { key: 'Religious Preference', label: 'Religious Preference' },
@@ -1224,7 +1561,7 @@ function formatSingleProfileWhatsApp(p, includeContact = false) {
     msg += `🕌 RELIGIOUS & FAMILY\n`;
     msg += `Maslak: ${p.Maslak || p['Maslak / Religious Background'] || '—'}\n`;
     msg += `Surname / Biradari: ${p['Surname / Biradari'] || '—'}\n`;
-    msg += `Family Location: ${p['Family Location'] || '—'}\n`;
+    msg += `Native Place: ${p['Native Place'] || p['Family Location'] || '—'}\n`;
     msg += `Family Type: ${p['Family Type'] || '—'}\n`;
     msg += `\n`;
 
@@ -1289,6 +1626,7 @@ function openShareSingleProfile(idx) {
     document.getElementById('shareMultiNotice').classList.add('hidden');
     document.getElementById('sharePreviewText').innerText = formatSingleProfileWhatsApp(p, false);
 
+    lockModalScroll();
     document.getElementById('shareWhatsAppModal').classList.remove('hidden');
 }
 
@@ -1337,6 +1675,7 @@ function handleShareAction(type) {
     document.getElementById('shareMultiNotice').classList.remove('hidden');
     document.getElementById('sharePreviewText').innerText = formatMultiProfileWhatsApp(shareList, false);
 
+    lockModalScroll();
     document.getElementById('shareWhatsAppModal').classList.remove('hidden');
 }
 
@@ -1347,11 +1686,6 @@ function toggleShareContactDetails(checked) {
     } else {
         document.getElementById('sharePreviewText').innerText = formatMultiProfileWhatsApp(shareModalState.profiles, checked);
     }
-}
-
-function closeShareModal() {
-    const modal = document.getElementById('shareWhatsAppModal');
-    if (modal) modal.classList.add('hidden');
 }
 
 async function executeShareWhatsApp() {
@@ -1976,6 +2310,7 @@ function openDeleteQueryModal(idx) {
     if (cancelBtn) cancelBtn.disabled = false;
     isDeletingQuery = false;
 
+    lockModalScroll();
     const modal = document.getElementById('deleteQueryModal');
     if (modal) modal.classList.remove('hidden');
 }
@@ -1985,6 +2320,7 @@ function closeDeleteQueryModal() {
     const modal = document.getElementById('deleteQueryModal');
     if (modal) modal.classList.add('hidden');
     deleteCandidateIndex = null;
+    unlockModalScroll();
 }
 
 async function executeDeleteQuery() {
@@ -2142,9 +2478,49 @@ function initDeleteQueryModalListeners() {
 
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            const m = document.getElementById('deleteQueryModal');
-            if (m && !m.classList.contains('hidden')) {
+            // 1. Close any open dropdowns
+            closeAllDropdowns();
+
+            // 2. Close temp dialog if active
+            const tempDialog = document.getElementById('tempDialog');
+            if (tempDialog) {
+                closeTempDialog();
+                return;
+            }
+
+            // 3. Close delete query confirmation modal
+            const delModal = document.getElementById('deleteQueryModal');
+            if (delModal && !delModal.classList.contains('hidden')) {
                 closeDeleteQueryModal();
+                return;
+            }
+
+            // 4. Close WhatsApp sharing modal
+            const shareModal = document.getElementById('shareWhatsAppModal');
+            if (shareModal && !shareModal.classList.contains('hidden')) {
+                closeShareModal();
+                return;
+            }
+
+            // 5. Close follow up modal
+            const fuModal = document.getElementById('followUpModal');
+            if (fuModal && !fuModal.classList.contains('hidden')) {
+                closeFollowUpModal();
+                return;
+            }
+
+            // 6. Close filter modal
+            const fltModal = document.getElementById('filterModal');
+            if (fltModal && !fltModal.classList.contains('hidden')) {
+                closeFilterModal();
+                return;
+            }
+
+            // 7. Close profile detail modal
+            const profModal = document.getElementById('profileModal');
+            if (profModal && !profModal.classList.contains('hidden')) {
+                closeModal();
+                return;
             }
         }
     });
@@ -2159,7 +2535,7 @@ function confirmDelete(idx) {
 const pFields = [
     {group: 'BASIC', f: ['Full Name', 'Registering For', 'Gender', 'Age', 'Date of Birth', 'Marital Status', 'Height']},
     {group: 'PROFESSIONAL', f: ['Education', 'Occupation', 'City', 'Mother Tongue', 'Languages Known']},
-    {group: 'FAMILY & RELIGIOUS', f: ['Surname / Biradari', "Father's Occupation", "Mother's Occupation", 'Brothers', 'Sisters', 'Family Location', 'Family Type', 'Maslak', 'Religious Preference']},
+    {group: 'FAMILY & RELIGIOUS', f: ['Surname / Biradari', "Father's Occupation", "Mother's Occupation", 'Brothers', 'Sisters', 'Native Place', 'Family Type', 'Maslak', 'Religious Preference']},
     {group: 'ABOUT CANDIDATE', f: ['About Candidate']},
     {group: 'MATCH PREFERENCES', f: ['Preferred Age Range', 'Preferred Location', 'Preferred Education', 'Preferred Profession', 'Other Preferences']},
     {group: 'CONTACT', f: ['Guardian Name', 'Relationship', 'Mobile', 'WhatsApp', 'Preferred Contact Time', 'Residential Address', 'Email Address']}
@@ -2172,10 +2548,14 @@ const pFields = [
 function viewProfile(idx) {
     activeProfileIndex = idx;
     isEditMode = false;
+    lockModalScroll();
     document.getElementById('profileModal').classList.remove('hidden');
     renderProfileModal();
 }
-function closeModal() { document.getElementById('profileModal').classList.add('hidden'); }
+function closeModal() {
+    document.getElementById('profileModal').classList.add('hidden');
+    unlockModalScroll();
+}
 
 function renderProfileModal() {
     const p = profiles[activeProfileIndex];
@@ -2414,6 +2794,16 @@ async function saveProfile() {
                 if (f === 'Maslak / Religious Background') p['Maslak'] = val;
                 if (f === 'Surname / Biradari') p['Surname / Biradari'] = val;
                 if (f === 'Email Address') p['Email Address'] = val;
+                if (f === 'Native Place') {
+                    p['Family Location'] = val;
+                    updateData['native_place'] = val || null;
+                    updateData['family_location'] = val || null;
+                }
+                if (f === 'Family Location') {
+                    p['Native Place'] = val;
+                    updateData['native_place'] = val || null;
+                    updateData['family_location'] = val || null;
+                }
 
                 if (['Age', 'Brothers', 'Sisters'].includes(f)) {
                     const trimmed = (val || '').trim();
@@ -2438,8 +2828,15 @@ async function saveProfile() {
     updateData.updated_at = nowStr;
     
     try {
-        const { error } = await window.supabaseClient.from('profiles').update(updateData).eq('id', p.id);
-        if (error) throw error;
+        let { error } = await window.supabaseClient.from('profiles').update(updateData).eq('id', p.id);
+        if (error && error.message && error.message.includes('native_place')) {
+            console.warn("Column native_place pending migration, saving to family_location:", error);
+            delete updateData.native_place;
+            const retryRes = await window.supabaseClient.from('profiles').update(updateData).eq('id', p.id);
+            if (retryRes.error) throw retryRes.error;
+        } else if (error) {
+            throw error;
+        }
         
         isEditMode = false;
         renderProfileModal();

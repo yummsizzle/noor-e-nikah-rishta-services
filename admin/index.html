@@ -165,29 +165,116 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
     
     <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="page-view flex flex-col gap-8">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div class="glass-card p-6">
-          <h3 class="text-3xl font-serif text-wine font-semibold mb-0.5" id="statTotal">0</h3>
-          <p class="text-sm font-medium text-wine/80">Total Profiles</p>
+      <!-- 4 INTERACTIVE DASHBOARD KPI CARDS -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5" id="dashKpiCards">
+        <div 
+          onclick="navigate('all')" 
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('all');}"
+          tabindex="0" 
+          role="button"
+          aria-label="View All Profiles"
+          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statTotal">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Total Profiles</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
         </div>
-        <div class="glass-card p-6">
-          <h3 class="text-3xl font-serif text-wine font-semibold mb-0.5" id="statMale">0</h3>
-          <p class="text-sm font-medium text-wine/80">Male Candidates</p>
+
+        <div 
+          onclick="navigate('pending')" 
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('pending');}"
+          tabindex="0" 
+          role="button"
+          aria-label="View Pending Review Profiles"
+          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statPending">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Pending Review</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
         </div>
-        <div class="glass-card p-6">
-          <h3 class="text-3xl font-serif text-wine font-semibold mb-0.5" id="statFemale">0</h3>
-          <p class="text-sm font-medium text-wine/80">Female Candidates</p>
+
+        <div 
+          onclick="navigate('shortlisted')" 
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('shortlisted');}"
+          tabindex="0" 
+          role="button"
+          aria-label="View Shortlisted Profiles"
+          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statShortlisted">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Shortlisted</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
         </div>
-        <div class="glass-card p-6">
-          <h3 class="text-3xl font-serif text-wine font-semibold mb-0.5" id="statNew">0</h3>
-          <p class="text-sm font-medium text-wine/80">New This Month</p>
+
+        <div 
+          onclick="navigate('followup')" 
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('followup');}"
+          tabindex="0" 
+          role="button"
+          aria-label="View Follow Up Due Profiles"
+          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statFollowUp">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Follow Up Due</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
         </div>
       </div>
+
+      <!-- RECENT REGISTRATIONS WITH INTEGRATED SEARCH & FILTER -->
       <div class="glass-card flex flex-col overflow-hidden">
-        <div class="p-6 border-b border-gold/10 bg-white flex justify-between items-center">
-          <h3 class="font-serif text-[22px] font-semibold text-wine">Recent Registrations</h3>
-          <input type="text" id="dashSearchInput" placeholder="Search recent..." class="px-4 py-2 border rounded-xl text-sm w-48 focus:outline-none">
+        <div class="p-4 md:p-6 border-b border-gold/10 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
+          <div class="flex items-center gap-2.5">
+            <h3 class="font-serif text-[20px] md:text-[22px] font-semibold text-wine">Recent Registrations</h3>
+            <span id="dashResultsCountBadge" class="hidden text-xs bg-wine/10 text-wine px-2 py-0.5 rounded-full font-bold"></span>
+          </div>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-64 md:w-72">
+              <input 
+                type="text" 
+                id="dashSearchInput" 
+                placeholder="Search recent..." 
+                class="w-full px-4 py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[15px] md:text-sm text-wine placeholder:text-wine/40 focus:outline-none focus:border-wine/50 transition pr-9"
+              >
+              <button 
+                type="button" 
+                id="dashSearchClearBtn" 
+                onclick="clearDashSearch()" 
+                class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-wine/40 hover:text-wine p-1 text-xs rounded-full hover:bg-wine/10 transition" 
+                title="Clear Search"
+              >✕</button>
+            </div>
+            <button 
+              type="button" 
+              id="dashFilterBtn" 
+              onclick="openDashboardFilter()" 
+              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gold/20 bg-[#FAF8F5] sm:bg-white rounded-xl text-[14px] md:text-sm font-medium text-wine hover:bg-gray-50 transition shadow-sm relative shrink-0"
+            >
+              <svg class="w-4 h-4 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              <span>Filter</span>
+              <span id="dashActiveFilterDot" class="hidden w-2 h-2 rounded-full bg-wine"></span>
+            </button>
+          </div>
         </div>
+
+        <!-- DASHBOARD ACTIVE FILTER TAGS BANNER -->
+        <div id="dashActiveFiltersBanner" class="p-3 px-4 md:px-6 bg-[#FAF8F5] border-b border-gold/10 hidden flex gap-2 flex-wrap items-center text-xs"></div>
+
         <div class="hidden md:block overflow-x-auto">
           <table class="w-full text-left text-sm border-collapse min-w-[800px]">
             <thead class="bg-[#FAF8F5] text-wine/60 text-[10px] uppercase border-b border-gold/10">
@@ -303,7 +390,7 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
         <div class="p-4 md:p-6 border-b border-gold/10 bg-white flex flex-col md:flex-row gap-3 md:gap-4 items-center">
           <input type="text" id="listSearchInput" placeholder="Search by name, ID..." class="w-full md:flex-1 px-4 py-3 md:py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[16px] md:text-sm focus:outline-none">
-          <button onclick="document.getElementById('filterModal').classList.remove('hidden')" class="w-full md:w-auto px-5 py-3 md:py-2.5 border border-gold/20 rounded-xl text-[16px] md:text-sm hover:bg-gray-50 transition font-medium">Filter</button>
+          <button onclick="openFilterModal()" class="w-full md:w-auto px-5 py-3 md:py-2.5 border border-gold/20 rounded-xl text-[16px] md:text-sm hover:bg-gray-50 transition font-medium">Filter</button>
         </div>
         <div id="activeFiltersContainer" class="p-4 bg-[#FAF8F5] border-b border-gold/10 hidden flex gap-2 flex-wrap items-center"></div>
         <div class="hidden md:block overflow-x-auto">
@@ -363,7 +450,7 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
     <div class="p-4 md:p-6 border-b border-gold/10 bg-white flex flex-col md:flex-row justify-between md:items-center rounded-none md:rounded-t-[24px] gap-4 shrink-0">
       <div class="flex items-center justify-between">
         <h3 class="font-serif text-2xl text-wine font-semibold">Profile Details</h3>
-        <button class="md:hidden p-2 text-wine" onclick="closeModal()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button class="p-2 text-wine/50 hover:text-wine rounded-lg hover:bg-wine/5 transition" onclick="closeModal()" title="Close Details"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
       </div>
       <div class="grid grid-cols-2 sm:flex gap-2" id="modalActions"></div>
     </div>
@@ -373,11 +460,11 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
 <!-- FILTER MODAL -->
 <div id="filterModal" class="fixed inset-0 z-[140] hidden flex items-end md:items-center justify-center p-0 md:p-4">
-  <div class="absolute inset-0 bg-black/50" onclick="document.getElementById('filterModal').classList.add('hidden')"></div>
+  <div class="absolute inset-0 bg-black/50" onclick="closeFilterModal()"></div>
   <div class="relative bg-white w-full max-w-md rounded-t-2xl md:rounded-2xl flex flex-col max-h-[90vh] md:max-h-[80vh]">
     <div class="p-4 md:p-6 border-b flex justify-between items-center">
         <span class="font-serif text-xl font-semibold text-wine">Filters</span>
-        <button class="md:hidden text-wine" onclick="document.getElementById('filterModal').classList.add('hidden')"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button class="p-2 text-wine/50 hover:text-wine rounded-lg hover:bg-wine/5 transition" onclick="closeFilterModal()" title="Close Filters"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
     <div class="p-4 md:p-6 overflow-y-auto space-y-4 text-sm flex-1">
       <select id="fltGender" class="w-full p-2 border rounded"><option value="All">Gender: All</option><option value="Male">Male</option><option value="Female">Female</option></select>
@@ -393,11 +480,11 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
 <!-- FOLLOW UP MODAL -->
 <div id="followUpModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4">
-  <div class="absolute inset-0 bg-black/50" onclick="document.getElementById('followUpModal').classList.add('hidden')"></div>
+  <div class="absolute inset-0 bg-black/50" onclick="closeFollowUpModal()"></div>
   <div class="relative bg-white p-4 md:p-6 rounded-2xl max-w-sm w-full">
     <div class="flex justify-between items-center mb-4">
         <h3 class="font-serif text-xl text-wine">Set Follow Up</h3>
-        <button class="md:hidden text-wine" onclick="document.getElementById('followUpModal').classList.add('hidden')"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button class="p-2 text-wine/50 hover:text-wine rounded-lg hover:bg-wine/5 transition" onclick="closeFollowUpModal()" title="Close Follow Up"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
     <input type="hidden" id="fuIndex">
     <input type="date" id="fuDate" class="w-full mb-3 p-2 border rounded">

@@ -17,6 +17,13 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
   ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #8A2340; border-radius: 10px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(232, 201, 121, 0.2); }
+  @keyframes scaleUp {
+    0% { transform: scale(0.95); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-scale-up {
+    animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 </style>
 </head>
 <body class="antialiased h-screen flex overflow-hidden bg-ivory">
@@ -195,13 +202,105 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
     <!-- LIST VIEW -->
     <div id="view-list" class="page-view hidden flex flex-col gap-6">
-      <div class="flex justify-between items-end">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
           <h2 class="font-serif text-3xl font-semibold text-wine" id="listTitle">All Profiles</h2>
           <p class="text-sm text-wine/60 mt-1" id="listSubtitle">Manage all registrations</p>
         </div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <!-- EXPORT DROPDOWN -->
+          <div class="relative">
+            <button id="exportDropdownBtn" onclick="toggleExportDropdown(event)" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gold/30 rounded-xl text-sm font-medium text-wine hover:border-gold hover:shadow-sm transition">
+              <svg class="w-4 h-4 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Export CSV</span>
+              <svg class="w-3.5 h-3.5 text-wine/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div id="exportDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gold/20 rounded-xl shadow-xl z-30 py-1 text-sm animate-scale-up">
+              <button id="exportSelectedBtn" onclick="handleExportAction('selected')" class="w-full text-left px-4 py-2.5 hover:bg-[#FAF8F5] flex items-center justify-between text-wine transition disabled:opacity-40 disabled:cursor-not-allowed">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-wine/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span>Export Selected</span>
+                </span>
+                <span id="exportSelectedCount" class="text-xs bg-wine/10 px-2 py-0.5 rounded-full font-semibold text-wine">0</span>
+              </button>
+              <button id="exportFilteredBtn" onclick="handleExportAction('filtered')" class="w-full text-left px-4 py-2.5 hover:bg-[#FAF8F5] flex items-center justify-between text-wine transition">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-wine/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                  <span>Export Filtered</span>
+                </span>
+                <span id="exportFilteredCount" class="text-xs bg-gold/20 px-2 py-0.5 rounded-full font-semibold text-wine">0</span>
+              </button>
+              <div class="border-t border-gold/10 my-1"></div>
+              <button id="exportAllBtn" onclick="handleExportAction('all')" class="w-full text-left px-4 py-2.5 hover:bg-[#FAF8F5] flex items-center justify-between text-wine font-medium transition">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-wine/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/></svg>
+                  <span>Export All</span>
+                </span>
+                <span id="exportAllCount" class="text-xs bg-wine/10 px-2 py-0.5 rounded-full font-semibold text-wine">0</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- SHARE WHATSAPP DROPDOWN -->
+          <div class="relative">
+            <button id="shareDropdownBtn" onclick="toggleShareDropdown(event)" class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#25D366]/10 border border-[#25D366]/30 rounded-xl text-sm font-medium text-[#1E7E34] hover:bg-[#25D366]/20 transition">
+              <svg class="w-4 h-4 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+              <span>Share on WhatsApp</span>
+              <svg class="w-3.5 h-3.5 text-[#1E7E34]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div id="shareDropdownMenu" class="hidden absolute right-0 mt-2 w-60 bg-white border border-gold/20 rounded-xl shadow-xl z-30 py-1 text-sm animate-scale-up">
+              <button id="shareSelectedBtn" onclick="handleShareAction('selected')" class="w-full text-left px-4 py-2.5 hover:bg-[#FAF8F5] flex items-center justify-between text-wine transition disabled:opacity-40 disabled:cursor-not-allowed">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-wine/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span>Share Selected</span>
+                </span>
+                <span id="shareSelectedCount" class="text-xs bg-wine/10 px-2 py-0.5 rounded-full font-semibold text-wine">0</span>
+              </button>
+              <button id="shareFilteredBtn" onclick="handleShareAction('filtered')" class="w-full text-left px-4 py-2.5 hover:bg-[#FAF8F5] flex items-center justify-between text-wine transition">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-wine/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                  <span>Share Filtered</span>
+                </span>
+                <span id="shareFilteredCount" class="text-xs bg-gold/20 px-2 py-0.5 rounded-full font-semibold text-wine">0</span>
+              </button>
+              <div class="border-t border-gold/10 my-1"></div>
+              <button id="shareAllBtn" onclick="handleShareAction('all')" class="w-full text-left px-4 py-2.5 hover:bg-[#FAF8F5] flex items-center justify-between text-wine font-medium transition">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-wine/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/></svg>
+                  <span>Share All</span>
+                </span>
+                <span id="shareAllCount" class="text-xs bg-wine/10 px-2 py-0.5 rounded-full font-semibold text-wine">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="glass-card flex flex-col overflow-hidden">
+        <!-- CONTEXTUAL SELECTION TOOLBAR -->
+        <div id="selectionToolbar" class="hidden p-3 md:px-6 md:py-3 bg-wine text-white flex flex-wrap items-center justify-between gap-3 border-b border-gold/20">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gold/20 text-gold text-xs font-bold" id="selectionCountBadge">0</span>
+            <span id="selectionText" class="font-medium text-sm">0 Profiles Selected</span>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
+            <button onclick="handleExportAction('selected')" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition inline-flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Export Selected</span>
+            </button>
+            <button onclick="handleShareAction('selected')" class="px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-lg font-medium transition inline-flex items-center gap-1.5 shadow-sm">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+              <span>Share Selected</span>
+            </button>
+            <button onclick="clearProfileSelection()" class="px-3 py-1.5 text-white/80 hover:text-white hover:underline transition">Clear</button>
+          </div>
+        </div>
+
+        <!-- SELECT ALL FILTERED BANNER -->
+        <div id="selectAllFilteredBanner" class="hidden p-2.5 px-4 bg-gold/15 border-b border-gold/30 text-wine text-xs sm:text-sm flex items-center justify-between">
+          <span id="selectAllFilteredText">All 10 profiles on this page are selected.</span>
+          <button id="selectAllFilteredBtn" onclick="selectAllFilteredProfiles()" class="font-bold underline ml-2 hover:text-wine/80">Select all 45 filtered profiles</button>
+        </div>
+
         <div class="p-4 md:p-6 border-b border-gold/10 bg-white flex flex-col md:flex-row gap-3 md:gap-4 items-center">
           <input type="text" id="listSearchInput" placeholder="Search by name, ID..." class="w-full md:flex-1 px-4 py-3 md:py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[16px] md:text-sm focus:outline-none">
           <button onclick="document.getElementById('filterModal').classList.remove('hidden')" class="w-full md:w-auto px-5 py-3 md:py-2.5 border border-gold/20 rounded-xl text-[16px] md:text-sm hover:bg-gray-50 transition font-medium">Filter</button>
@@ -304,6 +403,81 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
     <input type="date" id="fuDate" class="w-full mb-3 p-2 border rounded">
     <textarea id="fuNote" class="w-full mb-4 p-2 border rounded" placeholder="Note..."></textarea>
     <button onclick="saveFollowUp()" class="w-full p-2 bg-wine text-white rounded">Save</button>
+  </div>
+</div>
+
+<!-- DELETE QUERY CONFIRMATION MODAL -->
+<div id="deleteQueryModal" class="fixed inset-0 z-[160] hidden flex items-center justify-center p-4">
+  <div id="deleteQueryBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeDeleteQueryModal()"></div>
+  <div class="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gold/20 overflow-hidden animate-scale-up">
+    <button id="deleteModalCloseX" onclick="closeDeleteQueryModal()" class="absolute top-4 right-4 text-wine/40 hover:text-wine text-xl font-bold">&times;</button>
+    <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+    </div>
+    <h3 class="font-serif text-xl font-bold text-wine text-center mb-2">Delete Customer Enquiry?</h3>
+    <p class="text-xs text-wine/70 text-center mb-4">This action cannot be undone. The enquiry and profile will be permanently removed.</p>
+    <div class="bg-[#FAF8F5] border border-gold/15 rounded-xl p-3 mb-4 text-xs text-wine/80 space-y-1">
+      <div><span class="font-semibold text-wine">Name:</span> <span id="deleteModalTargetName">—</span></div>
+      <div><span class="font-semibold text-wine">Profile ID:</span> <span id="deleteModalTargetId">—</span></div>
+    </div>
+    <p id="deleteModalError" class="text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200 mb-4 hidden text-center font-medium"></p>
+    <div class="flex gap-3">
+      <button type="button" id="deleteModalCancelBtn" onclick="closeDeleteQueryModal()" class="flex-1 py-2.5 px-4 border border-gold/20 rounded-xl text-sm font-medium text-wine/70 hover:bg-gray-50 transition">Cancel</button>
+      <button type="button" id="deleteModalConfirmBtn" onclick="executeDeleteQuery()" class="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md inline-flex items-center justify-center gap-2">
+        <svg id="deleteBtnSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <span id="deleteBtnText">Yes, Delete</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE ON WHATSAPP MODAL -->
+<div id="shareWhatsAppModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeShareModal()"></div>
+  <div class="relative bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gold/20 overflow-hidden animate-scale-up flex flex-col max-h-[90vh]">
+    <div class="flex items-center justify-between pb-3 border-b border-gold/15">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-[#25D366]/20 text-[#1E7E34] flex items-center justify-center">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+        </div>
+        <div>
+          <h3 class="font-serif text-lg font-bold text-wine" id="shareModalTitle">Share on WhatsApp</h3>
+          <p class="text-xs text-wine/60" id="shareModalSubtitle">Preview profile details before sharing</p>
+        </div>
+      </div>
+      <button onclick="closeShareModal()" class="text-wine/40 hover:text-wine text-xl font-bold">&times;</button>
+    </div>
+
+    <!-- PRIVACY / CONTACT DETAILS TOGGLE -->
+    <div class="mt-4 p-3 bg-[#FAF8F5] border border-gold/20 rounded-xl flex items-center justify-between">
+      <div>
+        <div class="text-xs font-semibold text-wine">Include Contact Details</div>
+        <div class="text-[11px] text-wine/60">Includes Mobile, WhatsApp & Email in shared message</div>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="shareContactToggle" class="sr-only peer" onchange="toggleShareContactDetails(this.checked)">
+        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#25D366]"></div>
+      </label>
+    </div>
+
+    <!-- PREVIEW AREA -->
+    <div class="mt-3 flex-1 overflow-y-auto custom-scrollbar">
+      <div class="text-xs font-semibold text-wine/70 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+        <span>Message Preview</span>
+        <span id="shareProfileCountBadge" class="text-[11px] font-normal lowercase bg-wine/10 px-2 py-0.5 rounded-full text-wine">1 profile</span>
+      </div>
+      <pre id="sharePreviewText" class="p-3.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-xs text-wine font-mono whitespace-pre-wrap leading-relaxed select-all max-h-64 overflow-y-auto"></pre>
+      <p id="shareMultiNotice" class="text-[11px] text-wine/70 mt-2 hidden italic">Note: For multiple profiles, a consolidated CSV will be generated and shared/downloaded alongside this summary.</p>
+    </div>
+
+    <!-- MODAL ACTIONS -->
+    <div class="mt-4 pt-3 border-t border-gold/15 flex gap-2">
+      <button onclick="closeShareModal()" class="flex-1 py-2.5 px-4 border border-gold/20 rounded-xl text-sm font-medium text-wine/70 hover:bg-gray-50 transition">Cancel</button>
+      <button id="confirmShareWhatsAppBtn" onclick="executeShareWhatsApp()" class="flex-1 py-2.5 px-4 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-sm font-semibold transition shadow-md inline-flex items-center justify-center gap-2">
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+        <span>Open WhatsApp</span>
+      </button>
+    </div>
   </div>
 </div>
 

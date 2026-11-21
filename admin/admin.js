@@ -3,19 +3,30 @@ const fieldMapToDb = {
     'Registering For': 'registering_for', 'Full Name': 'full_name', 'Gender': 'gender', 'Date of Birth': 'date_of_birth',
     'Age': 'age', 'Marital Status': 'marital_status', 'Height': 'height', 'Education': 'education',
     'Occupation': 'occupation', 'City': 'city', 'Mother Tongue': 'mother_tongue', 'Languages Known': 'languages_known',
-    'Father Occupation': 'father_occupation', 'Mother Occupation': 'mother_occupation', 'Brothers': 'brothers',
-    'Sisters': 'sisters', 'Family Location': 'family_location', 'Family Type': 'family_type', 'Maslak': 'maslak',
-    'Maslak Preference': 'maslak_preference',
+    'Father Occupation': 'father_occupation', "Father's Occupation": 'father_occupation',
+    'Mother Occupation': 'mother_occupation', "Mother's Occupation": 'mother_occupation',
+    'Brothers': 'brothers', 'Sisters': 'sisters',
+    'Family Location': 'family_location', 'Family Type': 'family_type',
+    'Surname / Biradari': 'surname_biradari',
+    'Maslak': 'maslak', 'Maslak / Religious Background': 'maslak',
+    'Maslak Preference': 'maslak_preference', 'Religious Preference': 'maslak_preference',
     'About Candidate': 'about_candidate', 'Preferred Age Range': 'preferred_age_range', 'Preferred Location': 'preferred_location',
     'Preferred Education': 'preferred_education', 'Preferred Profession': 'preferred_profession', 'Other Preferences': 'other_preferences',
     'Guardian Name': 'guardian_name', 'Relationship': 'relationship', 'Mobile': 'mobile', 'WhatsApp': 'whatsapp',
-    'Preferred Contact Time': 'preferred_contact_time', 'Photo Attached': 'photo_attached'
+    'Preferred Contact Time': 'preferred_contact_time', 'Photo Attached': 'photo_attached',
+    'Email Address': 'email'
 };
 const dbMapToUI = {};
-for(let k in fieldMapToDb) dbMapToUI[fieldMapToDb[k]] = k;
+for(let k in fieldMapToDb) {
+    if (!dbMapToUI[fieldMapToDb[k]]) {
+        dbMapToUI[fieldMapToDb[k]] = k;
+    }
+}
 
 const STORE = 'noorEnikahSubmissions';
 let profiles = [];
+window.getProfiles = () => profiles;
+window.setProfiles = (val) => { profiles = val; };
 
 // Supabase Data Mapping
 
@@ -38,41 +49,81 @@ function convertFromDb(row) {
     for(let k in row) {
         if(dbMapToUI[k]) uiData[dbMapToUI[k]] = row[k] !== null ? row[k].toString() : '';
     }
+    // Backward-compatible field aliases & direct mappings so UI keys always match database values
+    uiData['Surname / Biradari'] = row.surname_biradari || uiData['Surname / Biradari'] || '';
+    uiData["Father's Occupation"] = row.father_occupation || uiData['Father Occupation'] || '';
+    uiData['Father Occupation'] = row.father_occupation || uiData["Father's Occupation"] || '';
+    uiData["Mother's Occupation"] = row.mother_occupation || uiData['Mother Occupation'] || '';
+    uiData['Mother Occupation'] = row.mother_occupation || uiData["Mother's Occupation"] || '';
+    uiData['Maslak'] = row.maslak || uiData['Maslak'] || '';
+    uiData['Maslak / Religious Background'] = row.maslak || uiData['Maslak'] || '';
+    uiData['Maslak Preference'] = row.maslak_preference || uiData['Maslak Preference'] || '';
+    uiData['Religious Preference'] = row.maslak_preference || uiData['Religious Preference'] || '';
+    uiData['Email Address'] = row.email || uiData['Email Address'] || '';
+    uiData['Residential Address'] = row.family_location || uiData['Family Location'] || row.city || uiData['City'] || '';
+
     return uiData;
 }
 let currentView = 'dashboard';
 let listType = 'all';
 let currentPage = 1;
+const PAGE_SIZE = 10;
+let selectedProfileIds = new Set();
+window.selectedProfileIds = selectedProfileIds;
+let shareModalState = {
+    type: 'single',
+    profiles: [],
+    includeContact: false
+};
+window.shareModalState = shareModalState;
 let activeFilters = {};
 let activeProfileIndex = null;
 let isEditMode = false;
 
 // Custom UI Dialog
-function showDialog(type, title, message, onConfirm = null, showInput = false, inputType = 'textarea', options = []) {
+function showDialog(type, title, message, onConfirm = null, showInput = false, inputType = 'textarea', options = [], initialValue = '', confirmBtnText = 'Confirm', cancelBtnText = 'Cancel') {
     let inputHtml = '';
     if (showInput) {
         if (inputType === 'select') {
             inputHtml = `<select id="dialogInput" class="w-full bg-white border border-gold/30 p-3.5 rounded-xl mb-4 text-[16px] md:text-sm focus:outline-none focus:border-wine">` + 
-                        options.map(o => `<option value="${o}">${o}</option>`).join('') + `</select>`;
+                        options.map(o => `<option value="${o}" ${o === initialValue ? 'selected' : ''}>${o}</option>`).join('') + `</select>`;
         } else {
-            inputHtml = `<textarea id="dialogInput" class="w-full bg-white border border-gold/30 p-3.5 rounded-xl mb-4 text-[16px] md:text-sm focus:outline-none focus:border-wine" rows="3" placeholder="Type here..."></textarea>`;
+            const escapedVal = (initialValue || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+            inputHtml = `<textarea id="dialogInput" class="w-full bg-[#FAF8F5] border border-gold/40 p-3.5 rounded-xl mb-4 text-[15px] md:text-sm text-wine focus:outline-none focus:border-wine transition" rows="4" placeholder="Type here...">${escapedVal}</textarea>`;
         }
     }
+
+    const confirmBtnClass = type === 'danger' 
+        ? 'bg-[#C9436B] hover:bg-[#A82B50] text-white' 
+        : 'btn-wine';
 
     const dialogHTML = `
     <div id="tempDialog" class="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-0 md:p-4">
         <div class="absolute inset-0 bg-[#320A16]/60 backdrop-blur-sm" onclick="document.getElementById('tempDialog').remove()"></div>
         <div class="relative bg-ivory w-full max-w-sm rounded-t-[24px] md:rounded-[20px] shadow-2xl p-6 border border-gold/20 flex flex-col items-center text-center animate-slide-up md:animate-none">
             <h3 class="font-serif text-2xl text-wine font-semibold mb-2">${title}</h3>
-            <p class="text-wine/70 text-sm mb-6">${message}</p>
+            <p class="text-wine/70 text-sm mb-6 leading-relaxed">${message}</p>
             ${inputHtml}
             <div class="flex flex-col md:flex-row w-full gap-3">
-                <button onclick="document.getElementById('tempDialog').remove()" class="w-full py-3.5 md:py-3 bg-[#FAF8F5] border border-gold/20 text-wine rounded-xl text-[16px] md:text-sm font-medium hover:bg-white transition">Cancel</button>
-                <button id="dialogConfirmBtn" class="w-full py-3.5 md:py-3 bg-wine text-cream rounded-xl text-[16px] md:text-sm font-medium shadow-md transition hover:bg-wine/90">Confirm</button>
+                <button onclick="document.getElementById('tempDialog').remove()" class="w-full py-3.5 md:py-3 bg-[#FAF8F5] border border-gold/20 text-wine rounded-xl text-[16px] md:text-sm font-medium hover:bg-white transition">${cancelBtnText}</button>
+                <button id="dialogConfirmBtn" class="w-full py-3.5 md:py-3 ${confirmBtnClass} rounded-xl text-[16px] md:text-sm font-medium shadow-md transition">${confirmBtnText}</button>
             </div>
         </div>
     </div>`;
     document.body.insertAdjacentHTML('beforeend', dialogHTML);
+    const inputEl = document.getElementById('dialogInput');
+    if (inputEl) {
+        setTimeout(() => {
+            inputEl.focus();
+            if (inputType !== 'select') {
+                inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+            }
+        }, 100);
+    }
     document.getElementById('dialogConfirmBtn').onclick = () => {
         let val = showInput ? document.getElementById('dialogInput').value : true;
         document.getElementById('tempDialog').remove();
@@ -531,8 +582,13 @@ document.getElementById('sidebarOverlay').addEventListener('click', () => {
     document.getElementById('sidebarOverlay').classList.add('hidden');
 });
 
+initDeleteQueryModalListeners();
+
 function navigate(view) {
     currentView = view;
+    currentPage = 1;
+    selectedProfileIds.clear();
+    closeAllDropdowns();
     document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.nav-link').forEach(el => {
         el.classList.remove('bg-burg/50', 'border-gold/10', 'text-cream');
@@ -604,7 +660,13 @@ function initDashboard() {
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender||'-'} / ${p.Age||'-'}</td>
                 <td class="p-4 text-[13px] text-wine/80">${p.City||'-'}</td>
                 <td class="p-4">${getStatusBadge(p)}</td>
-                <td class="p-4 text-right"><button onclick="viewProfile(${idx})" class="px-3 py-1.5 border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine hover:bg-wine/5">View</button></td>
+                <td class="p-4 text-right flex justify-end items-center gap-1.5">
+                    <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine hover:bg-wine/5 shadow-sm">View</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
+                </td>
             </tr>`;
         }).join('');
     }
@@ -627,7 +689,13 @@ function initDashboard() {
                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.City||'-'}</span>
                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold/50"></span>${p.createdAt.split('T')[0]}</span>
                 </div>
-                <button onclick="viewProfile(${idx})" class="w-full py-3 mt-1 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[13px] uppercase font-bold text-wine shadow-sm active:scale-[0.98] transition-transform">View Details</button>
+                <div class="grid grid-cols-2 gap-2 mt-1">
+                    <button onclick="viewProfile(${idx})" class="py-3 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm active:scale-[0.98] transition">View Details</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="py-3 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-xl text-[12px] uppercase font-bold shadow-sm active:scale-[0.98] transition inline-flex items-center justify-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
+                </div>
             </div>`;
         }).join('');
     }
@@ -659,9 +727,6 @@ function injectFilterUI() {
             <div><label class="text-[10px] uppercase font-bold text-wine/50 block mb-1">Surname / Biradari</label>
             <select id="fltSurname" class="w-full p-3 md:p-2 border rounded-xl md:rounded border-gold/30 text-[16px] md:text-sm bg-[#FAF8F5]"></select></div>
             
-            <div><label class="text-[10px] uppercase font-bold text-wine/50 block mb-1">Sect / Firqah</label>
-            <select id="fltSect" class="w-full p-3 md:p-2 border rounded-xl md:rounded border-gold/30 text-[16px] md:text-sm bg-[#FAF8F5]"></select></div>
-            
             <div><label class="text-[10px] uppercase font-bold text-wine/50 block mb-1">Maslak</label>
             <select id="fltMaslak" class="w-full p-3 md:p-2 border rounded-xl md:rounded border-gold/30 text-[16px] md:text-sm bg-[#FAF8F5]"></select></div>
             
@@ -685,11 +750,11 @@ function injectFilterUI() {
 
 function populateFilters() {
     const getOptions = (key) => [...new Set(profiles.map(p=>p[key]).filter(Boolean))].sort();
+    const maslakOptions = [...new Set(profiles.map(p=>p['Maslak'] || p['Maslak / Religious Background']).filter(Boolean))].sort();
     
     document.getElementById('fltCity').innerHTML = '<option value="All">All</option>' + getOptions('City').map(c=>`<option value="${c}">${c}</option>`).join('');
     document.getElementById('fltSurname').innerHTML = '<option value="All">All</option>' + getOptions('Surname / Biradari').map(c=>`<option value="${c}">${c}</option>`).join('');
-    document.getElementById('fltSect').innerHTML = '<option value="All">All</option>' + getOptions('Sect / Firqah').map(c=>`<option value="${c}">${c}</option>`).join('');
-    document.getElementById('fltMaslak').innerHTML = '<option value="All">All</option>' + getOptions('Maslak / Religious Background').map(c=>`<option value="${c}">${c}</option>`).join('');
+    document.getElementById('fltMaslak').innerHTML = '<option value="All">All</option>' + maslakOptions.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 
 function applyFilters() {
@@ -700,11 +765,12 @@ function applyFilters() {
         minAge: document.getElementById('fltMinAge').value,
         maxAge: document.getElementById('fltMaxAge').value,
         surname: document.getElementById('fltSurname').value,
-        sect: document.getElementById('fltSect').value,
         maslak: document.getElementById('fltMaslak').value,
         regFrom: document.getElementById('fltRegFrom').value,
         regTo: document.getElementById('fltRegTo').value
     };
+    currentPage = 1;
+    selectedProfileIds.clear();
     document.getElementById('filterModal').classList.add('hidden');
     renderListView();
 }
@@ -716,14 +782,19 @@ function clearFilters() {
     document.getElementById('fltMinAge').value = '';
     document.getElementById('fltMaxAge').value = '';
     document.getElementById('fltSurname').value = 'All';
-    document.getElementById('fltSect').value = 'All';
     document.getElementById('fltMaslak').value = 'All';
     document.getElementById('fltRegFrom').value = '';
     document.getElementById('fltRegTo').value = '';
+    currentPage = 1;
+    selectedProfileIds.clear();
     applyFilters();
 }
 
-document.getElementById('listSearchInput').addEventListener('input', () => renderListView());
+document.getElementById('listSearchInput').addEventListener('input', () => {
+    currentPage = 1;
+    selectedProfileIds.clear();
+    renderListView();
+});
 
 // View Helpers
 function getStatusBadge(p) {
@@ -743,40 +814,590 @@ function getStatusBadge(p) {
     return `<span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-800 border border-gray-200">${p.status}</span>`;
 }
 
-// List View
-function renderListView() {
+// Data Filter & Helper Engine
+function getFilteredProfiles() {
     let filtered = [...profiles];
-
-// Supabase Data Mapping
-
-
     
     // Module Filters
     if (listType === 'pending') filtered = filtered.filter(p => p.status === 'New');
     if (listType === 'shortlisted') filtered = filtered.filter(p => p.status === 'Shortlisted');
     if (listType === 'contacted') filtered = filtered.filter(p => p.status === 'Contacted');
-    if (listType === 'followup') {
-        filtered = filtered.filter(p => p.status === 'Follow Up');
-    }
+    if (listType === 'followup') filtered = filtered.filter(p => p.status === 'Follow Up');
     if (listType === 'notes') filtered = filtered.filter(p => p.notes && p.notes.length > 0);
 
     // Advanced Filters
-    if (activeFilters.gender && activeFilters.gender !== 'All') filtered = filtered.filter(p=>p.Gender===activeFilters.gender);
-    if (activeFilters.status && activeFilters.status !== 'All') filtered = filtered.filter(p=>p.status===activeFilters.status);
-    if (activeFilters.city && activeFilters.city !== 'All') filtered = filtered.filter(p=>p.City===activeFilters.city);
-    if (activeFilters.surname && activeFilters.surname !== 'All') filtered = filtered.filter(p=>p['Surname / Biradari']===activeFilters.surname);
-    if (activeFilters.sect && activeFilters.sect !== 'All') filtered = filtered.filter(p=>p['Sect / Firqah']===activeFilters.sect);
-    if (activeFilters.maslak && activeFilters.maslak !== 'All') filtered = filtered.filter(p=>p['Maslak / Religious Background']===activeFilters.maslak);
-    if (activeFilters.minAge) filtered = filtered.filter(p=> parseInt(p.Age) >= parseInt(activeFilters.minAge));
-    if (activeFilters.maxAge) filtered = filtered.filter(p=> parseInt(p.Age) <= parseInt(activeFilters.maxAge));
+    if (activeFilters.gender && activeFilters.gender !== 'All') filtered = filtered.filter(p => p.Gender === activeFilters.gender);
+    if (activeFilters.status && activeFilters.status !== 'All') filtered = filtered.filter(p => p.status === activeFilters.status);
+    if (activeFilters.city && activeFilters.city !== 'All') filtered = filtered.filter(p => p.City === activeFilters.city);
+    if (activeFilters.surname && activeFilters.surname !== 'All') filtered = filtered.filter(p => p['Surname / Biradari'] === activeFilters.surname);
+    if (activeFilters.maslak && activeFilters.maslak !== 'All') filtered = filtered.filter(p => (p['Maslak'] === activeFilters.maslak || p['Maslak / Religious Background'] === activeFilters.maslak));
+    if (activeFilters.minAge) filtered = filtered.filter(p => parseInt(p.Age) >= parseInt(activeFilters.minAge));
+    if (activeFilters.maxAge) filtered = filtered.filter(p => parseInt(p.Age) <= parseInt(activeFilters.maxAge));
     if (activeFilters.regFrom) filtered = filtered.filter(p => new Date(p.createdAt.split('T')[0]) >= new Date(activeFilters.regFrom));
     if (activeFilters.regTo) filtered = filtered.filter(p => new Date(p.createdAt.split('T')[0]) <= new Date(activeFilters.regTo));
 
     // Global Search
-    const term = document.getElementById('listSearchInput').value.toLowerCase();
-    if(term) {
+    const searchInput = document.getElementById('listSearchInput');
+    const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    if (term) {
         filtered = filtered.filter(p => Object.values(p).some(v => String(v).toLowerCase().includes(term)));
     }
+    return filtered;
+}
+
+// Pagination & Selection Management
+function changePage(p) {
+    const filtered = getFilteredProfiles();
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    renderListView();
+    const listEl = document.getElementById('view-list');
+    if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleSelectPage(checked) {
+    const filtered = getFilteredProfiles();
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const pagedProfiles = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+    pagedProfiles.forEach(p => {
+        if (checked) {
+            selectedProfileIds.add(p.id);
+        } else {
+            selectedProfileIds.delete(p.id);
+        }
+    });
+    renderListView();
+}
+
+function selectAllFilteredProfiles() {
+    const filtered = getFilteredProfiles();
+    filtered.forEach(p => selectedProfileIds.add(p.id));
+    renderListView();
+}
+
+function clearProfileSelection() {
+    selectedProfileIds.clear();
+    renderListView();
+}
+
+function toggleProfileSelection(id, checked, e) {
+    if (checked) {
+        selectedProfileIds.add(id);
+    } else {
+        selectedProfileIds.delete(id);
+    }
+    const evt = e || (typeof window !== 'undefined' ? window.event : null);
+    if (evt && evt.target) {
+        const tr = evt.target.closest('tr');
+        if (tr) tr.classList.toggle('bg-[#FAF8F5]', checked);
+        const card = evt.target.closest('div.bg-white');
+        if (card) {
+            card.classList.toggle('ring-2', checked);
+            card.classList.toggle('ring-wine/20', checked);
+            card.classList.toggle('bg-[#FAF8F5]/40', checked);
+        }
+    }
+    const filtered = getFilteredProfiles();
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const pagedProfiles = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+    updateSelectionUI(filtered, pagedProfiles);
+}
+
+function updateSelectionUI(filtered = getFilteredProfiles(), pagedProfiles = null) {
+    if (!pagedProfiles) {
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+        const cur = Math.max(1, Math.min(currentPage, totalPages));
+        const startIdx = (cur - 1) * PAGE_SIZE;
+        pagedProfiles = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+    }
+    const selCount = selectedProfileIds.size;
+    const filteredCount = filtered.length;
+    const allCount = profiles.length;
+
+    // Dropdown counters
+    const expSelCount = document.getElementById('exportSelectedCount');
+    if (expSelCount) expSelCount.innerText = selCount;
+    const expFltCount = document.getElementById('exportFilteredCount');
+    if (expFltCount) expFltCount.innerText = filteredCount;
+    const expAllCount = document.getElementById('exportAllCount');
+    if (expAllCount) expAllCount.innerText = allCount;
+
+    const shrSelCount = document.getElementById('shareSelectedCount');
+    if (shrSelCount) shrSelCount.innerText = selCount;
+    const shrFltCount = document.getElementById('shareFilteredCount');
+    if (shrFltCount) shrFltCount.innerText = filteredCount;
+    const shrAllCount = document.getElementById('shareAllCount');
+    if (shrAllCount) shrAllCount.innerText = allCount;
+
+    // Button disabled states
+    const expSelBtn = document.getElementById('exportSelectedBtn');
+    if (expSelBtn) expSelBtn.disabled = selCount === 0;
+    const shrSelBtn = document.getElementById('shareSelectedBtn');
+    if (shrSelBtn) shrSelBtn.disabled = selCount === 0;
+
+    const expFltBtn = document.getElementById('exportFilteredBtn');
+    if (expFltBtn) expFltBtn.disabled = filteredCount === 0;
+    const shrFltBtn = document.getElementById('shareFilteredBtn');
+    if (shrFltBtn) shrFltBtn.disabled = filteredCount === 0;
+
+    const expAllBtn = document.getElementById('exportAllBtn');
+    if (expAllBtn) expAllBtn.disabled = allCount === 0;
+    const shrAllBtn = document.getElementById('shareAllBtn');
+    if (shrAllBtn) shrAllBtn.disabled = allCount === 0;
+
+    // Selection Toolbar
+    const toolbar = document.getElementById('selectionToolbar');
+    if (toolbar) {
+        if (selCount > 0) {
+            toolbar.classList.remove('hidden');
+            const badge = document.getElementById('selectionCountBadge');
+            if (badge) badge.innerText = selCount;
+            const text = document.getElementById('selectionText');
+            if (text) text.innerText = selCount === 1 ? '1 Profile Selected' : `${selCount} Profiles Selected`;
+        } else {
+            toolbar.classList.add('hidden');
+        }
+    }
+
+    // Select All Filtered Banner
+    const banner = document.getElementById('selectAllFilteredBanner');
+    if (banner) {
+        const allPageSelected = pagedProfiles.length > 0 && pagedProfiles.every(p => selectedProfileIds.has(p.id));
+        const hasMoreFiltered = filteredCount > pagedProfiles.length;
+        const allFilteredSelected = filteredCount > 0 && filtered.every(p => selectedProfileIds.has(p.id));
+
+        if (allPageSelected && hasMoreFiltered && !allFilteredSelected) {
+            banner.classList.remove('hidden');
+            const bText = document.getElementById('selectAllFilteredText');
+            if (bText) bText.innerText = `All ${pagedProfiles.length} profiles on this page are selected.`;
+            const bBtn = document.getElementById('selectAllFilteredBtn');
+            if (bBtn) bBtn.innerText = `Select all ${filteredCount} filtered profiles`;
+        } else {
+            banner.classList.add('hidden');
+        }
+    }
+
+    // Header Checkbox state
+    const headerCb = document.getElementById('selectAllHeaderCheckbox');
+    if (headerCb) {
+        if (pagedProfiles.length === 0) {
+            headerCb.checked = false;
+            headerCb.indeterminate = false;
+        } else {
+            const pageSelectedCount = pagedProfiles.filter(p => selectedProfileIds.has(p.id)).length;
+            if (pageSelectedCount === pagedProfiles.length) {
+                headerCb.checked = true;
+                headerCb.indeterminate = false;
+            } else if (pageSelectedCount > 0) {
+                headerCb.checked = false;
+                headerCb.indeterminate = true;
+            } else {
+                headerCb.checked = false;
+                headerCb.indeterminate = false;
+            }
+        }
+    }
+}
+
+// Dropdown UI Handlers
+function toggleExportDropdown(e) {
+    if (e) e.stopPropagation();
+    const expMenu = document.getElementById('exportDropdownMenu');
+    const shrMenu = document.getElementById('shareDropdownMenu');
+    if (shrMenu) shrMenu.classList.add('hidden');
+    if (expMenu) expMenu.classList.toggle('hidden');
+}
+
+function toggleShareDropdown(e) {
+    if (e) e.stopPropagation();
+    const expMenu = document.getElementById('exportDropdownMenu');
+    const shrMenu = document.getElementById('shareDropdownMenu');
+    if (expMenu) expMenu.classList.add('hidden');
+    if (shrMenu) shrMenu.classList.toggle('hidden');
+}
+
+function closeAllDropdowns() {
+    const expMenu = document.getElementById('exportDropdownMenu');
+    const shrMenu = document.getElementById('shareDropdownMenu');
+    if (expMenu) expMenu.classList.add('hidden');
+    if (shrMenu) shrMenu.classList.add('hidden');
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#exportDropdownBtn') && !e.target.closest('#exportDropdownMenu') &&
+        !e.target.closest('#shareDropdownBtn') && !e.target.closest('#shareDropdownMenu')) {
+        closeAllDropdowns();
+    }
+});
+
+// CSV Export Engine
+const CSV_COLUMNS = [
+    { key: 'profileId', label: 'Profile ID' },
+    { key: 'status', label: 'Status' },
+    { key: 'createdAtFormatted', label: 'Registration Date' },
+    // Basic
+    { key: 'Full Name', label: 'Full Name' },
+    { key: 'Registering For', label: 'Registering For' },
+    { key: 'Gender', label: 'Gender' },
+    { key: 'Age', label: 'Age' },
+    { key: 'Date of Birth', label: 'Date of Birth' },
+    { key: 'Marital Status', label: 'Marital Status' },
+    { key: 'Height', label: 'Height' },
+    // Professional
+    { key: 'Education', label: 'Education' },
+    { key: 'Occupation', label: 'Occupation' },
+    { key: 'City', label: 'City' },
+    { key: 'Mother Tongue', label: 'Mother Tongue' },
+    { key: 'Languages Known', label: 'Languages Known' },
+    // Family & Religious
+    { key: 'Surname / Biradari', label: 'Surname / Biradari' },
+    { key: "Father's Occupation", label: "Father's Occupation" },
+    { key: "Mother's Occupation", label: "Mother's Occupation" },
+    { key: 'Brothers', label: 'Brothers' },
+    { key: 'Sisters', label: 'Sisters' },
+    { key: 'Family Location', label: 'Family Location' },
+    { key: 'Family Type', label: 'Family Type' },
+    { key: 'Maslak', label: 'Maslak' },
+    { key: 'Religious Preference', label: 'Religious Preference' },
+    // About Candidate
+    { key: 'About Candidate', label: 'About Candidate' },
+    // Match Preferences
+    { key: 'Preferred Age Range', label: 'Preferred Age Range' },
+    { key: 'Preferred Location', label: 'Preferred Location' },
+    { key: 'Preferred Education', label: 'Preferred Education' },
+    { key: 'Preferred Profession', label: 'Preferred Profession' },
+    { key: 'Other Preferences', label: 'Other Preferences' },
+    // Contact Details
+    { key: 'Guardian Name', label: 'Guardian Name', isContact: true },
+    { key: 'Relationship', label: 'Relationship', isContact: true },
+    { key: 'Mobile', label: 'Mobile', isContact: true, isPhone: true },
+    { key: 'WhatsApp', label: 'WhatsApp', isContact: true, isPhone: true },
+    { key: 'Preferred Contact Time', label: 'Preferred Contact Time', isContact: true },
+    { key: 'Residential Address', label: 'Residential Address', isContact: true },
+    { key: 'Email Address', label: 'Email Address', isContact: true }
+];
+
+function getTodayDate() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function sanitizeFilename(name) {
+    if (!name) return 'profile';
+    return String(name)
+        .trim()
+        .toLowerCase()
+        .replace(/[/\\?%*:|"<>]/g, '')
+        .replace(/\s+/g, '-');
+}
+
+function escapeCsvCell(val, isPhone = false) {
+    if (val === undefined || val === null || val === '') return '—';
+    let str = String(val).trim();
+    if (!str) return '—';
+
+    // Formula injection protection: prepend ' if value starts with =, +, -, @, \t, \r
+    const formulaPrefixes = ['=', '+', '-', '@', '\t', '\r'];
+    if (formulaPrefixes.includes(str.charAt(0))) {
+        str = "'" + str;
+    } else if (isPhone && /^\d+$/.test(str)) {
+        str = "'" + str;
+    }
+
+    // RFC 4180 escaping
+    if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+}
+
+function generateCsvContent(profileList, includeContact = true) {
+    let csv = '\uFEFF'; // UTF-8 BOM
+    
+    // Header row
+    const headers = CSV_COLUMNS.map(col => `"${col.label.replace(/"/g, '""')}"`);
+    csv += headers.join(',') + '\r\n';
+
+    // Data rows
+    profileList.forEach(p => {
+        const row = CSV_COLUMNS.map(col => {
+            if (col.isContact && !includeContact) {
+                return '—';
+            }
+            if (col.key === 'createdAtFormatted') {
+                const regDate = p.createdAt ? p.createdAt.split('T')[0] : '—';
+                return escapeCsvCell(regDate);
+            }
+            const val = p[col.key];
+            return escapeCsvCell(val, col.isPhone);
+        });
+        csv += row.join(',') + '\r\n';
+    });
+
+    return csv;
+}
+
+function downloadCsvFile(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function handleExportAction(type) {
+    closeAllDropdowns();
+    let exportList = [];
+    let filenameSuffix = '';
+
+    if (type === 'selected') {
+        exportList = profiles.filter(p => selectedProfileIds.has(p.id));
+        if (exportList.length === 0) {
+            showDialog('info', 'No Profiles Selected', 'Please select at least one profile using the checkboxes to export.');
+            return;
+        }
+        filenameSuffix = 'selected-profiles';
+    } else if (type === 'filtered') {
+        exportList = getFilteredProfiles();
+        if (exportList.length === 0) {
+            showDialog('info', 'No Filtered Profiles', 'No profiles match the active search or filters.');
+            return;
+        }
+        filenameSuffix = 'filtered-profiles';
+    } else {
+        exportList = [...profiles];
+        if (exportList.length === 0) {
+            showDialog('info', 'No Profiles Found', 'There are no profiles in the database to export.');
+            return;
+        }
+        filenameSuffix = 'all-profiles';
+    }
+
+    const filename = `noor-e-nikah-${filenameSuffix}-${getTodayDate()}.csv`;
+    const csvContent = generateCsvContent(exportList, true);
+    downloadCsvFile(csvContent, filename);
+}
+
+function exportSingleProfile(idx) {
+    const p = profiles[idx];
+    if (!p) return;
+    const nameStr = sanitizeFilename(p['Full Name'] || p.profileId || 'profile');
+    const filename = `noor-e-nikah-profile-${nameStr}-${getTodayDate()}.csv`;
+    const csvContent = generateCsvContent([p], true);
+    downloadCsvFile(csvContent, filename);
+}
+
+// WhatsApp Sharing Engine
+function formatSingleProfileWhatsApp(p, includeContact = false) {
+    if (!p) return '';
+    let msg = `🌟 NOOR-E-NIKAH MATRIMONIAL PROFILE 🌟\n\n`;
+    msg += `Profile ID: ${p.profileId || '—'}\n`;
+    msg += `Name: ${p['Full Name'] || '—'}\n`;
+    msg += `Registering For: ${p['Registering For'] || '—'}\n`;
+    msg += `Gender / Age: ${p.Gender || '—'} • ${p.Age ? p.Age + ' yrs' : '—'}\n`;
+    msg += `Marital Status: ${p['Marital Status'] || '—'}\n`;
+    msg += `Height: ${p.Height || '—'}\n\n`;
+
+    msg += `🎓 EDUCATION & PROFESSION\n`;
+    msg += `Education: ${p.Education || '—'}\n`;
+    msg += `Occupation: ${p.Occupation || '—'}\n`;
+    msg += `City: ${p.City || '—'}\n`;
+    msg += `Mother Tongue: ${p['Mother Tongue'] || '—'}\n`;
+    if (p['Languages Known']) msg += `Languages: ${p['Languages Known']}\n`;
+    msg += `\n`;
+
+    msg += `🕌 RELIGIOUS & FAMILY\n`;
+    msg += `Maslak: ${p.Maslak || p['Maslak / Religious Background'] || '—'}\n`;
+    msg += `Surname / Biradari: ${p['Surname / Biradari'] || '—'}\n`;
+    msg += `Family Location: ${p['Family Location'] || '—'}\n`;
+    msg += `Family Type: ${p['Family Type'] || '—'}\n`;
+    msg += `\n`;
+
+    msg += `🎯 MATCH PREFERENCES\n`;
+    msg += `Preferred Age: ${p['Preferred Age Range'] || '—'}\n`;
+    msg += `Preferred Location: ${p['Preferred Location'] || '—'}\n`;
+    msg += `Preferred Education: ${p['Preferred Education'] || '—'}\n`;
+    msg += `Preferred Profession: ${p['Preferred Profession'] || '—'}\n`;
+    if (p['Other Preferences']) msg += `Other: ${p['Other Preferences']}\n`;
+    msg += `\n`;
+
+    if (includeContact) {
+        msg += `📞 CONTACT DETAILS\n`;
+        msg += `Guardian: ${p['Guardian Name'] || '—'} (${p.Relationship || '—'})\n`;
+        msg += `Mobile: ${p.Mobile || '—'}\n`;
+        msg += `WhatsApp: ${p.WhatsApp || '—'}\n`;
+        msg += `Preferred Time: ${p['Preferred Contact Time'] || '—'}\n`;
+        if (p['Email Address']) msg += `Email: ${p['Email Address']}\n`;
+        if (p['Residential Address']) msg += `Address: ${p['Residential Address']}\n`;
+        msg += `\n`;
+    }
+
+    msg += `Shared via Noor-E-Nikah Matrimonial Services`;
+    return msg;
+}
+
+function formatMultiProfileWhatsApp(profileList, includeContact = false) {
+    let msg = `🌟 NOOR-E-NIKAH MATRIMONIAL PROFILES 🌟\n\n`;
+    msg += `Total Profiles: ${profileList.length}\n\n`;
+    msg += `Summary List:\n`;
+    profileList.slice(0, 10).forEach((p, idx) => {
+        msg += `${idx + 1}. ${p['Full Name'] || 'Candidate'} — ${p.Gender || '—'}, ${p.Age ? p.Age + ' yrs' : '—'} | ${p.City || '—'} | ${p.Occupation || '—'} (ID: ${p.profileId || '—'})\n`;
+    });
+    if (profileList.length > 10) {
+        msg += `\n... and ${profileList.length - 10} more profile(s).\n`;
+    }
+    msg += `\n`;
+    if (includeContact) {
+        msg += `ℹ️ Contact details are included in the shared export.\n`;
+    } else {
+        msg += `🔒 Contact details are kept private as per selection.\n`;
+    }
+    msg += `📎 A consolidated CSV file is attached.\n\n`;
+    msg += `Shared via Noor-E-Nikah Matrimonial Services`;
+    return msg;
+}
+
+function openShareSingleProfile(idx) {
+    const p = profiles[idx];
+    if (!p) return;
+    shareModalState = {
+        type: 'single',
+        profiles: [p],
+        includeContact: false
+    };
+    const toggle = document.getElementById('shareContactToggle');
+    if (toggle) toggle.checked = false;
+
+    document.getElementById('shareModalTitle').innerText = 'Share Profile on WhatsApp';
+    document.getElementById('shareModalSubtitle').innerText = `${p['Full Name'] || 'Candidate'} (${p.profileId})`;
+    document.getElementById('shareProfileCountBadge').innerText = '1 profile';
+    document.getElementById('shareMultiNotice').classList.add('hidden');
+    document.getElementById('sharePreviewText').innerText = formatSingleProfileWhatsApp(p, false);
+
+    document.getElementById('shareWhatsAppModal').classList.remove('hidden');
+}
+
+function handleShareAction(type) {
+    closeAllDropdowns();
+    let shareList = [];
+
+    if (type === 'selected') {
+        shareList = profiles.filter(p => selectedProfileIds.has(p.id));
+        if (shareList.length === 0) {
+            showDialog('info', 'No Profiles Selected', 'Please select at least one profile using the checkboxes to share.');
+            return;
+        }
+    } else if (type === 'filtered') {
+        shareList = getFilteredProfiles();
+        if (shareList.length === 0) {
+            showDialog('info', 'No Filtered Profiles', 'No profiles match the active search or filters.');
+            return;
+        }
+    } else {
+        shareList = [...profiles];
+        if (shareList.length === 0) {
+            showDialog('info', 'No Profiles Found', 'There are no profiles in the database to share.');
+            return;
+        }
+    }
+
+    if (shareList.length === 1) {
+        const globalIdx = profiles.indexOf(shareList[0]);
+        openShareSingleProfile(globalIdx >= 0 ? globalIdx : 0);
+        return;
+    }
+
+    shareModalState = {
+        type: type,
+        profiles: shareList,
+        includeContact: false
+    };
+    const toggle = document.getElementById('shareContactToggle');
+    if (toggle) toggle.checked = false;
+
+    const label = type === 'all' ? 'All' : type === 'filtered' ? 'Filtered' : 'Selected';
+    document.getElementById('shareModalTitle').innerText = `Share ${label} Profiles on WhatsApp`;
+    document.getElementById('shareModalSubtitle').innerText = `Consolidated export of ${shareList.length} profiles`;
+    document.getElementById('shareProfileCountBadge').innerText = `${shareList.length} profiles`;
+    document.getElementById('shareMultiNotice').classList.remove('hidden');
+    document.getElementById('sharePreviewText').innerText = formatMultiProfileWhatsApp(shareList, false);
+
+    document.getElementById('shareWhatsAppModal').classList.remove('hidden');
+}
+
+function toggleShareContactDetails(checked) {
+    shareModalState.includeContact = checked;
+    if (shareModalState.type === 'single') {
+        document.getElementById('sharePreviewText').innerText = formatSingleProfileWhatsApp(shareModalState.profiles[0], checked);
+    } else {
+        document.getElementById('sharePreviewText').innerText = formatMultiProfileWhatsApp(shareModalState.profiles, checked);
+    }
+}
+
+function closeShareModal() {
+    const modal = document.getElementById('shareWhatsAppModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function executeShareWhatsApp() {
+    if (!shareModalState.profiles || shareModalState.profiles.length === 0) return;
+
+    if (shareModalState.type === 'single') {
+        const text = formatSingleProfileWhatsApp(shareModalState.profiles[0], shareModalState.includeContact);
+        const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+        window.open(waUrl, '_blank');
+        closeShareModal();
+    } else {
+        const text = formatMultiProfileWhatsApp(shareModalState.profiles, shareModalState.includeContact);
+        const filename = `noor-e-nikah-${shareModalState.type}-profiles-${getTodayDate()}.csv`;
+        const csvContent = generateCsvContent(shareModalState.profiles, shareModalState.includeContact);
+
+        let sharedSuccessfully = false;
+        try {
+            if (navigator.canShare && typeof File !== 'undefined') {
+                const file = new File([csvContent], filename, { type: 'text/csv' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: 'Noor-E-Nikah Profiles Export',
+                        text: text,
+                        files: [file]
+                    });
+                    sharedSuccessfully = true;
+                    closeShareModal();
+                }
+            }
+        } catch (err) {
+            console.log("Web Share API not completed or cancelled, using fallback", err);
+        }
+
+        if (!sharedSuccessfully) {
+            downloadCsvFile(csvContent, filename);
+            const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+            window.open(waUrl, '_blank');
+            closeShareModal();
+            showDialog('info', 'File Downloaded', `The profile export CSV file (${filename}) has been downloaded. WhatsApp is now open so you can attach the downloaded file.`);
+        }
+    }
+}
+
+// List View
+function renderListView() {
+    const filtered = getFilteredProfiles();
     
     // Header Titles
     const titles = {
@@ -787,8 +1408,10 @@ function renderListView() {
         'followup': {t: 'Follow Up', s: 'Profiles requiring follow-up communication.'},
         'notes': {t: 'Profile Notes', s: 'Internal administrative notes on profiles.'}
     };
-    document.getElementById('listTitle').innerText = titles[listType].t;
-    document.getElementById('listSubtitle').innerText = titles[listType].s;
+    if (titles[listType]) {
+        document.getElementById('listTitle').innerText = titles[listType].t;
+        document.getElementById('listSubtitle').innerText = titles[listType].s;
+    }
 
     // Filter Chips Render
     let chipsHTML = '';
@@ -798,22 +1421,51 @@ function renderListView() {
         }
     }
     const chipsContainer = document.getElementById('activeFiltersContainer');
-    if(chipsHTML) {
-        chipsContainer.innerHTML = chipsHTML + '<button onclick="clearFilters()" class="text-[12px] font-bold text-wine/60 underline ml-2 hover:text-wine p-2">Clear All</button>';
-        chipsContainer.classList.remove('hidden');
-    } else {
-        chipsContainer.classList.add('hidden');
+    if (chipsContainer) {
+        if(chipsHTML) {
+            chipsContainer.innerHTML = chipsHTML + '<button onclick="clearFilters()" class="text-[12px] font-bold text-wine/60 underline ml-2 hover:text-wine p-2">Clear All</button>';
+            chipsContainer.classList.remove('hidden');
+        } else {
+            chipsContainer.classList.add('hidden');
+        }
     }
 
     const tbody = document.getElementById('listTableBody');
     const thead = document.getElementById('listTableHeader');
     const mobCont = document.getElementById('listMobileCards');
+    const paginationEl = document.getElementById('listPagination');
     
-    if(filtered.length === 0) {
+    // Pagination calculations
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const pagedProfiles = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+    // Update selection counters & toolbars
+    updateSelectionUI(filtered, pagedProfiles);
+
+    if (filtered.length === 0) {
         if(thead) thead.innerHTML = '<tr><th class="p-4">Profiles</th></tr>';
         if(tbody) tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-wine/50 text-sm italic">No profiles found for this view.</td></tr>';
         if(mobCont) mobCont.innerHTML = '<div class="p-8 text-center text-wine/50 text-sm italic">No profiles found for this view.</div>';
+        if(paginationEl) paginationEl.classList.add('hidden');
         return;
+    }
+
+    // Render pagination controls
+    if (paginationEl) {
+        paginationEl.classList.remove('hidden');
+        paginationEl.innerHTML = `
+            <div class="text-xs text-wine/70">
+                Showing <span class="font-bold text-wine">${startIdx + 1}</span> to <span class="font-bold text-wine">${Math.min(startIdx + PAGE_SIZE, filtered.length)}</span> of <span class="font-bold text-wine">${filtered.length}</span> profiles
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button onclick="changePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} class="px-3 py-1.5 border border-gold/20 rounded-lg text-xs font-medium text-wine hover:bg-[#FAF8F5] transition disabled:opacity-30 disabled:cursor-not-allowed">Previous</button>
+                <span class="px-2 text-xs font-semibold text-wine">Page ${currentPage} of ${totalPages}</span>
+                <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="px-3 py-1.5 border border-gold/20 rounded-lg text-xs font-medium text-wine hover:bg-[#FAF8F5] transition disabled:opacity-30 disabled:cursor-not-allowed">Next</button>
+            </div>
+        `;
     }
 
     const renderTableAndCards = (profilesArray, columnsHtml, desktopRowFn, mobileCardFn) => {
@@ -826,10 +1478,7 @@ function renderListView() {
         const today = new Date().setHours(0,0,0,0);
         const overdue = [], due = [], upcoming = [];
 
-// Supabase Data Mapping
-
-
-        filtered.forEach(p => {
+        pagedProfiles.forEach(p => {
             if(!p.followUpDate) return overdue.push(p);
             let d = new Date(p.followUpDate).setHours(0,0,0,0);
             if(d < today) overdue.push(p);
@@ -837,27 +1486,45 @@ function renderListView() {
             else upcoming.push(p);
         });
         
-        const cols = `<th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Contact</th><th class="p-4">Follow-up Info</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        const cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Contact</th><th class="p-4">Follow-up Info</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         const deskRow = (p, idx) => `
-            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
+                <td class="p-4 text-center">
+                    <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
                 <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Mobile||'-'}</td>
                 <td class="p-4 text-[12px]"><p class="font-bold">${p.followUpDate||'-'} ${p.followUpTime||''}</p><p class="text-wine/60 truncate max-w-xs">${p.followUpNote||''}</p></td>
                 <td class="p-4">${getStatusBadge(p)}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
-                    <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">View</button>
+                    <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm hover:border-gold transition">View</button>
+                    <button onclick="exportSingleProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm hover:border-gold transition inline-flex items-center gap-1" title="Download CSV">
+                        <svg class="w-3 h-3 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="px-2.5 py-1.5 bg-[#25D366]/10 border border-[#25D366]/30 rounded-lg text-[10px] uppercase font-bold text-[#1E7E34] hover:bg-[#25D366]/20 transition inline-flex items-center gap-1" title="Share WhatsApp">
+                        <svg class="w-3 h-3 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share</span>
+                    </button>
                     <button onclick="changeStatus(${idx},'Contacted')" class="px-2.5 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-lg text-[10px] uppercase font-bold shadow-sm">Complete</button>
                     <button onclick="openFollowUp(${idx})" class="px-2.5 py-1.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-[10px] uppercase font-bold shadow-sm">Reschedule</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
                 </td>
             </tr>`;
         
         const mobCard = (p, idx) => `
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gold/20 flex flex-col gap-3">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gold/20 flex flex-col gap-3 ${selectedProfileIds.has(p.id) ? 'ring-2 ring-wine/20 bg-[#FAF8F5]/40' : ''}">
                 <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-serif font-bold text-wine text-[18px] leading-tight">${p['Full Name']||'-'}</h4>
-                        <p class="text-[11px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId}</p>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                        <div>
+                            <h4 class="font-serif font-bold text-wine text-[18px] leading-tight">${p['Full Name']||'-'}</h4>
+                            <p class="text-[11px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId}</p>
+                        </div>
                     </div>
                     ${getStatusBadge(p)}
                 </div>
@@ -868,7 +1535,19 @@ function renderListView() {
                 <div class="grid grid-cols-2 gap-2 mt-2">
                     <button onclick="viewProfile(${idx})" class="py-3 bg-white border border-gold/30 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm">View Profile</button>
                     <button onclick="changeStatus(${idx},'Contacted')" class="py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-[12px] uppercase font-bold shadow-sm">Complete</button>
+                    <button onclick="exportSingleProfile(${idx})" class="py-2.5 bg-white border border-gold/30 rounded-xl text-[11px] uppercase font-bold text-wine shadow-sm flex items-center justify-center gap-1.5 hover:border-gold transition">
+                        <svg class="w-3.5 h-3.5 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>Download CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="py-2.5 bg-[#25D366]/10 border border-[#25D366]/30 text-[#1E7E34] rounded-xl text-[11px] uppercase font-bold shadow-sm flex items-center justify-center gap-1.5 hover:bg-[#25D366]/20 transition">
+                        <svg class="w-3.5 h-3.5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share WhatsApp</span>
+                    </button>
                     <button onclick="openFollowUp(${idx})" class="col-span-2 py-3 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl text-[12px] uppercase font-bold shadow-sm mt-1">Reschedule</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="col-span-2 py-2.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-xl text-[12px] uppercase font-bold shadow-sm flex items-center justify-center gap-1.5 mt-1 active:scale-[0.98] transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete Query</span>
+                    </button>
                 </div>
             </div>`;
 
@@ -876,19 +1555,19 @@ function renderListView() {
         
         let deskHtml = '', mobHtml = '';
         if(overdue.length) {
-            deskHtml += `<tr><td colspan="6" class="p-3 bg-red-50 text-red-800 font-bold text-xs uppercase tracking-wider">Overdue</td></tr>`;
+            deskHtml += `<tr><td colspan="7" class="p-3 bg-red-50 text-red-800 font-bold text-xs uppercase tracking-wider">Overdue</td></tr>`;
             deskHtml += overdue.map(p => deskRow(p, profiles.indexOf(p))).join('');
             mobHtml += `<div class="px-2 py-1 text-red-800 font-bold text-xs uppercase tracking-wider">Overdue</div>`;
             mobHtml += overdue.map(p => mobCard(p, profiles.indexOf(p))).join('');
         }
         if(due.length) {
-            deskHtml += `<tr><td colspan="6" class="p-3 bg-blue-50 text-blue-800 font-bold text-xs uppercase tracking-wider">Due Today</td></tr>`;
+            deskHtml += `<tr><td colspan="7" class="p-3 bg-blue-50 text-blue-800 font-bold text-xs uppercase tracking-wider">Due Today</td></tr>`;
             deskHtml += due.map(p => deskRow(p, profiles.indexOf(p))).join('');
             mobHtml += `<div class="px-2 py-1 text-blue-800 font-bold text-xs uppercase tracking-wider mt-4">Due Today</div>`;
             mobHtml += due.map(p => mobCard(p, profiles.indexOf(p))).join('');
         }
         if(upcoming.length) {
-            deskHtml += `<tr><td colspan="6" class="p-3 bg-gray-50 text-gray-800 font-bold text-xs uppercase tracking-wider">Upcoming</td></tr>`;
+            deskHtml += `<tr><td colspan="7" class="p-3 bg-gray-50 text-gray-800 font-bold text-xs uppercase tracking-wider">Upcoming</td></tr>`;
             deskHtml += upcoming.map(p => deskRow(p, profiles.indexOf(p))).join('');
             mobHtml += `<div class="px-2 py-1 text-gray-600 font-bold text-xs uppercase tracking-wider mt-4">Upcoming</div>`;
             mobHtml += upcoming.map(p => mobCard(p, profiles.indexOf(p))).join('');
@@ -902,11 +1581,14 @@ function renderListView() {
     
     // Generic Mobile Card builder to reduce duplication
     const buildMobCard = (p, idx, fieldsHtml, actionsHtml) => `
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gold/20 flex flex-col gap-3 relative overflow-hidden">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gold/20 flex flex-col gap-3 relative overflow-hidden ${selectedProfileIds.has(p.id) ? 'ring-2 ring-wine/20 bg-[#FAF8F5]/40' : ''}">
             <div class="flex justify-between items-start">
-                <div>
-                    <h4 class="font-serif font-bold text-wine text-[18px] leading-tight pr-2">${p['Full Name']||'-'}</h4>
-                    <p class="text-[11px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId}</p>
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                    <div>
+                        <h4 class="font-serif font-bold text-wine text-[18px] leading-tight pr-2">${p['Full Name']||'-'}</h4>
+                        <p class="text-[11px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId}</p>
+                    </div>
                 </div>
                 ${getStatusBadge(p)}
             </div>
@@ -916,14 +1598,29 @@ function renderListView() {
             <div class="grid grid-cols-2 gap-2 mt-3 pt-4 border-t border-gold/10">
                 <button onclick="viewProfile(${idx})" class="py-3 bg-[#FAF8F5] border border-gold/30 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm active:scale-[0.98] transition-transform">View Details</button>
                 ${actionsHtml}
+                <button onclick="exportSingleProfile(${idx})" class="py-2.5 bg-white border border-gold/30 rounded-xl text-[11px] uppercase font-bold text-wine shadow-sm flex items-center justify-center gap-1.5 hover:border-gold transition">
+                    <svg class="w-3.5 h-3.5 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Download CSV</span>
+                </button>
+                <button onclick="openShareSingleProfile(${idx})" class="py-2.5 bg-[#25D366]/10 border border-[#25D366]/30 text-[#1E7E34] rounded-xl text-[11px] uppercase font-bold shadow-sm flex items-center justify-center gap-1.5 hover:bg-[#25D366]/20 transition">
+                    <svg class="w-3.5 h-3.5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                    <span>Share WhatsApp</span>
+                </button>
+                <button onclick="openDeleteQueryModal(${idx})" class="col-span-2 py-2.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-xl text-[12px] uppercase font-bold shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98] transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <span>Delete Query</span>
+                </button>
             </div>
         </div>
     `;
 
     if (listType === 'pending') {
-        cols = `<th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Reg Date</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Reg Date</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
-            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
+                <td class="p-4 text-center">
+                    <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
                 <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']||'-'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender||'-'} / ${p.Age||'-'}</td>
@@ -932,8 +1629,20 @@ function renderListView() {
                 <td class="p-4">${getStatusBadge(p)}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
                     <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">View Details</button>
+                    <button onclick="exportSingleProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm hover:border-gold transition inline-flex items-center gap-1" title="Download CSV">
+                        <svg class="w-3 h-3 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="px-2.5 py-1.5 bg-[#25D366]/10 border border-[#25D366]/30 rounded-lg text-[10px] uppercase font-bold text-[#1E7E34] hover:bg-[#25D366]/20 transition inline-flex items-center gap-1" title="Share WhatsApp">
+                        <svg class="w-3 h-3 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share</span>
+                    </button>
                     <button onclick="changeStatus(${idx},'Reviewed')" class="px-2.5 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-lg text-[10px] uppercase font-bold shadow-sm">Review</button>
                     <button onclick="changeStatus(${idx},'Shortlisted')" class="px-2.5 py-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-[10px] uppercase font-bold shadow-sm">Shortlist</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
                 </td>
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
@@ -945,19 +1654,34 @@ function renderListView() {
         );
     } 
     else if (listType === 'shortlisted') {
-        cols = `<th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Surname / Maslak</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Surname / Maslak</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
-            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
+                <td class="p-4 text-center">
+                    <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
                 <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender||'-'} / ${p.Age||'-'}</td>
                 <td class="p-4 text-[13px] text-wine/80">${p.City||'-'}</td>
-                <td class="p-4 text-[12px] text-wine/80"><p>${p['Surname / Biradari']||'-'}</p><p class="text-[10px] text-wine/50">${p['Sect / Firqah']||'-'} | ${p['Maslak']||'-'}</p></td>
+                <td class="p-4 text-[12px] text-wine/80"><p>${p['Surname / Biradari']||'-'}</p><p class="text-[10px] text-wine/50">${p['Maslak']||'-'}</p></td>
                 <td class="p-4">${getStatusBadge(p)}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
                     <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">View</button>
+                    <button onclick="exportSingleProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm hover:border-gold transition inline-flex items-center gap-1" title="Download CSV">
+                        <svg class="w-3 h-3 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="px-2.5 py-1.5 bg-[#25D366]/10 border border-[#25D366]/30 rounded-lg text-[10px] uppercase font-bold text-[#1E7E34] hover:bg-[#25D366]/20 transition inline-flex items-center gap-1" title="Share WhatsApp">
+                        <svg class="w-3 h-3 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share</span>
+                    </button>
                     <button onclick="changeStatus(${idx},'Contacted')" class="px-2.5 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-[10px] uppercase font-bold shadow-sm">Contacted</button>
                     <button onclick="changeStatus(${idx},'Reviewed')" class="px-2.5 py-1.5 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg text-[10px] uppercase font-bold shadow-sm">Remove</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
                 </td>
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
@@ -969,9 +1693,12 @@ function renderListView() {
         );
     }
     else if (listType === 'contacted') {
-        cols = `<th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Contact</th><th class="p-4">Contacted Date</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Contact</th><th class="p-4">Contacted Date</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
-            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
+                <td class="p-4 text-center">
+                    <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
                 <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender||'-'} / ${p.Age||'-'}</td>
@@ -980,7 +1707,19 @@ function renderListView() {
                 <td class="p-4 text-[12px] text-wine/80">${p.contactedAt ? p.contactedAt.split('T')[0] : '-'}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
                     <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">View</button>
+                    <button onclick="exportSingleProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm hover:border-gold transition inline-flex items-center gap-1" title="Download CSV">
+                        <svg class="w-3 h-3 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="px-2.5 py-1.5 bg-[#25D366]/10 border border-[#25D366]/30 rounded-lg text-[10px] uppercase font-bold text-[#1E7E34] hover:bg-[#25D366]/20 transition inline-flex items-center gap-1" title="Share WhatsApp">
+                        <svg class="w-3 h-3 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share</span>
+                    </button>
                     <button onclick="openFollowUp(${idx})" class="px-2.5 py-1.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-[10px] uppercase font-bold shadow-sm">Set Follow Up</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
                 </td>
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
@@ -992,43 +1731,90 @@ function renderListView() {
         );
     }
     else if (listType === 'notes') {
-        cols = `<th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Latest Note</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Latest Note</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
-            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
+                <td class="p-4 text-center">
+                    <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
                 <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80 italic break-words max-w-sm">${p.notes.length ? p.notes[p.notes.length-1].text : '-'}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
                     <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">View Notes</button>
+                    <button onclick="exportSingleProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm hover:border-gold transition inline-flex items-center gap-1" title="Download CSV">
+                        <svg class="w-3 h-3 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="px-2.5 py-1.5 bg-[#25D366]/10 border border-[#25D366]/30 rounded-lg text-[10px] uppercase font-bold text-[#1E7E34] hover:bg-[#25D366]/20 transition inline-flex items-center gap-1" title="Share WhatsApp">
+                        <svg class="w-3 h-3 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share</span>
+                    </button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
                 </td>
             </tr>`;
         mobCard = (p, idx) => `
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gold/20 flex flex-col gap-3">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gold/20 flex flex-col gap-3 ${selectedProfileIds.has(p.id) ? 'ring-2 ring-wine/20 bg-[#FAF8F5]/40' : ''}">
                 <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-serif font-bold text-wine text-[18px] leading-tight">${p['Full Name']||'-'}</h4>
-                        <p class="text-[11px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId}</p>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                        <div>
+                            <h4 class="font-serif font-bold text-wine text-[18px] leading-tight">${p['Full Name']||'-'}</h4>
+                            <p class="text-[11px] font-bold text-wine/50 uppercase tracking-widest mt-0.5">${p.profileId}</p>
+                        </div>
                     </div>
                 </div>
                 <div class="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100/50 text-[14px] italic text-wine/80">
                     "${p.notes.length ? p.notes[p.notes.length-1].text : '-'}"
                 </div>
-                <button onclick="viewProfile(${idx})" class="w-full py-3 mt-1 bg-[#FAF8F5] border border-gold/30 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm">Open Profile</button>
+                <div class="grid grid-cols-2 gap-2 mt-1">
+                    <button onclick="viewProfile(${idx})" class="py-3 bg-[#FAF8F5] border border-gold/30 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm">Open Profile</button>
+                    <button onclick="exportSingleProfile(${idx})" class="py-2.5 bg-white border border-gold/30 rounded-xl text-[11px] uppercase font-bold text-wine shadow-sm flex items-center justify-center gap-1.5 hover:border-gold transition">
+                        <svg class="w-3.5 h-3.5 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="py-2.5 bg-[#25D366]/10 border border-[#25D366]/30 text-[#1E7E34] rounded-xl text-[11px] uppercase font-bold shadow-sm flex items-center justify-center gap-1.5 hover:bg-[#25D366]/20 transition">
+                        <svg class="w-3.5 h-3.5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share</span>
+                    </button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="col-span-2 py-3 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-xl text-[12px] uppercase font-bold shadow-sm flex items-center justify-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
+                </div>
             </div>`;
     }
     else {
-        cols = `<th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">Location & Comm</th><th class="p-4">Contact</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">Location & Comm</th><th class="p-4">Contact</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
-            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+            <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
+                <td class="p-4 text-center">
+                    <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
+                </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
                 <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']||'-'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']||'-'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender||'-'} / ${p.Age||'-'}</td>
                 <td class="p-4 text-[12px] text-wine/80"><p>${p.City||'-'}</p><p class="text-[10px] text-wine/50">${p['Surname / Biradari']||'-'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Mobile||'-'}</td>
                 <td class="p-4">${getStatusBadge(p)}</td>
-                <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
+                <td class="p-4 text-right flex justify-end gap-1.5 flex-wrap">
                     <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">View</button>
+                    <button onclick="exportSingleProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm hover:border-gold transition inline-flex items-center gap-1" title="Download CSV">
+                        <svg class="w-3 h-3 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>CSV</span>
+                    </button>
+                    <button onclick="openShareSingleProfile(${idx})" class="px-2.5 py-1.5 bg-[#25D366]/10 border border-[#25D366]/30 rounded-lg text-[10px] uppercase font-bold text-[#1E7E34] hover:bg-[#25D366]/20 transition inline-flex items-center gap-1" title="Share WhatsApp">
+                        <svg class="w-3 h-3 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                        <span>Share</span>
+                    </button>
                     <button onclick="promptStatus()" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">Status</button>
+                    <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
                 </td>
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
@@ -1038,7 +1824,7 @@ function renderListView() {
         );
     }
     
-    renderTableAndCards(filtered, cols, deskRow, mobCard);
+    renderTableAndCards(pagedProfiles, cols, deskRow, mobCard);
 }
 
 async function changeStatus(idx, st, reRenderModal = false) {
@@ -1126,29 +1912,257 @@ async function saveFollowUp() {
     }
 }
 
-function confirmDelete(idx) {
-    showDialog('warning', 'Delete Profile', 'Are you sure you want to permanently delete this profile?', async () => {
-        try {
-            const { error } = await window.supabaseClient.from('profiles').delete().eq('id', profiles[idx].id);
-            if (error) throw error;
-            
-            profiles.splice(idx, 1);
-            updateSidebarBadges();
-            renderListView();
-            if(currentView === 'dashboard') initDashboard();
-        } catch(err) {
-            console.error(err);
-            showDialog('info', 'Error', 'Failed to delete profile.');
+// ==========================================
+// Delete Enquiry / Query Modal & Functionality
+// ==========================================
+let deleteCandidateIndex = null;
+let isDeletingQuery = false;
+
+function showAdminNotification(message, type = 'success') {
+    const existing = document.getElementById('adminNotificationToast');
+    if (existing) existing.remove();
+
+    const isSuccess = type === 'success';
+    const isWarning = type === 'warning';
+    
+    let bg = 'bg-[#320A16] text-[#D4AF37] border-gold/40';
+    let icon = `<svg class="w-5 h-5 text-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+
+    if (isWarning) {
+        bg = 'bg-[#422006] text-[#FDE68A] border-amber-500/50';
+        icon = `<svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+    } else if (type === 'error') {
+        bg = 'bg-red-900 text-white border-red-500';
+        icon = `<svg class="w-5 h-5 text-red-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+    }
+
+    const toast = document.createElement('div');
+    toast.id = 'adminNotificationToast';
+    toast.className = `fixed bottom-6 right-6 z-[300] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${bg} text-sm font-medium animate-slide-up transition-all duration-300 max-w-md`;
+    toast.innerHTML = `${icon}<span>${message}</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
+}
+
+function openDeleteQueryModal(idx) {
+    if (idx === null || idx === undefined || !profiles[idx]) return;
+    deleteCandidateIndex = idx;
+    
+    const p = profiles[idx];
+    const nameEl = document.getElementById('deleteModalTargetName');
+    const idEl = document.getElementById('deleteModalTargetId');
+    const errEl = document.getElementById('deleteModalError');
+    const spinner = document.getElementById('deleteBtnSpinner');
+    const btnText = document.getElementById('deleteBtnText');
+    const confirmBtn = document.getElementById('deleteModalConfirmBtn');
+    const cancelBtn = document.getElementById('deleteModalCancelBtn');
+    
+    if (nameEl) nameEl.textContent = p['Full Name'] || 'Candidate / Query';
+    if (idEl) idEl.textContent = p.profileId || p.id || '';
+    if (errEl) {
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+    }
+    if (spinner) spinner.classList.add('hidden');
+    if (btnText) btnText.textContent = 'Yes, Delete';
+    if (confirmBtn) confirmBtn.disabled = false;
+    if (cancelBtn) cancelBtn.disabled = false;
+    isDeletingQuery = false;
+
+    const modal = document.getElementById('deleteQueryModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeDeleteQueryModal() {
+    if (isDeletingQuery) return; // Prevent closing during active deletion
+    const modal = document.getElementById('deleteQueryModal');
+    if (modal) modal.classList.add('hidden');
+    deleteCandidateIndex = null;
+}
+
+async function executeDeleteQuery() {
+    if (deleteCandidateIndex === null || !profiles[deleteCandidateIndex]) {
+        closeDeleteQueryModal();
+        return;
+    }
+    if (isDeletingQuery) return; // Prevent concurrent requests
+
+    isDeletingQuery = true;
+    const confirmBtn = document.getElementById('deleteModalConfirmBtn');
+    const cancelBtn = document.getElementById('deleteModalCancelBtn');
+    const spinner = document.getElementById('deleteBtnSpinner');
+    const btnText = document.getElementById('deleteBtnText');
+    const errEl = document.getElementById('deleteModalError');
+
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (spinner) spinner.classList.remove('hidden');
+    if (btnText) btnText.textContent = 'Deleting...';
+    if (errEl) {
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+    }
+
+    const target = profiles[deleteCandidateIndex];
+    const targetId = target.id;
+    const targetIdx = deleteCandidateIndex;
+
+    try {
+        console.log(`[Admin] Initiating permanent deletion of query ID: ${targetId} (${target.profileId || ''})`);
+        
+        // 1. Delete record from Supabase public.profiles (Strict Admin Delete RLS enforced on exact primary key UUID)
+        const { error, count } = await window.supabaseClient
+            .from('profiles')
+            .delete({ count: 'exact' })
+            .eq('id', targetId);
+
+        if (error) {
+            throw error;
+        }
+
+        // Verify that the database confirms deletion of the record
+        if (count === 0 || count === null) {
+            throw new Error('Zero records deleted. You may lack permission, or the record was already removed.');
+        }
+
+        console.log(`[Admin] Query ${targetId} permanently deleted from database. Verified count: ${count}`);
+
+        // 2. Storage photo cleanup: delete only this customer's photo file from 'profile-photos' bucket
+        let photoCleanupFailed = false;
+        let photoCleanupErrorMsg = '';
+
+        if (target.photoUrl && typeof target.photoUrl === 'string') {
+            let photoPath = target.photoUrl.trim();
+            if (photoPath.includes('profile-photos/')) {
+                photoPath = photoPath.split('profile-photos/')[1];
+            }
+            if (photoPath.includes('?')) {
+                photoPath = photoPath.split('?')[0];
+            }
+
+            // Path safety check: ensure non-empty relative path, strictly within profile-photos
+            if (photoPath && photoPath !== '/' && !photoPath.startsWith('/') && !photoPath.includes('..')) {
+                try {
+                    console.log(`[Admin] Deleting associated photo from 'profile-photos' bucket: ${photoPath}`);
+                    const { data: photoData, error: photoErr } = await window.supabaseClient.storage
+                        .from('profile-photos')
+                        .remove([photoPath]);
+
+                    if (photoErr) {
+                        photoCleanupFailed = true;
+                        photoCleanupErrorMsg = photoErr.message || 'Storage service error';
+                        console.error('[Admin] Storage photo removal failed:', photoErr);
+                    } else {
+                        console.log('[Admin] Photo deleted successfully from storage:', photoPath, photoData);
+                    }
+                } catch(pErr) {
+                    photoCleanupFailed = true;
+                    photoCleanupErrorMsg = pErr.message || 'Storage exception';
+                    console.error('[Admin] Storage photo removal exception:', pErr);
+                }
+            }
+        }
+
+        // 3. Remove from local memory state & update UI without page reload
+        profiles.splice(targetIdx, 1);
+
+        // If detail modal was open for this record, close it
+        if (activeProfileIndex === targetIdx) {
+            closeModal();
+        } else if (activeProfileIndex > targetIdx) {
+            activeProfileIndex--;
+        }
+
+        // Reset state and close confirmation popup
+        isDeletingQuery = false;
+        closeDeleteQueryModal();
+
+        // Refresh UI views and badge counts
+        updateSidebarBadges();
+        renderListView();
+        if (currentView === 'dashboard') {
+            initDashboard();
+        }
+
+        // 4. Show success or partial-cleanup warning message
+        if (photoCleanupFailed) {
+            showAdminNotification(
+                `Query deleted from database, but photo cleanup failed (${photoCleanupErrorMsg}). Please check storage.`,
+                'warning'
+            );
+        } else {
+            showAdminNotification('Query Deleted Successfully', 'success');
+        }
+
+    } catch (err) {
+        console.error('[Admin] Delete query failed:', err);
+
+        // Reset button states so admin can retry or cancel
+        isDeletingQuery = false;
+        if (confirmBtn) confirmBtn.disabled = false;
+        if (cancelBtn) cancelBtn.disabled = false;
+        if (spinner) spinner.classList.add('hidden');
+        if (btnText) btnText.textContent = 'Yes, Delete';
+
+        // Display required error message in modal & toast; preserve enquiry in UI
+        const errorMsg = 'Unable to Delete Query. Please try again or contact the system administrator.';
+        if (errEl) {
+            errEl.textContent = errorMsg;
+            errEl.classList.remove('hidden');
+        }
+        showAdminNotification(errorMsg, 'error');
+    }
+}
+
+function initDeleteQueryModalListeners() {
+    const cancelBtn = document.getElementById('deleteModalCancelBtn');
+    const closeX = document.getElementById('deleteModalCloseX');
+    const backdrop = document.getElementById('deleteQueryBackdrop');
+    const confirmBtn = document.getElementById('deleteModalConfirmBtn');
+    const modal = document.getElementById('deleteQueryModal');
+
+    if (cancelBtn) cancelBtn.addEventListener('click', closeDeleteQueryModal);
+    if (closeX) closeX.addEventListener('click', closeDeleteQueryModal);
+    if (backdrop) backdrop.addEventListener('click', closeDeleteQueryModal);
+    if (confirmBtn) confirmBtn.addEventListener('click', executeDeleteQuery);
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target === backdrop) {
+                closeDeleteQueryModal();
+            }
+        });
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const m = document.getElementById('deleteQueryModal');
+            if (m && !m.classList.contains('hidden')) {
+                closeDeleteQueryModal();
+            }
         }
     });
+}
+
+// Global confirmDelete alias for backward compatibility
+function confirmDelete(idx) {
+    openDeleteQueryModal(idx);
 }
 
 // Profile Modal (View/Edit)
 const pFields = [
     {group: 'BASIC', f: ['Full Name', 'Registering For', 'Gender', 'Age', 'Date of Birth', 'Marital Status', 'Height']},
     {group: 'PROFESSIONAL', f: ['Education', 'Occupation', 'City', 'Mother Tongue', 'Languages Known']},
-    {group: 'FAMILY & RELIGIOUS', f: ['Surname / Biradari', "Father's Occupation", 'Sect / Firqah', 'Maslak', 'Religious Preference']},
-    {group: 'CONTACT', f: ['Mobile', 'Email Address', 'Residential Address']}
+    {group: 'FAMILY & RELIGIOUS', f: ['Surname / Biradari', "Father's Occupation", "Mother's Occupation", 'Brothers', 'Sisters', 'Family Location', 'Family Type', 'Maslak', 'Religious Preference']},
+    {group: 'ABOUT CANDIDATE', f: ['About Candidate']},
+    {group: 'MATCH PREFERENCES', f: ['Preferred Age Range', 'Preferred Location', 'Preferred Education', 'Preferred Profession', 'Other Preferences']},
+    {group: 'CONTACT', f: ['Guardian Name', 'Relationship', 'Mobile', 'WhatsApp', 'Preferred Contact Time', 'Residential Address', 'Email Address']}
 ];
 
 // Supabase Data Mapping
@@ -1165,6 +2179,7 @@ function closeModal() { document.getElementById('profileModal').classList.add('h
 
 function renderProfileModal() {
     const p = profiles[activeProfileIndex];
+    if (!p) return;
 
 // Supabase Data Mapping
 
@@ -1255,13 +2270,22 @@ function renderProfileModal() {
         html += `<div class="mb-8"><h4 class="font-serif text-sm text-wine/60 font-bold tracking-widest mb-4 border-b border-gold/20 pb-2 uppercase">${g.group}</h4><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">`;
         g.f.forEach(f => {
             const key = f;
-            const val = p[key] || '';
+            const rawVal = p[key];
+            const val = (rawVal !== undefined && rawVal !== null) ? String(rawVal).trim() : '';
             const safeId = 'edit_' + key.replace(/[^a-zA-Z]/g, '');
+            const isFullWidth = (key === 'About Candidate' || key === 'Other Preferences');
+            const colClass = isFullWidth ? 'col-span-1 md:col-span-2 lg:col-span-3' : '';
             if(isEditMode) {
-                html += `<div><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
-                <input type="text" id="${safeId}" value="${val.replace(/"/g,'&quot;')}" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50"></div>`;
+                if(isFullWidth) {
+                    html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
+                    <textarea id="${safeId}" rows="3" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50">${val.replace(/"/g,'&quot;')}</textarea></div>`;
+                } else {
+                    html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
+                    <input type="text" id="${safeId}" value="${val.replace(/"/g,'&quot;')}" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50"></div>`;
+                }
             } else {
-                html += `<div><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1">${key}</span><span class="block text-[16px] md:text-[15px] text-wine font-medium break-words">${val || '-'}</span></div>`;
+                const displayVal = val !== '' ? val : '-';
+                html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1">${key}</span><span class="block text-[16px] md:text-[15px] text-wine font-medium break-words ${isFullWidth ? 'whitespace-pre-line leading-relaxed' : ''}">${displayVal}</span></div>`;
             }
         });
         html += `</div></div>`;
@@ -1281,7 +2305,34 @@ function renderProfileModal() {
 
     // Admin Notes Section
     if(!isEditMode) {
-        let nHtml = p.notes && p.notes.length ? [...p.notes].reverse().map(n=>`<div class="p-4 md:p-5 border-b border-gold/10 text-[15px] md:text-sm text-wine/80 hover:bg-[#FAF8F5] transition"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-wider mb-1.5">${new Date(n.date).toLocaleString()}</span>${n.text}</div>`).join('') : '<div class="p-5 text-[15px] md:text-sm text-wine/50 italic">No notes added.</div>';
+        let nHtml = '<div class="p-5 text-[15px] md:text-sm text-wine/50 italic">No notes added.</div>';
+        if (p.notes && p.notes.length) {
+            const indexedNotes = p.notes.map((n, originalIndex) => ({ note: n, originalIndex }));
+            indexedNotes.reverse();
+            
+            nHtml = indexedNotes.map(({ note: n, originalIndex }) => {
+                const escapedText = (n.text || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+                const noteDate = n.date ? new Date(n.date).toLocaleString() : 'Date N/A';
+                
+                return `
+                <div class="p-4 md:p-5 border-b border-gold/10 hover:bg-[#FAF8F5] transition">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <span class="block text-[10px] font-bold text-wine/40 uppercase tracking-wider mb-1.5">${noteDate}</span>
+                            <div class="text-[15px] md:text-sm text-wine/80 whitespace-pre-wrap break-words leading-relaxed">${escapedText}</div>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
+                            <button onclick="editNote(${originalIndex})" class="px-2.5 py-1 text-[11px] font-bold uppercase rounded-lg border border-gold/30 text-wine hover:bg-white transition shadow-sm" title="Edit Note">EDIT</button>
+                            <button onclick="deleteNote(${originalIndex})" class="px-2.5 py-1 text-[11px] font-bold uppercase rounded-lg border border-red-200 text-[#C9436B] hover:bg-red-50 transition shadow-sm" title="Delete Note">DELETE</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
         html += `<div class="mb-8"><h4 class="font-serif text-sm text-wine/60 font-bold tracking-widest mb-4 border-b border-gold/20 pb-2">ADMIN NOTES</h4>
             <div class="bg-white border border-gold/10 rounded-xl shadow-sm overflow-hidden">${nHtml}</div>
         </div>`;
@@ -1296,6 +2347,7 @@ function renderProfileModal() {
         <button onclick="isEditMode=true;renderProfileModal()" class="w-full sm:w-auto px-4 py-3.5 md:py-2.5 bg-[#FAF8F5] text-wine rounded-xl md:rounded-lg text-[13px] md:text-[11px] uppercase font-bold border border-gold/30 shadow-sm transition hover:bg-white">EDIT</button>
         <button onclick="promptStatus()" class="w-full sm:w-auto px-4 py-3.5 md:py-2.5 bg-wine text-cream rounded-xl md:rounded-lg text-[13px] md:text-[11px] uppercase font-bold shadow-sm transition hover:bg-wine/90">STATUS</button>
         <button onclick="promptNote()" class="col-span-2 sm:w-auto px-4 py-3.5 md:py-2.5 bg-[#FAF8F5] text-wine rounded-xl md:rounded-lg text-[13px] md:text-[11px] uppercase font-bold border border-gold/30 shadow-sm transition hover:bg-white">ADD NOTE</button>
+        <button onclick="openDeleteQueryModal(activeProfileIndex)" class="w-full sm:w-auto px-4 py-3.5 md:py-2.5 bg-red-50 text-[#C9436B] hover:bg-red-100 rounded-xl md:rounded-lg text-[13px] md:text-[11px] uppercase font-bold border border-red-200/70 shadow-sm transition inline-flex items-center justify-center gap-1.5" title="Delete Query"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg><span>DELETE</span></button>
         <button onclick="closeModal()" class="hidden md:block px-4 py-2 bg-[#FAF8F5] text-wine/50 rounded-lg text-[11px] uppercase font-bold border border-gold/20 hover:bg-white transition">CLOSE</button>`;
     }
     
@@ -1350,11 +2402,32 @@ async function saveProfile() {
         g.f.forEach(f => {
             let el = document.getElementById('edit_' + f.replace(/[^a-zA-Z]/g, ''));
             if(el && fieldMapToDb[f]) {
-                p[f] = el.value;
+                const val = el.value;
+                p[f] = val;
+                if (f === "Father's Occupation") p['Father Occupation'] = val;
+                if (f === "Father Occupation") p["Father's Occupation"] = val;
+                if (f === "Mother's Occupation") p['Mother Occupation'] = val;
+                if (f === "Mother Occupation") p["Mother's Occupation"] = val;
+                if (f === 'Maslak Preference') p['Religious Preference'] = val;
+                if (f === 'Religious Preference') p['Maslak Preference'] = val;
+                if (f === 'Maslak') p['Maslak / Religious Background'] = val;
+                if (f === 'Maslak / Religious Background') p['Maslak'] = val;
+                if (f === 'Surname / Biradari') p['Surname / Biradari'] = val;
+                if (f === 'Email Address') p['Email Address'] = val;
+
                 if (['Age', 'Brothers', 'Sisters'].includes(f)) {
-                    updateData[fieldMapToDb[f]] = parseInt(el.value) || 0;
+                    const trimmed = (val || '').trim();
+                    if (trimmed === '') {
+                        updateData[fieldMapToDb[f]] = null;
+                        p[f] = '';
+                    } else {
+                        const n = parseInt(trimmed, 10);
+                        const validNum = (!isNaN(n) && n >= 0) ? n : null;
+                        updateData[fieldMapToDb[f]] = validNum;
+                        p[f] = validNum !== null ? String(validNum) : '';
+                    }
                 } else {
-                    updateData[fieldMapToDb[f]] = el.value || null;
+                    updateData[fieldMapToDb[f]] = val || null;
                 }
             }
         });
@@ -1380,9 +2453,16 @@ async function saveProfile() {
 
 function promptNote() {
     showDialog('info', 'Add Internal Note', 'Enter note for this profile:', async (val) => {
-        if(val.trim()) {
+        const textVal = (val || '').trim();
+        if(textVal) {
             const p = profiles[activeProfileIndex];
-            const newNote = {text: val.trim(), date: new Date().toISOString()};
+            if (!p) return;
+            if (!Array.isArray(p.notes)) p.notes = [];
+            const newNote = {
+                id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                text: textVal,
+                date: new Date().toISOString()
+            };
             const nowStr = new Date().toISOString();
             
             p.notes.push(newNote);
@@ -1404,7 +2484,69 @@ function promptNote() {
                 p.notes.pop();
             }
         }
-    }, true);
+    }, true, 'textarea', [], '', 'Add Note', 'Cancel');
+}
+
+function editNote(idx) {
+    const p = profiles[activeProfileIndex];
+    if (!p || !p.notes || !p.notes[idx]) return;
+    const currentNote = p.notes[idx];
+    
+    showDialog('info', 'Edit Internal Note', 'Update note for this profile:', async (val) => {
+        const textVal = (val || '').trim();
+        if (!textVal) {
+            showDialog('info', 'Validation Error', 'Note content cannot be empty.');
+            return;
+        }
+        
+        const originalText = currentNote.text;
+        currentNote.text = textVal;
+        const nowStr = new Date().toISOString();
+        p.updatedAt = nowStr;
+        
+        try {
+            const { error } = await window.supabaseClient.from('profiles').update({
+                notes: p.notes,
+                updated_at: nowStr
+            }).eq('id', p.id);
+            
+            if (error) throw error;
+            
+            renderProfileModal();
+            renderListView();
+        } catch(err) {
+            console.error(err);
+            currentNote.text = originalText;
+            showDialog('info', 'Error', 'Failed to update note.');
+        }
+    }, true, 'textarea', [], currentNote.text || '', 'Save Note', 'Cancel');
+}
+
+function deleteNote(idx) {
+    const p = profiles[activeProfileIndex];
+    if (!p || !p.notes || !p.notes[idx]) return;
+    
+    showDialog('danger', 'Delete Note', 'Are you sure you want to delete this note? This action cannot be undone.', async () => {
+        const deletedNote = p.notes.splice(idx, 1)[0];
+        const nowStr = new Date().toISOString();
+        p.updatedAt = nowStr;
+        
+        try {
+            const { error } = await window.supabaseClient.from('profiles').update({
+                notes: p.notes,
+                updated_at: nowStr
+            }).eq('id', p.id);
+            
+            if (error) throw error;
+            
+            renderProfileModal();
+            renderListView();
+        } catch(err) {
+            console.error(err);
+            p.notes.splice(idx, 0, deletedNote);
+            showDialog('info', 'Error', 'Failed to delete note.');
+        }
+    }, false, 'textarea', [], '', 'Delete', 'Cancel');
 }
 
 // Export Data - stacked buttons on mobile

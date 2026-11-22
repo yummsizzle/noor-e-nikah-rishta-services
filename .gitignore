@@ -20,6 +20,7 @@ yarn-error.log*
 Thumbs.db
 
 # Temporary & Debug Files
+scratch/
 temp.js
 temp_script.js
 admin/index_html.txt

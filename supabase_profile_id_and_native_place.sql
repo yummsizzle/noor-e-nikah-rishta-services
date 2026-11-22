@@ -1,34 +1,41 @@
 -- =============================================================================
 -- NOOR-E-NIKAH MATCHMAKING — SECURE PROFILE ID REGISTRY & NATIVE PLACE MIGRATION
 -- Project: Noor-E-Nikah Rishta Services
--- Target: Supabase PostgreSQL (`public.profiles`, `public.profile_id_tracker`, `public.profile_id_registry`)
--- Version: 3.3 (Final Hardened: Trusted Search Path Order, Explicit Qualification & Schema Isolation)
+-- Target: Supabase PostgreSQL (`public.profiles`, `public.profile_id_tracker`, `public.profile_id_registry`, `public.profile_id_rate_limit`)
+-- Version: 3.5 (Production Hardened: Server-Side IP Rate Limiting & Anti-Abuse Protection)
 --
 -- AUDIT & SECURITY CONTROLS:
--- 1. Trusted Search Path Order:
+-- 1. Server-Side Anti-Abuse & Rate Limiting:
+--    - Enforces IP-based rate limiting on `get_next_profile_id()` (maximum 5 reservations per 10 minutes per IP).
+--    - Extracts real client IP via PostgREST headers (`cf-connecting-ip`, `x-forwarded-for`, `x-real-ip`).
+--    - Rate limit check executes BEFORE sequence increment; rejected attempts NEVER consume or advance serial numbers.
+--    - Automatically bypasses rate limits for `service_role` and administrative operations.
+--    - Automatically prunes stale rate limit buckets older than 1 hour.
+-- 2. Explicit Schema Privilege Hardening:
+--    - Explicitly checks whether schema `extensions` exists in the database.
+--    - Revokes CREATE on `public` and `extensions` schemas from PUBLIC, anon, and authenticated.
+--    - No silent EXCEPTION WHEN OTHERS THEN NULL: Any failure halts migration with an explicit error.
+-- 3. Trusted Search Path Order:
 --    - All seven SECURITY DEFINER functions explicitly set:
 --      `SET search_path = pg_catalog, public, extensions, pg_temp;`
 --    - Putting `pg_catalog` first ensures core PostgreSQL system functions always resolve
 --      directly to PostgreSQL's trusted catalog, preventing object-shadowing attacks.
 --    - Keeping `pg_temp` last ensures temporary tables cannot hijack persistent tables.
--- 2. Schema Privilege Hardening:
---    - Explicitly revokes CREATE privileges on `public` and `extensions` schemas from
---      PUBLIC, anon, and authenticated roles to guarantee zero unauthorized schema pollution.
--- 3. Explicit Function Qualification:
+-- 4. Explicit Function Qualification:
 --    - Explicitly qualifies `extensions.gen_random_bytes(32)` and `pg_catalog` utilities
 --      wherever appropriate.
--- 4. Fail-Safe 256-Bit CSPRNG Token Generation:
+-- 5. Fail-Safe 256-Bit CSPRNG Token Generation:
 --    - Strictly uses genuine 32-byte (256-bit) cryptographic random bytes.
 --    - Fails safely if unavailable without silent, insecure fallbacks.
--- 5. Role & Maintenance Privilege Isolation:
+-- 6. Role & Maintenance Privilege Isolation:
 --    - `cleanup_expired_profile_id_reservations()` is granted strictly to `service_role`.
---    - Direct table manipulation on tracker and registry is REVOKED from public, anon, and authenticated.
--- 6. Strict Lifecycle & No-Reuse Guarantee:
+--    - Direct table manipulation on tracker, registry, and rate_limit is REVOKED from public, anon, and authenticated.
+-- 7. Strict Lifecycle & No-Reuse Guarantee:
 --    - 'reserved' -> 'active' -> 'deleted' / 'retired'
 --    - Deleted or retired IDs can NEVER be reused or reallocated.
--- 7. Repeated Migration Idempotency:
+-- 8. Repeated Migration Idempotency:
 --    - Safe to run multiple times without resetting sequence counters or altering data.
---    - Preserves all 16 existing customer profiles (`NN-2026-XXXX`).
+--    - Preserves all existing customer profiles (including all 19 active profiles `NN-2026-XXXX`).
 --
 -- STRICT RESTRICTION:
 -- This file is for review and execution by the database administrator in the Supabase SQL Editor.
@@ -37,18 +44,28 @@
 -- Ensure pgcrypto extension is installed in schema extensions (default Supabase) or public
 DO $$
 BEGIN
-    CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+    IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'extensions') THEN
+        CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+    ELSE
+        CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    END IF;
 EXCEPTION WHEN OTHERS THEN
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    RAISE EXCEPTION 'Extension Installation Failure: Unable to install pgcrypto extension: % (SQLSTATE: %)', SQLERRM, SQLSTATE;
 END $$;
 
 -- Defensive Schema Privilege Hardening: Ensure untrusted roles cannot CREATE objects in public or extensions
 REVOKE CREATE ON SCHEMA public FROM PUBLIC, anon, authenticated;
+
 DO $$
 BEGIN
-    EXECUTE 'REVOKE CREATE ON SCHEMA extensions FROM PUBLIC, anon, authenticated';
+    IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'extensions') THEN
+        EXECUTE 'REVOKE CREATE ON SCHEMA extensions FROM PUBLIC, anon, authenticated';
+        RAISE NOTICE 'SUCCESS: Revoked CREATE on schema extensions from PUBLIC, anon, authenticated.';
+    ELSE
+        RAISE NOTICE 'INFO: Schema extensions does not exist in this database environment. Skipping extensions schema privilege revocation.';
+    END IF;
 EXCEPTION WHEN OTHERS THEN
-    NULL;
+    RAISE EXCEPTION 'Security Hardening Failure: Failed to revoke CREATE on schema extensions: % (SQLSTATE: %)', SQLERRM, SQLSTATE;
 END $$;
 
 
@@ -79,7 +96,7 @@ WHERE family_location IS NULL AND native_place IS NOT NULL;
 
 
 -- =============================================================================
--- SECTION 2: PROFILE ID TRACKER & PERMANENT REGISTRY TABLES
+-- SECTION 2: PROFILE ID TRACKER, REGISTRY & RATE LIMIT TABLES
 -- =============================================================================
 
 -- 2.1 Atomic sequence tracker (records the highest issued sequence number per year)
@@ -90,7 +107,7 @@ CREATE TABLE IF NOT EXISTS public.profile_id_tracker (
 
 COMMENT ON TABLE public.profile_id_tracker IS 'Atomic sequence tracker for sequential Profile IDs (NN-YYYY-01)';
 
--- 2.2 Permanent Profile ID Registry (records full lifecycle, cryptographic token hash, and prevents reuse)
+-- 2.2 Permanent Profile ID Registry (records full lifecycle, cryptographic token hash, client IP, and prevents reuse)
 CREATE TABLE IF NOT EXISTS public.profile_id_registry (
     profile_id text PRIMARY KEY,
     registration_year integer NOT NULL,
@@ -98,31 +115,47 @@ CREATE TABLE IF NOT EXISTS public.profile_id_registry (
     issued_at timestamptz NOT NULL DEFAULT pg_catalog.now(),
     expires_at timestamptz NOT NULL DEFAULT (pg_catalog.now() + interval '15 minutes'),
     token_hash text,
+    client_ip text,
     profile_uuid uuid,
     status text NOT NULL DEFAULT 'reserved' CHECK (status IN ('reserved', 'active', 'deleted', 'retired'))
 );
 
 COMMENT ON TABLE public.profile_id_registry IS 'Permanent audit registry of all issued Profile IDs with cryptographic token hash and strict lifecycle tracking';
 
--- Ensure token_hash and expires_at exist if table was previously created
+-- Ensure columns exist if table was previously created
 ALTER TABLE public.profile_id_registry 
 ADD COLUMN IF NOT EXISTS expires_at timestamptz NOT NULL DEFAULT (pg_catalog.now() + interval '15 minutes');
 
 ALTER TABLE public.profile_id_registry 
 ADD COLUMN IF NOT EXISTS token_hash text;
 
--- 2.3 Hardened Access Control & Row Level Security
+ALTER TABLE public.profile_id_registry 
+ADD COLUMN IF NOT EXISTS client_ip text;
+
+-- 2.3 Server-Side IP Rate Limit Tracking Table
+CREATE TABLE IF NOT EXISTS public.profile_id_rate_limit (
+    ip_address text PRIMARY KEY,
+    bucket_start timestamptz NOT NULL DEFAULT pg_catalog.now(),
+    request_count integer NOT NULL DEFAULT 1
+);
+
+COMMENT ON TABLE public.profile_id_rate_limit IS 'Server-side IP rate limiting tracking table for public get_next_profile_id() allocations';
+
+-- 2.4 Hardened Access Control & Row Level Security
 ALTER TABLE public.profile_id_tracker ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile_id_registry ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profile_id_rate_limit ENABLE ROW LEVEL SECURITY;
 
 -- Revoke all direct privileges from public, anon, and authenticated users.
 -- Ordinary users and web clients cannot query, insert, update, or delete these tables directly.
 REVOKE ALL ON TABLE public.profile_id_tracker FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.profile_id_registry FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.profile_id_rate_limit FROM PUBLIC, anon, authenticated;
 
 -- Grant access to service_role for backend administrative maintenance if required
 GRANT ALL ON TABLE public.profile_id_tracker TO service_role;
 GRANT ALL ON TABLE public.profile_id_registry TO service_role;
+GRANT ALL ON TABLE public.profile_id_rate_limit TO service_role;
 
 
 -- =============================================================================
@@ -174,7 +207,7 @@ WHERE status = 'reserved' AND (token_hash IS NULL OR TRIM(token_hash) = '');
 
 
 -- =============================================================================
--- SECTION 4: SECURE ATOMIC RPC SEQUENCE GENERATOR (GENUINE 32-BYTE CSPRNG TOKEN)
+-- SECTION 4: SECURE ATOMIC RPC SEQUENCE GENERATOR (WITH IP RATE LIMITING)
 -- =============================================================================
 
 -- Drop previous function overload if return type was text
@@ -197,6 +230,11 @@ DECLARE
     v_raw_token text;
     v_token_hash text;
     v_expires_at timestamptz;
+    v_headers_text text;
+    v_headers json;
+    v_client_ip text;
+    v_role text;
+    v_req_count integer;
 BEGIN
     -- 1. Validate requested year: Must strictly match current year (or NULL defaulting to current year)
     -- Prevents arbitrary historical back-dating or rogue future year allocations
@@ -208,12 +246,73 @@ BEGIN
         v_year := p_year;
     END IF;
 
-    -- 2. Transaction-safe maintenance: Retire any expired reservations in this independent committing transaction
+    -- 2. Extract Client IP and Caller Role for Server-Side Rate Limiting
+    v_headers_text := pg_catalog.current_setting('request.headers', true);
+    IF v_headers_text IS NOT NULL AND TRIM(v_headers_text) <> '' THEN
+        BEGIN
+            v_headers := v_headers_text::json;
+            v_client_ip := NULLIF(TRIM(COALESCE(
+                v_headers->>'cf-connecting-ip',
+                split_part(v_headers->>'x-forwarded-for', ',', 1),
+                v_headers->>'x-real-ip'
+            )), '');
+        EXCEPTION WHEN OTHERS THEN
+            v_client_ip := NULL;
+        END;
+    END IF;
+
+    -- If no IP headers are present (e.g. direct calls, stripped headers),
+    -- group all unresolved requests into a shared fallback bucket to prevent unthrottled abuse
+    IF v_client_ip IS NULL THEN
+        v_client_ip := 'unresolved-client-ip';
+    END IF;
+
+    BEGIN
+        v_role := auth.role();
+    EXCEPTION WHEN undefined_function THEN
+        BEGIN
+            v_role := pg_catalog.current_setting('request.jwt.claims', true)::json->>'role';
+        EXCEPTION WHEN OTHERS THEN
+            v_role := 'anon';
+        END;
+    END;
+
+    -- 3. Enforce Server-Side Rate Limiting on Public Callers (anon & authenticated)
+    -- Limits: Maximum 5 ID reservations per 10 minutes per IP address.
+    -- Rate limit check executes BEFORE sequence generation so rejected attempts never burn IDs.
+    -- Trusted service_role operations bypass rate limiting.
+    IF COALESCE(v_role, 'anon') <> 'service_role' THEN
+        -- Prune stale rate limit buckets older than 1 hour to prevent table bloat
+        DELETE FROM public.profile_id_rate_limit WHERE bucket_start < pg_catalog.now() - interval '1 hour';
+
+        -- Atomic upsert: Handles initial insert, bucket expiration reset, and increment in one statement.
+        -- Completely eliminates concurrency race conditions on first-time IP insertion.
+        INSERT INTO public.profile_id_rate_limit (ip_address, bucket_start, request_count)
+        VALUES (v_client_ip, pg_catalog.now(), 1)
+        ON CONFLICT (ip_address) DO UPDATE
+        SET 
+            bucket_start = CASE 
+                WHEN public.profile_id_rate_limit.bucket_start < pg_catalog.now() - interval '10 minutes' THEN pg_catalog.now()
+                ELSE public.profile_id_rate_limit.bucket_start
+            END,
+            request_count = CASE 
+                WHEN public.profile_id_rate_limit.bucket_start < pg_catalog.now() - interval '10 minutes' THEN 1
+                ELSE public.profile_id_rate_limit.request_count + 1
+            END
+        RETURNING request_count INTO v_req_count;
+
+        -- If request limit exceeded within active window, reject before sequence generation
+        IF v_req_count > 5 THEN
+            RAISE EXCEPTION 'Rate Limit Exceeded: Maximum 5 profile ID reservations per 10 minutes reached for this IP. Please wait before requesting another ID.';
+        END IF;
+    END IF;
+
+    -- 4. Transaction-safe maintenance: Retire any expired reservations in this independent committing transaction
     UPDATE public.profile_id_registry
     SET status = 'retired', token_hash = NULL
     WHERE status = 'reserved' AND expires_at < pg_catalog.now();
 
-    -- 3. Atomically increment sequence counter with row-level lock on tracker
+    -- 5. Atomically increment sequence counter with row-level lock on tracker
     WHILE v_collision LOOP
         INSERT INTO public.profile_id_tracker (year, last_serial)
         VALUES (v_year, 1)
@@ -239,7 +338,7 @@ BEGIN
         END IF;
     END LOOP;
 
-    -- 4. Generate genuine 32-byte (256-bit) cryptographically secure random token
+    -- 6. Generate genuine 32-byte (256-bit) cryptographically secure random token
     -- Explicitly qualifies extensions.gen_random_bytes(32) and fails safely if unavailable
     BEGIN
         v_raw_token := pg_catalog.encode(extensions.gen_random_bytes(32), 'hex');
@@ -265,9 +364,9 @@ BEGIN
 
     v_expires_at := pg_catalog.now() + interval '15 minutes';
 
-    -- 5. Reserve ID in registry with status 'reserved' and token_hash
-    INSERT INTO public.profile_id_registry (profile_id, registration_year, serial_number, issued_at, expires_at, token_hash, status)
-    VALUES (v_profile_id, v_year, v_next_serial, pg_catalog.now(), v_expires_at, v_token_hash, 'reserved');
+    -- 7. Reserve ID in registry with status 'reserved', token_hash, and client_ip
+    INSERT INTO public.profile_id_registry (profile_id, registration_year, serial_number, issued_at, expires_at, token_hash, client_ip, status)
+    VALUES (v_profile_id, v_year, v_next_serial, pg_catalog.now(), v_expires_at, v_token_hash, v_client_ip, 'reserved');
 
     -- Return JSON payload containing profile_id, raw one-time reservation token, and expiry timestamp
     RETURN jsonb_build_object(

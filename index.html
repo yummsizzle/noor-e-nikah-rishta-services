@@ -825,9 +825,25 @@ tailwind.config = {
               </div>
               <div class="field"><label for="education">Education</label><input id="education" name="Education" type="text" placeholder="e.g. B.Com, MBA"></div>
               <div class="field"><label for="occupation">Occupation / Profession</label><input id="occupation" name="Occupation" type="text" placeholder="e.g. Teacher, Business"></div>
+              <div class="field">
+                <label for="monthlySalary">Monthly Salary (₹)</label>
+                <div class="relative flex items-center">
+                  <span class="absolute left-3.5 text-wine/70 font-semibold text-base select-none pointer-events-none">₹</span>
+                  <input 
+                    id="monthlySalary" 
+                    name="Monthly Salary" 
+                    type="number" 
+                    min="0" 
+                    step="1" 
+                    placeholder="e.g. 25000" 
+                    style="padding-left: 2.1rem;"
+                  >
+                </div>
+                <p id="monthlySalaryHelper" class="mt-1 text-xs text-[#7C1D38]/60">Enter your monthly salary in Indian Rupees.</p>
+              </div>
               <div class="field"><label for="city">City / Current Location</label><input id="city" name="City" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
               <div class="field"><label for="motherTongue">Mother Tongue</label><input id="motherTongue" name="Mother Tongue" type="text" placeholder="e.g. Urdu"></div>
-              <div class="field"><label for="languages">Languages Known</label><input id="languages" name="Languages Known" type="text" placeholder="e.g. Urdu, Hindi, English"></div>
+              <div class="field sm:col-span-2"><label for="languages">Languages Known</label><input id="languages" name="Languages Known" type="text" placeholder="e.g. Urdu, Hindi, English"></div>
             </div>
           </div>
 
@@ -2060,6 +2076,28 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
     }
   }, { passive: true });
 
+  /* ---------- monthly salary formatting & helper ---------- */
+  const monthlySalaryInput = document.getElementById('monthlySalary');
+  const monthlySalaryHelper = document.getElementById('monthlySalaryHelper');
+  if (monthlySalaryInput && monthlySalaryHelper) {
+    monthlySalaryInput.addEventListener('input', function() {
+      const val = this.value.trim();
+      if (!val) {
+        monthlySalaryHelper.textContent = 'Enter your monthly salary in Indian Rupees.';
+        monthlySalaryInput.style.borderColor = '';
+        return;
+      }
+      const num = Number(val);
+      if (!isNaN(num) && num >= 0) {
+        monthlySalaryHelper.textContent = 'Equivalent: ₹' + Math.round(num).toLocaleString('en-IN') + ' / month';
+        monthlySalaryInput.style.borderColor = '';
+      } else {
+        monthlySalaryHelper.textContent = 'Please enter a valid positive amount.';
+        monthlySalaryInput.style.borderColor = '#C9436B';
+      }
+    });
+  }
+
   /* ---------- photo label & validation ---------- */
   let processedPhotoFile = null;
   const photo = document.getElementById('photo');
@@ -2273,6 +2311,33 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
       } else {
         if (heightInput) heightInput.style.borderColor = '';
       }
+
+      // Optional Monthly Salary Validation
+      const salaryInput = document.getElementById('monthlySalary');
+      let rawSalary = (salaryInput?.value || '').trim();
+      let parsedMonthlySalary = null;
+      if (rawSalary) {
+        const cleanSalaryStr = rawSalary.replace(/[₹,\s]/g, '');
+        const numSalary = Number(cleanSalaryStr);
+        if (isNaN(numSalary) || !/^\d+(\.\d{1,2})?$/.test(cleanSalaryStr) || numSalary < 0) {
+          errBox.textContent = 'Please enter a valid positive monthly salary amount (e.g. 25000).';
+          errBox.classList.remove('hidden');
+          errBox.scrollIntoView({behavior:'smooth', block:'center'});
+          if (salaryInput) salaryInput.style.borderColor = '#C9436B';
+          return;
+        }
+        if (numSalary > 100000000) {
+          errBox.textContent = 'Please enter a realistic monthly salary amount.';
+          errBox.classList.remove('hidden');
+          errBox.scrollIntoView({behavior:'smooth', block:'center'});
+          if (salaryInput) salaryInput.style.borderColor = '#C9436B';
+          return;
+        }
+        if (salaryInput) salaryInput.style.borderColor = '';
+        parsedMonthlySalary = Math.round(numSalary * 100) / 100;
+      } else {
+        if (salaryInput) salaryInput.style.borderColor = '';
+      }
     
       if(missing.length){
         errBox.textContent = 'Please complete: ' + missing.join(', ') + '.';
@@ -2401,7 +2466,11 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             console.error("[Profile ID Allocation Error]:", e);
             submitBtn.disabled = false;
             submitBtn.textContent = originalBtnText;
-            alert("Unable to allocate a registration Profile ID at this time. Please check your internet connection and try submitting again in a moment.");
+            if (e && e.message && e.message.toLowerCase().includes('rate limit')) {
+                alert("Too many registration attempts from this device. Please wait a few minutes before submitting again, or contact us directly on WhatsApp.");
+            } else {
+                alert("Unable to allocate a registration Profile ID at this time. Please check your internet connection and try submitting again in a moment.");
+            }
             return;
         }
         
@@ -2431,6 +2500,7 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             height: rawHeight || null,
             education: data['Education'] || null,
             occupation: data['Occupation'] || null,
+            monthly_salary: parsedMonthlySalary,
             city: data['City'] || null,
             mother_tongue: data['Mother Tongue'] || null,
             languages_known: data['Languages Known'] || null,
@@ -2475,7 +2545,13 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
         msg += '*Profile ID:* ' + encodeURIComponent(profileIdStr) + '%0A';
         Object.keys(data).forEach(k => { 
             if (k !== 'Profile ID') {
-                msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A'; 
+                if (k === 'Monthly Salary') {
+                    const salNum = Number(String(data[k]).replace(/[^\d.]/g, ''));
+                    const salFormatted = (!isNaN(salNum) && salNum > 0) ? ('₹' + Math.round(salNum).toLocaleString('en-IN') + ' / month') : data[k];
+                    msg += '*' + k + ':* ' + encodeURIComponent(salFormatted) + '%0A';
+                } else {
+                    msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A'; 
+                }
             }
         });
         document.getElementById('waSummary').href = 'https://wa.me/919594388960?text=' + msg;

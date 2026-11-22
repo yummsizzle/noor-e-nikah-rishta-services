@@ -120,7 +120,7 @@ SELECT
     (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.table_schema = 'public') AS column_count
 FROM information_schema.tables t
 WHERE table_schema = 'public' 
-  AND table_name IN ('profile_id_tracker', 'profile_id_registry');
+  AND table_name IN ('profile_id_tracker', 'profile_id_registry', 'profile_id_rate_limit');
 
 
 -- =============================================================================

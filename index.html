@@ -720,7 +720,10 @@ tailwind.config = {
                 <label for="registeringFor">Registering For *</label>
                 <select id="registeringFor" name="Registering For" required>
                   <option value="">— Please select —</option>
-                  <option>My Son</option><option>My Daughter</option><option>Myself</option>
+                  <option value="My Son">My Son</option>
+                  <option value="My Daughter">My Daughter</option>
+                  <option value="My Self">My Self</option>
+                  <option value="Myself">Myself</option>
                 </select>
               </div>
               <div class="field">
@@ -728,11 +731,12 @@ tailwind.config = {
                 <input id="fullName" name="Full Name" type="text" placeholder="Enter full name" required />
               </div>
               <div class="field sm:col-span-2">
-                <label>Gender *</label>
-                <div class="flex flex-wrap gap-3">
-                  <label class="radio-pill"><input type="radio" name="Gender" value="Male" required><span>Male</span></label>
-                  <label class="radio-pill"><input type="radio" name="Gender" value="Female"><span>Female</span></label>
+                <label id="genderLabel">Gender *</label>
+                <div class="flex flex-wrap gap-3" id="genderOptionsContainer">
+                  <label class="radio-pill" id="genderPillMale"><input type="radio" name="Gender" id="genderMale" value="Male" required><span>Male</span></label>
+                  <label class="radio-pill" id="genderPillFemale"><input type="radio" name="Gender" id="genderFemale" value="Female"><span>Female</span></label>
                 </div>
+                <p id="genderAutoHelp" class="mt-1 text-xs text-[#7C1D38]/60 hidden"></p>
               </div>
               <div class="field">
                 <label for="dob">Date of Birth</label>
@@ -826,12 +830,12 @@ tailwind.config = {
               <div class="field"><label for="education">Education</label><input id="education" name="Education" type="text" placeholder="e.g. B.Com, MBA"></div>
               <div class="field"><label for="occupation">Occupation / Profession</label><input id="occupation" name="Occupation" type="text" placeholder="e.g. Teacher, Business"></div>
               <div class="field">
-                <label for="monthlySalary">Monthly Salary (₹)</label>
+                <label for="salary">Salary (₹)</label>
                 <div class="relative flex items-center">
                   <span class="absolute left-3.5 text-wine/70 font-semibold text-base select-none pointer-events-none">₹</span>
                   <input 
-                    id="monthlySalary" 
-                    name="Monthly Salary" 
+                    id="salary" 
+                    name="Salary" 
                     type="number" 
                     min="0" 
                     step="1" 
@@ -839,9 +843,58 @@ tailwind.config = {
                     style="padding-left: 2.1rem;"
                   >
                 </div>
-                <p id="monthlySalaryHelper" class="mt-1 text-xs text-[#7C1D38]/60">Enter your monthly salary in Indian Rupees.</p>
+                <p id="salaryHelper" class="mt-1 text-xs text-[#7C1D38]/60">Enter your salary in Indian Rupees.</p>
               </div>
               <div class="field"><label for="city">City / Current Location</label><input id="city" name="City" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
+              <div class="field">
+                <label for="state">State</label>
+                <input 
+                  id="state" 
+                  name="State" 
+                  type="text" 
+                  list="indianStatesList" 
+                  placeholder="e.g. Maharashtra"
+                  autocomplete="off"
+                >
+                <datalist id="indianStatesList">
+                  <option value="Andhra Pradesh"></option>
+                  <option value="Arunachal Pradesh"></option>
+                  <option value="Assam"></option>
+                  <option value="Bihar"></option>
+                  <option value="Chhattisgarh"></option>
+                  <option value="Goa"></option>
+                  <option value="Gujarat"></option>
+                  <option value="Haryana"></option>
+                  <option value="Himachal Pradesh"></option>
+                  <option value="Jharkhand"></option>
+                  <option value="Karnataka"></option>
+                  <option value="Kerala"></option>
+                  <option value="Madhya Pradesh"></option>
+                  <option value="Maharashtra"></option>
+                  <option value="Manipur"></option>
+                  <option value="Meghalaya"></option>
+                  <option value="Mizoram"></option>
+                  <option value="Nagaland"></option>
+                  <option value="Odisha"></option>
+                  <option value="Punjab"></option>
+                  <option value="Rajasthan"></option>
+                  <option value="Sikkim"></option>
+                  <option value="Tamil Nadu"></option>
+                  <option value="Telangana"></option>
+                  <option value="Tripura"></option>
+                  <option value="Uttar Pradesh"></option>
+                  <option value="Uttarakhand"></option>
+                  <option value="West Bengal"></option>
+                  <option value="Andaman and Nicobar Islands"></option>
+                  <option value="Chandigarh"></option>
+                  <option value="Dadra and Nagar Haveli and Daman and Diu"></option>
+                  <option value="Delhi (NCT)"></option>
+                  <option value="Jammu and Kashmir"></option>
+                  <option value="Ladakh"></option>
+                  <option value="Lakshadweep"></option>
+                  <option value="Puducherry"></option>
+                </datalist>
+              </div>
               <div class="field"><label for="motherTongue">Mother Tongue</label><input id="motherTongue" name="Mother Tongue" type="text" placeholder="e.g. Urdu"></div>
               <div class="field sm:col-span-2"><label for="languages">Languages Known</label><input id="languages" name="Languages Known" type="text" placeholder="e.g. Urdu, Hindi, English"></div>
             </div>
@@ -2076,24 +2129,24 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
     }
   }, { passive: true });
 
-  /* ---------- monthly salary formatting & helper ---------- */
-  const monthlySalaryInput = document.getElementById('monthlySalary');
-  const monthlySalaryHelper = document.getElementById('monthlySalaryHelper');
-  if (monthlySalaryInput && monthlySalaryHelper) {
-    monthlySalaryInput.addEventListener('input', function() {
+  /* ---------- salary formatting & helper ---------- */
+  const salaryInput = document.getElementById('salary') || document.getElementById('monthlySalary');
+  const salaryHelper = document.getElementById('salaryHelper') || document.getElementById('monthlySalaryHelper');
+  if (salaryInput && salaryHelper) {
+    salaryInput.addEventListener('input', function() {
       const val = this.value.trim();
       if (!val) {
-        monthlySalaryHelper.textContent = 'Enter your monthly salary in Indian Rupees.';
-        monthlySalaryInput.style.borderColor = '';
+        salaryHelper.textContent = 'Enter your salary in Indian Rupees.';
+        salaryInput.style.borderColor = '';
         return;
       }
       const num = Number(val);
       if (!isNaN(num) && num >= 0) {
-        monthlySalaryHelper.textContent = 'Equivalent: ₹' + Math.round(num).toLocaleString('en-IN') + ' / month';
-        monthlySalaryInput.style.borderColor = '';
+        salaryHelper.textContent = 'Equivalent: ₹' + Math.round(num).toLocaleString('en-IN') + ' / month';
+        salaryInput.style.borderColor = '';
       } else {
-        monthlySalaryHelper.textContent = 'Please enter a valid positive amount.';
-        monthlySalaryInput.style.borderColor = '#C9436B';
+        salaryHelper.textContent = 'Please enter a valid positive amount.';
+        salaryInput.style.borderColor = '#C9436B';
       }
     });
   }
@@ -2195,7 +2248,7 @@ function updateAboutCandidateText() {
     if (aboutLabel) aboutLabel.textContent = 'Please tell us briefly about your daughter';
     if (aboutTextarea) aboutTextarea.placeholder = "Describe your daughter's personality, education, profession, values, hobbies, and nature...";
     if (aboutHelp) aboutHelp.textContent = 'You may include her personality, religious inclination, education, hobbies, and what makes her special.';
-  } else if (val === 'Myself') {
+  } else if (val === 'Myself' || val === 'My Self') {
     if (aboutHeading) aboutHeading.textContent = 'About Myself';
     if (aboutLabel) aboutLabel.textContent = 'Please tell us briefly about yourself';
     if (aboutTextarea) aboutTextarea.placeholder = 'Describe your personality, values, lifestyle, interests, career aspirations, and outlook on life...';
@@ -2208,9 +2261,98 @@ function updateAboutCandidateText() {
   }
 }
 
+/* ---------- automatic gender selection based on Registering For ---------- */
+let previousRegisteringFor = (registeringForEl?.value || '').trim();
+
+function syncGenderWithRegisteringFor() {
+  const currentRegFor = (registeringForEl?.value || '').trim();
+  const maleInput = document.getElementById('genderMale');
+  const femaleInput = document.getElementById('genderFemale');
+  const malePill = document.getElementById('genderPillMale');
+  const femalePill = document.getElementById('genderPillFemale');
+  const genderHelp = document.getElementById('genderAutoHelp');
+
+  if (!maleInput || !femaleInput) return;
+
+  if (currentRegFor === 'My Son') {
+    // Automatically select Male
+    maleInput.disabled = false;
+    maleInput.checked = true;
+    if (malePill) {
+      malePill.classList.remove('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    }
+
+    // Disable and hide Female
+    femaleInput.checked = false;
+    femaleInput.disabled = true;
+    if (femalePill) {
+      femalePill.classList.add('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    }
+
+    if (genderHelp) {
+      genderHelp.textContent = 'Gender automatically set to Male for My Son.';
+      genderHelp.classList.remove('hidden');
+    }
+  } else if (currentRegFor === 'My Daughter') {
+    // Automatically select Female
+    femaleInput.disabled = false;
+    femaleInput.checked = true;
+    if (femalePill) {
+      femalePill.classList.remove('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    }
+
+    // Disable and hide Male
+    maleInput.checked = false;
+    maleInput.disabled = true;
+    if (malePill) {
+      malePill.classList.add('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    }
+
+    if (genderHelp) {
+      genderHelp.textContent = 'Gender automatically set to Female for My Daughter.';
+      genderHelp.classList.remove('hidden');
+    }
+  } else if (currentRegFor === 'My Self' || currentRegFor === 'Myself') {
+    // Enable both options
+    maleInput.disabled = false;
+    femaleInput.disabled = false;
+    if (malePill) {
+      malePill.classList.remove('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    }
+    if (femalePill) {
+      femalePill.classList.remove('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    }
+
+    // If changing from My Son or My Daughter to My Self, reset selection
+    if (previousRegisteringFor === 'My Son' || previousRegisteringFor === 'My Daughter') {
+      maleInput.checked = false;
+      femaleInput.checked = false;
+      if (genderHelp) {
+        genderHelp.textContent = 'Please select Gender (Male or Female).';
+        genderHelp.classList.remove('hidden');
+      }
+    } else {
+      if (genderHelp) genderHelp.classList.add('hidden');
+    }
+  } else {
+    // Blank or unselected
+    maleInput.disabled = false;
+    femaleInput.disabled = false;
+    if (malePill) malePill.classList.remove('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    if (femalePill) femalePill.classList.remove('hidden', 'opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+    if (genderHelp) genderHelp.classList.add('hidden');
+  }
+
+  previousRegisteringFor = currentRegFor;
+}
+
 if (registeringForEl) {
-  registeringForEl.addEventListener('change', updateAboutCandidateText);
+  registeringForEl.addEventListener('change', () => {
+    updateAboutCandidateText();
+    syncGenderWithRegisteringFor();
+  });
   updateAboutCandidateText();
+  syncGenderWithRegisteringFor();
 }
 
 /* ---------- whatsapp same as mobile ---------- */
@@ -2253,7 +2395,22 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
         else el.style.borderColor = '';
       });
       const genderInput = form.querySelector('input[name="Gender"]:checked');
-      if(!genderInput) missing.push('Gender');
+      const regForVal = (registeringForEl?.value || '').trim();
+      const genderVal = genderInput ? genderInput.value : '';
+
+      if (!genderVal) {
+        missing.push('Gender');
+      } else if (regForVal === 'My Son' && genderVal !== 'Male') {
+        errBox.textContent = 'Invalid selection: When registering for "My Son", Gender must be Male.';
+        errBox.classList.remove('hidden');
+        errBox.scrollIntoView({behavior:'smooth', block:'center'});
+        return;
+      } else if (regForVal === 'My Daughter' && genderVal !== 'Female') {
+        errBox.textContent = 'Invalid selection: When registering for "My Daughter", Gender must be Female.';
+        errBox.classList.remove('hidden');
+        errBox.scrollIntoView({behavior:'smooth', block:'center'});
+        return;
+      }
       if(!form.querySelector('input[name="Marital Status"]:checked')) missing.push('Marital Status');
       if(!document.getElementById('consent').checked) missing.push('Consent confirmation');
     
@@ -2312,29 +2469,29 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
         if (heightInput) heightInput.style.borderColor = '';
       }
 
-      // Optional Monthly Salary Validation
-      const salaryInput = document.getElementById('monthlySalary');
+      // Optional Salary Validation
+      const salaryInput = document.getElementById('salary') || document.getElementById('monthlySalary');
       let rawSalary = (salaryInput?.value || '').trim();
-      let parsedMonthlySalary = null;
+      let parsedSalary = null;
       if (rawSalary) {
         const cleanSalaryStr = rawSalary.replace(/[₹,\s]/g, '');
         const numSalary = Number(cleanSalaryStr);
         if (isNaN(numSalary) || !/^\d+(\.\d{1,2})?$/.test(cleanSalaryStr) || numSalary < 0) {
-          errBox.textContent = 'Please enter a valid positive monthly salary amount (e.g. 25000).';
+          errBox.textContent = 'Please enter a valid positive salary amount (e.g. 25000).';
           errBox.classList.remove('hidden');
           errBox.scrollIntoView({behavior:'smooth', block:'center'});
           if (salaryInput) salaryInput.style.borderColor = '#C9436B';
           return;
         }
         if (numSalary > 100000000) {
-          errBox.textContent = 'Please enter a realistic monthly salary amount.';
+          errBox.textContent = 'Please enter a realistic salary amount.';
           errBox.classList.remove('hidden');
           errBox.scrollIntoView({behavior:'smooth', block:'center'});
           if (salaryInput) salaryInput.style.borderColor = '#C9436B';
           return;
         }
         if (salaryInput) salaryInput.style.borderColor = '';
-        parsedMonthlySalary = Math.round(numSalary * 100) / 100;
+        parsedSalary = Math.round(numSalary * 100) / 100;
       } else {
         if (salaryInput) salaryInput.style.borderColor = '';
       }
@@ -2500,8 +2657,9 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             height: rawHeight || null,
             education: data['Education'] || null,
             occupation: data['Occupation'] || null,
-            monthly_salary: parsedMonthlySalary,
+            salary: parsedSalary,
             city: data['City'] || null,
+            state: data['State'] || null,
             mother_tongue: data['Mother Tongue'] || null,
             languages_known: data['Languages Known'] || null,
             father_occupation: data['Father Occupation'] || null,
@@ -2545,10 +2703,10 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
         msg += '*Profile ID:* ' + encodeURIComponent(profileIdStr) + '%0A';
         Object.keys(data).forEach(k => { 
             if (k !== 'Profile ID') {
-                if (k === 'Monthly Salary') {
+                if (k === 'Salary') {
                     const salNum = Number(String(data[k]).replace(/[^\d.]/g, ''));
                     const salFormatted = (!isNaN(salNum) && salNum > 0) ? ('₹' + Math.round(salNum).toLocaleString('en-IN') + ' / month') : data[k];
-                    msg += '*' + k + ':* ' + encodeURIComponent(salFormatted) + '%0A';
+                    msg += '*Salary:* ' + encodeURIComponent(salFormatted) + '%0A';
                 } else {
                     msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A'; 
                 }

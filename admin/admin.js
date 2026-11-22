@@ -2,8 +2,8 @@ console.log("[ADMIN DEBUG] admin.js loaded");
 const fieldMapToDb = {
     'Registering For': 'registering_for', 'Full Name': 'full_name', 'Gender': 'gender', 'Date of Birth': 'date_of_birth',
     'Age': 'age', 'Marital Status': 'marital_status', 'Height': 'height', 'Education': 'education',
-    'Occupation': 'occupation', 'Monthly Salary': 'monthly_salary', 'Monthly Salary (₹)': 'monthly_salary',
-    'City': 'city', 'Mother Tongue': 'mother_tongue', 'Languages Known': 'languages_known',
+    'Occupation': 'occupation', 'Salary': 'salary', 'Salary (₹)': 'salary',
+    'City': 'city', 'State': 'state', 'Mother Tongue': 'mother_tongue', 'Languages Known': 'languages_known',
     'Father Occupation': 'father_occupation', "Father's Occupation": 'father_occupation',
     'Mother Occupation': 'mother_occupation', "Mother's Occupation": 'mother_occupation',
     'Brothers': 'brothers', 'Sisters': 'sisters',
@@ -66,8 +66,10 @@ function convertFromDb(row) {
     uiData['Native Place'] = row.native_place || row.family_location || uiData['Native Place'] || uiData['Family Location'] || '';
     uiData['Family Location'] = uiData['Native Place'];
     uiData['Residential Address'] = row.native_place || row.family_location || uiData['Native Place'] || row.city || uiData['City'] || '';
-    uiData['Monthly Salary'] = (row.monthly_salary !== null && row.monthly_salary !== undefined) ? String(row.monthly_salary) : '';
-    uiData['Monthly Salary (₹)'] = uiData['Monthly Salary'];
+    uiData['City'] = row.city || uiData['City'] || '';
+    uiData['State'] = row.state || uiData['State'] || '';
+    uiData['Salary'] = (row.salary !== null && row.salary !== undefined) ? String(row.salary) : '';
+    uiData['Salary (₹)'] = uiData['Salary'];
 
     return uiData;
 }
@@ -765,13 +767,14 @@ function getDashboardRecentProfiles() {
                 p.Gender,
                 p.Age ? String(p.Age) : '',
                 p.City,
+                p.State,
                 p['Native Place'],
                 p['Family Location'],
                 p.Education,
                 p.Occupation,
-                p['Monthly Salary'],
-                p['Monthly Salary (₹)'],
-                formatSalary(p['Monthly Salary']),
+                p.Salary,
+                p['Salary (₹)'],
+                formatSalary(p.Salary),
                 p['Marital Status'],
                 p.Mobile,
                 p.WhatsApp,
@@ -1404,8 +1407,9 @@ const CSV_COLUMNS = [
     // Professional
     { key: 'Education', label: 'Education' },
     { key: 'Occupation', label: 'Occupation' },
-    { key: 'Monthly Salary (₹)', label: 'Monthly Salary (₹)' },
+    { key: 'Salary (₹)', label: 'Salary (₹)' },
     { key: 'City', label: 'City' },
+    { key: 'State', label: 'State' },
     { key: 'Mother Tongue', label: 'Mother Tongue' },
     { key: 'Languages Known', label: 'Languages Known' },
     // Family & Religious
@@ -1490,8 +1494,8 @@ function generateCsvContent(profileList, includeContact = true) {
                 const regDate = p.createdAt ? p.createdAt.split('T')[0] : '—';
                 return escapeCsvCell(regDate);
             }
-            if (col.key === 'Monthly Salary (₹)') {
-                const sal = p['Monthly Salary'] || p['Monthly Salary (₹)'];
+            if (col.key === 'Salary (₹)') {
+                const sal = p['Salary'] || p['Salary (₹)'];
                 return escapeCsvCell(sal ? formatSalary(sal) : '—');
             }
             const val = p[col.key];
@@ -1571,10 +1575,13 @@ function formatSingleProfileWhatsApp(p, includeContact = false) {
     msg += `🎓 EDUCATION & PROFESSION\n`;
     msg += `Education: ${p.Education || '—'}\n`;
     msg += `Occupation: ${p.Occupation || '—'}\n`;
-    if (p['Monthly Salary'] || p['Monthly Salary (₹)']) {
-        msg += `Monthly Salary: ${formatSalary(p['Monthly Salary'] || p['Monthly Salary (₹)'])} / month\n`;
+    if (p['Salary'] || p['Salary (₹)']) {
+        msg += `Salary: ${formatSalary(p['Salary'] || p['Salary (₹)'])} / month\n`;
     }
     msg += `City: ${p.City || '—'}\n`;
+    if (p.State) {
+        msg += `State: ${p.State}\n`;
+    }
     msg += `Mother Tongue: ${p['Mother Tongue'] || '—'}\n`;
     if (p['Languages Known']) msg += `Languages: ${p['Languages Known']}\n`;
     msg += `\n`;
@@ -1977,9 +1984,9 @@ function renderListView() {
                     <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
                 </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
-                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</p></td>
+                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender|| '—'} / ${p.Age|| '—'}</td>
-                <td class="p-4 text-[13px] text-wine/80">${p.City|| '—'}</td>
+                <td class="p-4 text-[13px] text-wine/80">${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</td>
                 <td class="p-4 text-[12px] text-wine/80">${p.createdAt.split('T')[0]}</td>
                 <td class="p-4">${getStatusBadge(p)}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
@@ -2002,8 +2009,8 @@ function renderListView() {
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
             `<div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Gender / Age</span>${p.Gender|| '—'} • ${p.Age|| '—'}</div>
-             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City|| '—'}</div>
-             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</div>
+             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</div>
+             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</div>
              <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Registered</span>${p.createdAt.split('T')[0]}</div>`,
             `<button onclick="changeStatus(${idx},'Reviewed')" class="py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-[12px] uppercase font-bold shadow-sm active:scale-[0.98]">Review</button>
              <button onclick="changeStatus(${idx},'Shortlisted')" class="col-span-2 py-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl text-[12px] uppercase font-bold shadow-sm mt-1 active:scale-[0.98]">Shortlist</button>`
@@ -2017,9 +2024,9 @@ function renderListView() {
                     <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
                 </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
-                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</p></td>
+                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender|| '—'} / ${p.Age|| '—'}</td>
-                <td class="p-4 text-[13px] text-wine/80">${p.City|| '—'}</td>
+                <td class="p-4 text-[13px] text-wine/80">${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</td>
                 <td class="p-4 text-[12px] text-wine/80"><p>${p['Surname / Biradari']|| '—'}</p><p class="text-[10px] text-wine/50">${p['Maslak']|| '—'}</p></td>
                 <td class="p-4">${getStatusBadge(p)}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
@@ -2042,8 +2049,8 @@ function renderListView() {
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
             `<div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Gender / Age</span>${p.Gender|| '—'} • ${p.Age|| '—'}</div>
-             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City|| '—'}</div>
-             <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</div>
+             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</div>
+             <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</div>
              <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Background</span>${p['Surname / Biradari']|| '—'} • ${p['Maslak']|| '—'}</div>`,
             `<button onclick="changeStatus(${idx},'Contacted')" class="py-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-[12px] uppercase font-bold shadow-sm">Contacted</button>
              <button onclick="changeStatus(${idx},'Reviewed')" class="col-span-2 py-3 bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-[12px] uppercase font-bold shadow-sm mt-1">Remove from Shortlist</button>`
@@ -2057,9 +2064,9 @@ function renderListView() {
                     <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
                 </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
-                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</p></td>
+                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender|| '—'} / ${p.Age|| '—'}</td>
-                <td class="p-4 text-[13px] text-wine/80">${p.City|| '—'}</td>
+                <td class="p-4 text-[13px] text-wine/80">${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Mobile|| '—'}</td>
                 <td class="p-4 text-[12px] text-wine/80">${p.contactedAt ? p.contactedAt.split('T')[0] : '—'}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
@@ -2081,8 +2088,8 @@ function renderListView() {
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
             `<div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Gender / Age</span>${p.Gender|| '—'} • ${p.Age|| '—'}</div>
-             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City|| '—'}</div>
-             <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</div>
+             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</div>
+             <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</div>
              <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Contact</span>${p.Mobile|| '—'}</div>`,
             `<button onclick="openFollowUp(${idx})" class="py-3 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl text-[12px] uppercase font-bold shadow-sm">Follow Up</button>
              <button onclick="changeStatus(${idx},'Closed')" class="col-span-2 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-[12px] uppercase font-bold shadow-sm mt-1">Close Profile</button>`
@@ -2153,9 +2160,9 @@ function renderListView() {
                     <input type="checkbox" ${selectedProfileIds.has(p.id) ? 'checked' : ''} onchange="toggleProfileSelection('${p.id}', this.checked)" class="profile-checkbox w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer">
                 </td>
                 <td class="p-4 font-bold text-[13px] text-wine">${p.profileId}</td>
-                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</p></td>
+                <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender|| '—'} / ${p.Age|| '—'}</td>
-                <td class="p-4 text-[12px] text-wine/80"><p>${p.City|| '—'}</p><p class="text-[10px] text-wine/50">${p['Surname / Biradari']|| '—'}</p></td>
+                <td class="p-4 text-[12px] text-wine/80"><p>${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</p><p class="text-[10px] text-wine/50">${p['Surname / Biradari']|| '—'}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Mobile|| '—'}</td>
                 <td class="p-4">${getStatusBadge(p)}</td>
                 <td class="p-4 text-right flex justify-end gap-1.5 flex-wrap">
@@ -2177,8 +2184,8 @@ function renderListView() {
             </tr>`;
         mobCard = (p, idx) => buildMobCard(p, idx, 
             `<div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Gender / Age</span>${p.Gender|| '—'} • ${p.Age|| '—'}</div>
-             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City|| '—'}</div>
-             <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p['Monthly Salary'] ? ' • ' + formatSalary(p['Monthly Salary']) : ''}</div>`,
+             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</div>
+             <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</div>`,
             `<button onclick="activeProfileIndex=${idx}; promptStatus()" class="py-3 bg-[#FAF8F5] border border-gold/30 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm">Change Status</button>`
         );
     }
@@ -2559,7 +2566,7 @@ function confirmDelete(idx) {
 // Profile Modal (View/Edit)
 const pFields = [
     {group: 'BASIC', f: ['Full Name', 'Registering For', 'Gender', 'Age', 'Date of Birth', 'Marital Status', 'Height']},
-    {group: 'PROFESSIONAL', f: ['Education', 'Occupation', 'Monthly Salary (₹)', 'City', 'Mother Tongue', 'Languages Known']},
+    {group: 'PROFESSIONAL', f: ['Education', 'Occupation', 'Salary (₹)', 'City', 'State', 'Mother Tongue', 'Languages Known']},
     {group: 'FAMILY & RELIGIOUS', f: ['Surname / Biradari', "Father's Occupation", "Mother's Occupation", 'Brothers', 'Sisters', 'Native Place', 'Family Type', 'Maslak', 'Religious Preference']},
     {group: 'ABOUT CANDIDATE', f: ['About Candidate']},
     {group: 'MATCH PREFERENCES', f: ['Preferred Age Range', 'Preferred Location', 'Preferred Education', 'Preferred Profession', 'Other Preferences']},
@@ -2684,7 +2691,7 @@ function renderProfileModal() {
                 if(isFullWidth) {
                     html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
                     <textarea id="${safeId}" rows="3" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50">${val.replace(/"/g,'&quot;')}</textarea></div>`;
-                } else if (key === 'Monthly Salary (₹)' || key === 'Monthly Salary') {
+                } else if (key === 'Salary (₹)' || key === 'Salary') {
                     html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
                     <div class="relative flex items-center">
                         <span class="absolute left-3 text-wine/60 font-semibold text-sm select-none pointer-events-none">₹</span>
@@ -2696,7 +2703,7 @@ function renderProfileModal() {
                 }
             } else {
                 let displayVal = val !== '' ? val : '—';
-                if ((key === 'Monthly Salary (₹)' || key === 'Monthly Salary') && val !== '') {
+                if ((key === 'Salary (₹)' || key === 'Salary') && val !== '') {
                     displayVal = formatSalary(val) + ' / month';
                 }
                 html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1">${key}</span><span class="block text-[16px] md:text-[15px] text-wine font-medium break-words ${isFullWidth ? 'whitespace-pre-line leading-relaxed' : ''}">${displayVal}</span></div>`;
@@ -2850,20 +2857,24 @@ async function saveProfile() {
                         updateData[fieldMapToDb[f]] = validNum;
                         p[f] = validNum !== null ? String(validNum) : '';
                     }
-                } else if (f === 'Monthly Salary (₹)' || f === 'Monthly Salary') {
+                } else if (f === 'Salary (₹)' || f === 'Salary') {
                     const trimmed = (val || '').trim();
                     if (trimmed === '') {
-                        updateData['monthly_salary'] = null;
-                        p['Monthly Salary'] = '';
-                        p['Monthly Salary (₹)'] = '';
+                        updateData['salary'] = null;
+                        p['Salary'] = '';
+                        p['Salary (₹)'] = '';
                     } else {
                         const cleanVal = trimmed.replace(/[₹,\s]/g, '');
                         const n = parseFloat(cleanVal);
                         const validNum = (!isNaN(n) && n >= 0) ? Math.round(n * 100) / 100 : null;
-                        updateData['monthly_salary'] = validNum;
-                        p['Monthly Salary'] = validNum !== null ? String(validNum) : '';
-                        p['Monthly Salary (₹)'] = p['Monthly Salary'];
+                        updateData['salary'] = validNum;
+                        p['Salary'] = validNum !== null ? String(validNum) : '';
+                        p['Salary (₹)'] = p['Salary'];
                     }
+                } else if (f === 'State') {
+                    const trimmed = (val || '').trim();
+                    updateData['state'] = trimmed || null;
+                    p['State'] = trimmed;
                 } else {
                     updateData[fieldMapToDb[f]] = val || null;
                 }
@@ -3005,7 +3016,7 @@ function exportCSV(segment) {
     }
     if(d.length===0) return showDialog('info','Export Failed', `No ${segment} profiles found to export.`);
     
-    let headers = ['Profile ID','Status','Full Name','Gender','Age','City','Mobile'];
+    let headers = ['Profile ID','Status','Full Name','Gender','Age','City','State','Mobile'];
 
 // Supabase Data Mapping
 

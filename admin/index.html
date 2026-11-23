@@ -24,12 +24,157 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
   .animate-scale-up {
     animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
+
+  /* Sidebar collapsed & expanded states */
+  #sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #sidebar.sidebar-collapsed {
+    width: 76px !important;
+  }
+  #sidebar.sidebar-expanded {
+    width: 290px !important;
+  }
+  #sidebar.sidebar-collapsed .sidebar-expanded-item {
+    display: none !important;
+    opacity: 0;
+    width: 0;
+  }
+  #sidebar.sidebar-collapsed .sidebar-section-header {
+    display: none !important;
+  }
+  #sidebar.sidebar-collapsed .nav-link {
+    justify-content: center !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    position: relative;
+  }
+  #sidebar.sidebar-collapsed .nav-badge {
+    display: none !important;
+  }
+  #sidebar.sidebar-collapsed .sidebar-brand-expanded {
+    display: none !important;
+  }
+  #sidebar.sidebar-collapsed .sidebar-brand-collapsed {
+    display: flex !important;
+  }
+  .sidebar-brand-collapsed {
+    display: none;
+  }
+  #sidebar.sidebar-collapsed .sidebar-footer-expanded {
+    display: none !important;
+  }
+  #sidebar.sidebar-collapsed .sidebar-footer-collapsed {
+    display: flex !important;
+  }
+  .sidebar-footer-collapsed {
+    display: none;
+  }
+
+  /* Tooltips in collapsed mode on desktop */
+  @media (min-width: 768px) {
+    #sidebar.sidebar-collapsed .nav-link:hover .sidebar-tooltip {
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  }
+  .sidebar-tooltip {
+    display: none;
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+    left: 100%;
+    margin-left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #4A0E1F;
+    color: #FFF8F1;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    border: 1px solid rgba(201,162,39,0.3);
+    z-index: 100;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out;
+  }
+  .sidebar-tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent #4A0E1F transparent transparent;
+  }
+
+  /* Active navigation item styling matching original Noor-e-Nikah design */
+  .nav-link.active-nav-link {
+    background: rgba(142, 36, 60, 0.5) !important;
+    border: 1px solid rgba(201, 162, 39, 0.3) !important;
+    color: #FFF8F1 !important;
+  }
+  .nav-link.active-nav-link svg {
+    color: #E8C979 !important;
+  }
+
+  /* Mobile off-canvas drawer overrides */
+  @media (max-width: 767px) {
+    #sidebar, #sidebar.sidebar-collapsed, #sidebar.sidebar-expanded {
+      width: 280px !important;
+    }
+    #sidebar.sidebar-collapsed .sidebar-expanded-item {
+      display: flex !important;
+      opacity: 1 !important;
+      width: auto !important;
+    }
+    #sidebar.sidebar-collapsed .sidebar-section-header {
+      display: block !important;
+    }
+    #sidebar.sidebar-collapsed .sidebar-brand-expanded {
+      display: flex !important;
+    }
+    #sidebar.sidebar-collapsed .sidebar-brand-collapsed {
+      display: none !important;
+    }
+    #sidebar.sidebar-collapsed .sidebar-footer-expanded {
+      display: block !important;
+    }
+    #sidebar.sidebar-collapsed .sidebar-footer-collapsed {
+      display: none !important;
+    }
+    #sidebar.sidebar-collapsed .nav-link {
+      justify-content: flex-start !important;
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+    }
+    #sidebar.sidebar-collapsed .nav-badge {
+      display: inline-block !important;
+    }
+  }
 </style>
 </head>
 <body class="antialiased h-screen flex overflow-hidden bg-ivory">
 
+<!-- AUTH LOADING SCREEN (Eliminates login flicker on refresh) -->
+<div id="authLoadingScreen" class="fixed inset-0 z-[130] flex flex-col items-center justify-center text-center p-6 bg-wine" style="background: linear-gradient(135deg, #5B1226, #430D1C);">
+  <div class="flex flex-col items-center max-w-sm w-full">
+    <img src="/assets/logo.png" alt="Noor-E-Nikah" class="h-24 w-auto object-contain mb-5 drop-shadow-md animate-pulse">
+    <h1 class="font-serif text-3xl font-semibold text-gold-lt tracking-widest mb-1">NOOR-E-NIKAH</h1>
+    <p class="text-[11px] tracking-[0.25em] text-cream/70 uppercase mb-8">Rishta Services • Admin Panel</p>
+    <div class="relative w-10 h-10 mb-4">
+      <div class="w-10 h-10 rounded-full border-2 border-gold/20 border-t-gold-lt animate-spin"></div>
+    </div>
+    <p class="text-xs text-cream/60 tracking-wider">Verifying secure session...</p>
+  </div>
+</div>
+
 <!-- LOGIN SCREEN -->
-<div id="loginScreen" class="fixed inset-0 z-[120] flex items-center justify-center bg-wine" style="background: linear-gradient(135deg, #5B1226, #430D1C);">
+<div id="loginScreen" class="hidden fixed inset-0 z-[120] flex items-center justify-center bg-wine" style="background: linear-gradient(135deg, #5B1226, #430D1C);">
   <div class="bg-white/95 backdrop-blur-md p-10 max-w-md w-full relative overflow-hidden rounded-[24px] shadow-2xl border border-gold/30">
     <img src="/assets/logo.png" alt="Noor-E-Nikah Logo" class="mx-auto h-20 w-auto mb-6 object-contain">
     <!-- LOGIN VIEW -->
@@ -81,100 +226,184 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 </div>
 
 <!-- SIDEBAR OVERLAY -->
-<div id="sidebarOverlay" class="fixed inset-0 bg-[#320A16]/50 backdrop-blur-sm z-40 hidden md:hidden"></div>
+<div id="sidebarOverlay" class="fixed inset-0 bg-[#320A16]/60 backdrop-blur-sm z-40 hidden transition-opacity duration-300"></div>
 
 <!-- SIDEBAR -->
-<aside id="sidebar" class="w-[280px] md:w-[290px] bg-wine text-cream flex-shrink-0 flex flex-col fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-50">
-  <div class="p-8 text-center border-b border-gold/10 flex flex-col items-center justify-center">
+<aside id="sidebar" class="w-[280px] md:w-[290px] bg-wine text-cream flex-shrink-0 flex flex-col fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 z-50 transition-all duration-300 ease-in-out border-r border-gold/10">
+  <!-- Brand Header: Expanded view matching original Noor-E-Nikah design -->
+  <div class="sidebar-brand-expanded p-6 md:p-7 text-center border-b border-gold/10 flex flex-col items-center justify-center relative flex-shrink-0">
+    <button id="sidebarCloseBtn" class="md:hidden absolute top-4 right-4 p-2 text-cream/70 hover:text-white rounded-lg hover:bg-white/10" aria-label="Close Sidebar">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <button id="sidebarDesktopToggleBtn" class="hidden md:flex absolute top-4 right-3 p-1.5 text-cream/70 hover:text-white rounded-lg hover:bg-white/10 transition" title="Toggle Sidebar">
+      <svg id="sidebarCollapseIcon" class="w-4 h-4 text-gold-lt" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+    </button>
     <img src="/assets/logo.png" alt="Noor-E-Nikah Logo" class="mx-auto h-20 w-auto object-contain mb-3">
-    <h1 class="font-serif text-[28px] font-semibold text-gold-lt tracking-widest">NOOR-E-NIKAH</h1>
+    <h1 class="font-serif text-[26px] md:text-[28px] font-semibold text-gold-lt tracking-widest leading-tight">NOOR-E-NIKAH</h1>
     <p class="text-[10px] tracking-[0.25em] text-cream/70 mt-2 uppercase">Rishta Services</p>
     <div class="w-12 h-[1px] bg-gold-lt/40 mx-auto mt-4 mb-2"></div>
     <p class="text-[9px] tracking-widest text-gold-lt/50 uppercase">Admin Panel</p>
   </div>
 
-  <nav class="flex-1 overflow-y-auto p-5 space-y-1.5 custom-scrollbar" id="sidebarNav">
-    <a href="#" data-target="dashboard" class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-burg/50 border border-gold/10 text-cream transition nav-link">
-      <span class="font-medium tracking-wide">Dashboard</span>
+  <!-- Brand Header: Collapsed compact view -->
+  <div class="sidebar-brand-collapsed p-4 text-center border-b border-gold/10 flex-col items-center justify-center relative flex-shrink-0">
+    <img src="/assets/logo.png" alt="Noor-E-Nikah" class="h-10 w-10 object-contain mx-auto">
+  </div>
+
+  <!-- Navigation items -->
+  <nav class="flex-1 overflow-y-auto p-4 md:p-5 space-y-1.5 custom-scrollbar" id="sidebarNav">
+    <a href="#" data-target="dashboard" class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-burg/50 border border-gold/10 text-cream transition nav-link group relative" title="Dashboard">
+      <svg class="w-5 h-5 flex-shrink-0 text-gold-lt" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Dashboard</span>
+      <span class="sidebar-tooltip">Dashboard</span>
     </a>
-    <a href="#" data-target="all" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">All Profiles</span>
+
+    <a href="#" data-target="all" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="All Profiles">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">All Profiles</span>
+      <span class="sidebar-tooltip">All Profiles</span>
     </a>
-    <a href="#" data-target="pending" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Pending Review</span>
+
+    <a href="#" data-target="pending" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Pending Review">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Pending Review</span>
+      <span class="sidebar-tooltip">Pending Review</span>
     </a>
-    <a href="#" data-target="reviewed" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Reviewed</span>
+
+    <a href="#" data-target="reviewed" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Reviewed">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Reviewed</span>
+      <span class="sidebar-tooltip">Reviewed</span>
     </a>
-    <a href="#" data-target="matching" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide flex items-center justify-between w-full">
+
+    <a href="#" data-target="matching" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="AI Matching">
+      <svg class="w-5 h-5 flex-shrink-0 text-gold-lt" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap flex items-center justify-between flex-1">
         <span>AI Matching</span>
         <span class="px-1.5 py-0.5 text-[10px] font-bold bg-gold/20 text-gold-lt rounded border border-gold/40">AI</span>
       </span>
+      <span class="sidebar-tooltip">AI Matching</span>
     </a>
-    <a href="#" data-target="pairs" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide flex items-center justify-between w-full">
+
+    <a href="#" data-target="pairs" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Pairs">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap flex items-center justify-between flex-1">
         <span>Pairs</span>
         <span class="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 rounded border border-emerald-400/30">1:1</span>
       </span>
+      <span class="sidebar-tooltip">Pairs</span>
     </a>
-    <a href="#" data-target="shortlisted" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Shortlisted</span>
+
+    <a href="#" data-target="shortlisted" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Shortlisted">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Shortlisted</span>
+      <span class="sidebar-tooltip">Shortlisted</span>
     </a>
-    <a href="#" data-target="followup" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Follow-up</span>
+
+    <a href="#" data-target="followup" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Follow Up">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Follow Up</span>
+      <span class="sidebar-tooltip">Follow Up</span>
     </a>
-    <a href="#" data-target="closed" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Closed</span>
+
+    <a href="#" data-target="contacted" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Contacted">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Contacted</span>
+      <span class="sidebar-tooltip">Contacted</span>
     </a>
-    <a href="#" data-target="contacted" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Contacted</span>
+
+    <a href="#" data-target="closed" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Closed">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Closed</span>
+      <span class="sidebar-tooltip">Closed</span>
     </a>
-    <a href="#" data-target="notes" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Notes</span>
+
+    <a href="#" data-target="cancelled" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Cancelled">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Cancelled</span>
+      <span class="sidebar-tooltip">Cancelled</span>
     </a>
-    <a href="#" data-target="export" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Export Data</span>
+
+    <a href="#" data-target="notes" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Notes">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Notes</span>
+      <span class="sidebar-tooltip">Notes</span>
     </a>
-    <a href="#" data-target="settings" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
-      <span class="font-medium tracking-wide">Settings</span>
+
+    <a href="#" data-target="export" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Export Data">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Export Data</span>
+      <span class="sidebar-tooltip">Export Data</span>
     </a>
-    <div class="my-4 border-t border-gold/10 mx-2"></div>
-    <a href="../index.html" target="_blank" class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl hover:bg-white/5 text-cream/70 transition">
-      <span class="text-sm tracking-wide">View Website</span>
+
+    <a href="#" data-target="settings" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/70 hover:bg-white/5 transition nav-link group relative" title="Settings">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <span class="font-medium tracking-wide sidebar-expanded-item whitespace-nowrap">Settings</span>
+      <span class="sidebar-tooltip">Settings</span>
     </a>
-    <a href="#" data-target="help" class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl hover:bg-white/5 text-cream/70 transition nav-link">
-      <span class="text-sm tracking-wide">Help & Support</span>
+
+    <div class="my-3 border-t border-gold/10 mx-2"></div>
+
+    <a href="../index.html" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl hover:bg-white/5 text-cream/70 transition group relative" title="View Website">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      <span class="text-sm tracking-wide sidebar-expanded-item whitespace-nowrap">View Website</span>
+      <span class="sidebar-tooltip">View Website</span>
+    </a>
+
+    <a href="#" data-target="help" class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl hover:bg-white/5 text-cream/70 transition nav-link group relative" title="Help & Support">
+      <svg class="w-5 h-5 flex-shrink-0 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-sm tracking-wide sidebar-expanded-item whitespace-nowrap">Help & Support</span>
+      <span class="sidebar-tooltip">Help & Support</span>
     </a>
   </nav>
 
-  <div class="p-5 border-t border-gold/10 bg-[#430D1C]/50 mt-auto">
-    <div class="flex items-center gap-3.5 mb-5">
-      <div class="w-10 h-10 rounded-full bg-burg text-gold-lt flex items-center justify-center font-serif text-[17px]">SK</div>
-      <div class="flex-1 overflow-hidden">
-        <p class="text-[13px] font-medium text-cream truncate">Seema Kadri</p>
-        <p class="text-[9px] tracking-widest text-cream/40 uppercase">Administrator</p>
+  <!-- Footer Section Anchored at Bottom -->
+  <div class="p-5 border-t border-gold/10 bg-[#430D1C]/50 mt-auto flex-shrink-0">
+    <!-- Expanded view -->
+    <div class="sidebar-footer-expanded">
+      <div class="flex items-center gap-3.5 mb-4">
+        <div class="w-10 h-10 rounded-full bg-burg text-gold-lt flex items-center justify-center font-serif text-[17px] font-bold border border-gold/30 flex-shrink-0">SK</div>
+        <div class="flex-1 overflow-hidden">
+          <p class="text-[13px] font-medium text-cream truncate">Seema Kadri</p>
+          <p class="text-[9px] tracking-widest text-cream/40 uppercase">Administrator</p>
+        </div>
       </div>
+      <button id="logoutBtn" class="w-full py-2.5 rounded-xl border border-wine/50 bg-wine/30 text-cream/80 hover:bg-white/10 transition text-sm font-medium flex items-center justify-center gap-2">
+        <svg class="w-4 h-4 text-cream/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span>Logout</span>
+      </button>
     </div>
-    <button id="logoutBtn" class="w-full py-2.5 rounded-xl border border-wine/50 bg-wine/30 text-cream/80 hover:bg-white/10 transition text-sm font-medium">Logout</button>
+
+    <!-- Collapsed view -->
+    <div class="sidebar-footer-collapsed flex-col items-center justify-center gap-2">
+      <div class="w-9 h-9 rounded-full bg-burg text-gold-lt flex items-center justify-center font-serif text-sm font-bold border border-gold/30" title="Seema Kadri (Administrator)">SK</div>
+      <button id="logoutBtnCollapsed" class="p-2 text-cream/70 hover:text-white rounded-lg hover:bg-white/10 transition" title="Logout">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      </button>
+    </div>
   </div>
 </aside>
 
 <!-- MAIN CONTENT -->
 <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
   <!-- HEADER -->
-  <header class="bg-white px-4 md:px-10 py-4 md:py-5 flex items-center justify-between border-b border-gold/10 flex-shrink-0">
-    <div class="flex items-center gap-4">
-      <button id="mobileMenuBtn" class="md:hidden text-wine p-2 -ml-2 rounded-lg hover:bg-wine/5"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+  <header class="bg-white px-4 md:px-8 py-3.5 md:py-4 flex items-center justify-between border-b border-gold/10 flex-shrink-0">
+    <div class="flex items-center gap-3 md:gap-4">
+      <button id="mobileMenuBtn" class="md:hidden text-wine p-2 -ml-2 rounded-lg hover:bg-wine/5 transition" aria-label="Open Mobile Menu"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+      <button id="desktopSidebarToggleBtn" class="hidden md:inline-flex items-center justify-center text-wine p-2 -ml-2 rounded-lg hover:bg-wine/5 transition" title="Toggle Sidebar Navigation" aria-label="Toggle Sidebar">
+        <svg id="desktopToggleIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+        </svg>
+      </button>
       <div>
-        <h2 class="text-lg md:text-[26px] font-serif font-semibold text-wine" id="headerWelcome">Welcome Back, Seema</h2>
-        <p class="text-[13px] text-wine/50 mt-1">Heres an overview of your Noor-E-Nikah Rishta Services</p>
+        <h2 class="text-lg md:text-[24px] font-serif font-semibold text-wine" id="headerWelcome">Welcome Back, Seema</h2>
+        <p class="text-[12px] md:text-[13px] text-wine/50 mt-0.5">Here's an overview of your Noor-E-Nikah Rishta Services</p>
       </div>
     </div>
     <div class="hidden md:flex flex-col items-end text-right">
       <p class="font-arab text-gold-lt text-[1.4rem] mb-0.5" dir="rtl" lang="ar">وَخَلَقْنَاكُمْ أَزْوَاجًا</p>
       <p class="font-serif italic text-wine/80 text-sm">"And We created you in pairs."</p>
-      <p class="text-[9px] uppercase tracking-[0.2em] text-gold mt-1.5">Quran 78:8</p>
+      <p class="text-[9px] uppercase tracking-[0.2em] text-gold mt-1">Quran 78:8</p>
     </div>
   </header>
 

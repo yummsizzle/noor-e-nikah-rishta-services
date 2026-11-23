@@ -284,7 +284,7 @@ function getStoredOrHashView() {
     try {
         const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
         const stored = sessionStorage.getItem('noor_admin_active_view');
-        const validViews = ['dashboard', 'all', 'pending', 'reviewed', 'shortlisted', 'followup', 'closed', 'pairs', 'matching', 'contacted', 'notes', 'export'];
+        const validViews = ['dashboard', 'all', 'pending', 'reviewed', 'shortlisted', 'followup', 'contacted', 'closed', 'cancelled', 'notes', 'pairs', 'matching', 'export', 'settings', 'help'];
         if (hash && validViews.includes(hash)) return hash;
         if (stored && validViews.includes(stored)) return stored;
     } catch(e) {}
@@ -307,9 +307,50 @@ if (typeof window !== 'undefined') {
     window.isAuthorizedAdmin = isAuthorizedAdmin;
 }
 
+function hideAuthLoading() {
+    const splash = document.getElementById('authLoadingScreen');
+    if (splash) {
+        splash.classList.add('transition-opacity', 'duration-200', 'opacity-0');
+        setTimeout(() => splash.classList.add('hidden'), 200);
+    }
+}
+
+function showLoginScreen(errorText) {
+    hideAuthLoading();
+    const loginScreen = document.getElementById('loginScreen');
+    if (loginScreen) loginScreen.classList.remove('hidden');
+    if (errorText) {
+        const loginError = document.getElementById('loginError');
+        if (loginError) {
+            loginError.textContent = errorText;
+            loginError.classList.remove('hidden');
+        }
+    }
+}
+
+function escapeHtml(str) {
+    if (str === undefined || str === null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+if (typeof window !== 'undefined') {
+    window.escapeHtml = escapeHtml;
+}
+
 // Initialization
 async function initializeAuth() {
     console.log("[ADMIN DEBUG] initializeAuth started");
+
+    // Safety check for supabaseClient
+    if (!window.supabaseClient || !window.supabaseClient.auth) {
+        console.error("[ADMIN CRITICAL] Supabase client not initialized before initializeAuth()!");
+        showLoginScreen("System initialization error. Please reload.");
+        return;
+    }
 
     // Safety check: Never allow password recovery link to open admin dashboard directly
     if (window.location.hash && (window.location.hash.includes('type=recovery') || window.location.hash.includes('error_code='))) {
@@ -334,44 +375,45 @@ async function initializeAuth() {
         }
     }
 
-    // Check existing session on page load (handles refresh)
-    const { data: { session }, error } = await window.supabaseClient.auth.getSession();
-    
-    if (error) {
-        console.warn("[ADMIN DEBUG] Session error (e.g., stale refresh token):", error.message);
-        // Clear stale session
-        await window.supabaseClient.auth.signOut();
-    }
-    
-    console.log("[ADMIN DEBUG] authenticated =", !!session);
-    if (session) {
-        // Authoritative check: verify authenticated user's actual UID against designated Admin UID
-        if (!isAuthorizedAdmin(session.user)) {
-            console.warn("[ADMIN AUTH] Unauthorized session detected (UID: " + session.user?.id + "). Immediate sign-out.");
+    // Check existing session on page load (handles refresh without login flicker)
+    try {
+        const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+
+        if (error) {
+            console.warn("[ADMIN DEBUG] Session error (e.g., stale refresh token):", error.message);
+            // Clear stale session
             await window.supabaseClient.auth.signOut();
-            const loginScreen = document.getElementById('loginScreen');
-            if (loginScreen) loginScreen.classList.remove('hidden');
-            const loginError = document.getElementById('loginError');
-            if (loginError) {
-                loginError.textContent = 'Access denied. Only the authorized administrator account can access this panel.';
-                loginError.classList.remove('hidden');
-            }
+            showLoginScreen();
             return;
         }
 
-        console.log("[ADMIN DEBUG] Authorized administrator session verified. UID:", session.user.id);
-        const loginScreen = document.getElementById('loginScreen');
-        if (loginScreen) loginScreen.classList.add('hidden');
-        
-        const migrateBtn = document.getElementById('migrateDataBtn');
-        if (migrateBtn) migrateBtn.classList.remove('hidden');
-        
-        loadData();
-        const initialView = getStoredOrHashView();
-        navigate(initialView, false);
-    } else {
-        const loginScreen = document.getElementById('loginScreen');
-        if (loginScreen) loginScreen.classList.remove('hidden');
+        console.log("[ADMIN DEBUG] authenticated =", !!session);
+        if (session) {
+            // Authoritative check: verify authenticated user's actual UID against designated Admin UID
+            if (!isAuthorizedAdmin(session.user)) {
+                console.warn("[ADMIN AUTH] Unauthorized session detected (UID: " + session.user?.id + "). Immediate sign-out.");
+                await window.supabaseClient.auth.signOut();
+                showLoginScreen('Access denied. Only the authorized administrator account can access this panel.');
+                return;
+            }
+
+            console.log("[ADMIN DEBUG] Authorized administrator session verified. UID:", session.user.id);
+            hideAuthLoading();
+            const loginScreen = document.getElementById('loginScreen');
+            if (loginScreen) loginScreen.classList.add('hidden');
+
+            const migrateBtn = document.getElementById('migrateDataBtn');
+            if (migrateBtn) migrateBtn.classList.remove('hidden');
+
+            loadData();
+            const initialView = getStoredOrHashView();
+            navigate(initialView, false);
+        } else {
+            showLoginScreen();
+        }
+    } catch (e) {
+        console.warn("[ADMIN AUTH] Session initialization check caught exception:", e);
+        showLoginScreen();
     }
     console.log("[ADMIN DEBUG] initializeAuth completed");
 
@@ -387,17 +429,12 @@ async function initializeAuth() {
             if (!session?.user || !isAuthorizedAdmin(session.user)) {
                 console.warn("[ADMIN AUTH] Unauthorized UID detected in onAuthStateChange:", session?.user?.id);
                 await window.supabaseClient.auth.signOut();
-                const loginScreen = document.getElementById('loginScreen');
-                if (loginScreen) loginScreen.classList.remove('hidden');
-                const loginError = document.getElementById('loginError');
-                if (loginError) {
-                    loginError.textContent = 'Access denied. Unauthorized administrator account.';
-                    loginError.classList.remove('hidden');
-                }
+                showLoginScreen('Access denied. Unauthorized administrator account.');
                 return;
             }
 
             console.log("[ADMIN AUTH] Authorized administrator confirmed in onAuthStateChange.");
+            hideAuthLoading();
             const loginScreen = document.getElementById('loginScreen');
             if (loginScreen) loginScreen.classList.add('hidden');
             
@@ -408,8 +445,7 @@ async function initializeAuth() {
             const targetView = getStoredOrHashView();
             navigate(targetView, false);
         } else if (event === 'SIGNED_OUT') {
-            const loginScreen = document.getElementById('loginScreen');
-            if (loginScreen) loginScreen.classList.remove('hidden');
+            showLoginScreen();
             
             try {
                 sessionStorage.removeItem('noor_admin_active_view');
@@ -664,17 +700,18 @@ function updateSidebarBadges() {
         shortlisted: profiles.filter(p => p.status === 'Shortlisted').length,
         contacted: profiles.filter(p => p.status === 'Contacted').length,
         followup: profiles.filter(p => p.status === 'Follow Up').length,
-        closed: profiles.filter(p => p.status === 'Closed').length,
+        closed: profiles.filter(p => (p.status || '').toLowerCase() === 'closed').length,
+        cancelled: profiles.filter(p => (p.status || '').toLowerCase() === 'cancelled').length,
         notes: profiles.filter(p => p.notes && p.notes.length > 0).length
     };
     
     document.querySelectorAll('.nav-link').forEach(link => {
         const target = link.getAttribute('data-target');
-        if (['pending', 'reviewed', 'shortlisted', 'contacted', 'followup', 'closed', 'notes'].includes(target)) {
+        if (['pending', 'reviewed', 'shortlisted', 'contacted', 'followup', 'closed', 'cancelled', 'notes'].includes(target)) {
             let badge = link.querySelector('.nav-badge');
             if (!badge) {
                 badge = document.createElement('span');
-                badge.className = 'nav-badge bg-white/20 px-2 py-0.5 rounded text-[10px] ml-auto font-bold';
+                badge.className = 'nav-badge sidebar-expanded-item bg-burg/80 border border-gold/30 px-2 py-0.5 rounded text-[10px] ml-auto font-bold text-gold-lt';
                 link.appendChild(badge);
             }
             badge.innerText = counts[target] !== undefined ? counts[target] : 0;
@@ -690,14 +727,120 @@ document.querySelectorAll('.nav-link').forEach(l => {
     });
 });
 
-document.getElementById('mobileMenuBtn').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.remove('-translate-x-full');
-    document.getElementById('sidebarOverlay').classList.remove('hidden');
-});
-document.getElementById('sidebarOverlay').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.add('-translate-x-full');
-    document.getElementById('sidebarOverlay').classList.add('hidden');
-});
+function initSidebarController() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const closeBtn = document.getElementById('sidebarCloseBtn');
+    const desktopBtn = document.getElementById('desktopSidebarToggleBtn');
+    const sidebarDesktopToggleBtn = document.getElementById('sidebarDesktopToggleBtn');
+    const logoutBtnCollapsed = document.getElementById('logoutBtnCollapsed');
+
+    if (!sidebar) return;
+
+    // Load saved preference for desktop collapse: default to false (expanded original sidebar)
+    let isCollapsed = false;
+    try {
+        const saved = localStorage.getItem('noor_admin_sidebar_collapsed');
+        if (saved !== null) {
+            isCollapsed = saved === 'true';
+        }
+    } catch(e) {}
+
+    function applyCollapse(collapsed) {
+        isCollapsed = collapsed;
+        if (collapsed) {
+            sidebar.classList.add('sidebar-collapsed');
+            sidebar.classList.remove('sidebar-expanded');
+        } else {
+            sidebar.classList.remove('sidebar-collapsed');
+            sidebar.classList.add('sidebar-expanded');
+        }
+        try {
+            localStorage.setItem('noor_admin_sidebar_collapsed', collapsed ? 'true' : 'false');
+        } catch(e) {}
+
+        const collapseIcon = document.getElementById('sidebarCollapseIcon');
+        if (collapseIcon) {
+            collapseIcon.innerHTML = collapsed
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>';
+        }
+    }
+
+    applyCollapse(isCollapsed);
+
+    function toggleSidebar() {
+        applyCollapse(!isCollapsed);
+    }
+
+    if (desktopBtn && !desktopBtn.dataset.bound) {
+        desktopBtn.dataset.bound = 'true';
+        desktopBtn.addEventListener('click', toggleSidebar);
+    }
+    if (sidebarDesktopToggleBtn && !sidebarDesktopToggleBtn.dataset.bound) {
+        sidebarDesktopToggleBtn.dataset.bound = 'true';
+        sidebarDesktopToggleBtn.addEventListener('click', toggleSidebar);
+    }
+
+    function openMobileDrawer() {
+        sidebar.classList.remove('-translate-x-full');
+        if (overlay) overlay.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeMobileDrawer() {
+        sidebar.classList.add('-translate-x-full');
+        if (overlay) overlay.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    if (mobileBtn && !mobileBtn.dataset.bound) {
+        mobileBtn.dataset.bound = 'true';
+        mobileBtn.addEventListener('click', openMobileDrawer);
+    }
+    if (closeBtn && !closeBtn.dataset.bound) {
+        closeBtn.dataset.bound = 'true';
+        closeBtn.addEventListener('click', closeMobileDrawer);
+    }
+    if (overlay && !overlay.dataset.bound) {
+        overlay.dataset.bound = 'true';
+        overlay.addEventListener('click', closeMobileDrawer);
+    }
+
+    // Auto-close mobile drawer when any nav link is clicked
+    if (typeof sidebar.querySelectorAll === 'function') {
+        sidebar.querySelectorAll('a').forEach(a => {
+            if (!a.dataset.mobileCloseBound) {
+                a.dataset.mobileCloseBound = 'true';
+                a.addEventListener('click', () => {
+                    if (window.innerWidth < 768) {
+                        closeMobileDrawer();
+                    }
+                });
+            }
+        });
+    }
+
+    // Close mobile drawer on Escape key
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && window.innerWidth < 768) {
+            if (!sidebar.classList.contains('-translate-x-full')) {
+                closeMobileDrawer();
+            }
+        }
+    });
+
+    if (logoutBtnCollapsed && !logoutBtnCollapsed.dataset.bound) {
+        logoutBtnCollapsed.dataset.bound = 'true';
+        logoutBtnCollapsed.addEventListener('click', () => {
+            const btn = document.getElementById('logoutBtn');
+            if (btn) btn.click();
+        });
+    }
+}
+window.initSidebarController = initSidebarController;
+initSidebarController();
 
 initDeleteQueryModalListeners();
 
@@ -725,21 +868,24 @@ function navigate(view, updateHash = true) {
 
     document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.nav-link').forEach(el => {
-        el.classList.remove('bg-burg/50', 'border-gold/10', 'text-cream');
+        el.classList.remove('active-nav-link', 'bg-burg/50', 'border-gold/10', 'text-cream');
         el.classList.add('text-cream/60', 'hover:bg-white/5');
     });
     const active = document.querySelector('.nav-link[data-target="'+view+'"]');
     if (active) {
         active.classList.remove('text-cream/60', 'hover:bg-white/5');
-        active.classList.add('bg-burg/50', 'border-gold/10', 'text-cream');
+        active.classList.add('active-nav-link', 'bg-burg/50', 'border-gold/10', 'text-cream');
     }
     
     if (window.innerWidth < 768) {
-        document.getElementById('sidebar').classList.add('-translate-x-full');
-        document.getElementById('sidebarOverlay').classList.add('hidden');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.add('-translate-x-full');
+        if (overlay) overlay.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
     }
     
-    if (['all', 'pending', 'reviewed', 'contacted', 'notes'].includes(view)) {
+    if (['all', 'pending', 'reviewed', 'contacted', 'closed', 'cancelled', 'notes'].includes(view)) {
         document.getElementById('view-list').classList.remove('hidden');
         listType = view;
         renderListView();
@@ -751,7 +897,6 @@ function navigate(view, updateHash = true) {
         if (view === 'pairs' && typeof initPairsView === 'function') initPairsView();
         if (view === 'shortlisted' && typeof initShortlistedPairsView === 'function') initShortlistedPairsView();
         if (view === 'followup' && typeof initFollowupPairsView === 'function') initFollowupPairsView();
-        if (view === 'closed' && typeof initClosedPairsView === 'function') initClosedPairsView();
     }
 }
 
@@ -821,7 +966,7 @@ function initDashboard() {
     const shortCount = profiles.filter(p => p.status === 'Shortlisted').length;
     const contactedCount = profiles.filter(p => p.status === 'Contacted').length;
     const fuCount = profiles.filter(p => p.status === 'Follow Up').length;
-    const closedCount = profiles.filter(p => p.status === 'Closed').length;
+    const closedCount = profiles.filter(p => (p.status || '').trim().toLowerCase() === 'closed').length;
     const notesCount = profiles.filter(p => p.notes && p.notes.length > 0).length;
 
     // Update 8 Interactive KPI Card Numbers
@@ -861,10 +1006,114 @@ function initDashboard() {
 }
 
 /**
- * Master multi-field, multi-token composite search engine.
+ * Strict Profile ID Parser.
+ * Recognizes Profile ID patterns:
+ *   - "NN-2026-34", "nn-2026-34", "2026-34", "2026 34", "NN 2026 34", "NN_2026_34", "NN-2026-034"
+ *   - Alphanumeric explicit IDs: "NN-GROOM-01", "NN-BRIDE-01", "NN-T-CLS"
+ * Returns normalization metadata or null if not a Profile ID.
+ */
+function parseProfileIdQuery(query) {
+    if (!query) return null;
+    const q = String(query).trim().toLowerCase();
+    if (!q) return null;
+
+    // Pattern 1: [NN][- /_] 4-digit-year [- /_] serial-digits (e.g. "NN-2026-34", "2026-34", "2026 34", "NN 2026 34")
+    const mNum = q.match(/^(?:nn[\s\-_/]+)?(\d{4})[\s\-_/]+(\d+)$/i);
+    if (mNum) {
+        return {
+            type: 'numeric',
+            year: mNum[1],
+            serialInt: parseInt(mNum[2], 10),
+            rawSerial: mNum[2],
+            key: `${mNum[1]}-${parseInt(mNum[2], 10)}`
+        };
+    }
+
+    // Pattern 2: Standalone serial with NN prefix (1-3 digits serial: e.g. "NN-34", "NN 34", "NN/34")
+    const mSerialOnly = q.match(/^nn[\s\-_/]+(\d{1,3})$/i);
+    if (mSerialOnly) {
+        return {
+            type: 'serial_only',
+            serialInt: parseInt(mSerialOnly[1], 10),
+            rawSerial: mSerialOnly[1],
+            key: `serial-${parseInt(mSerialOnly[1], 10)}`
+        };
+    }
+
+    // Pattern 3: Prefix only with 4-digit year (e.g. "NN-2026", "NN 2026")
+    const mYearOnly = q.match(/^nn[\s\-_/]+(\d{4})$/i);
+    if (mYearOnly) {
+        return {
+            type: 'year_prefix',
+            year: mYearOnly[1],
+            key: `year-${mYearOnly[1]}`
+        };
+    }
+
+    // Pattern 4: Explicit "NN-" prefix followed by alphanumeric tokens (e.g. "NN-GROOM-01", "NN-BRIDE-05")
+    const mAlpha = q.match(/^nn[\s\-_/]+([a-z0-9]+(?:[\s\-_/]+[a-z0-9]+)*)$/i);
+    if (mAlpha) {
+        return {
+            type: 'alphanumeric',
+            key: 'nn-' + mAlpha[1].replace(/[\s\-_/]+/g, '-').toLowerCase()
+        };
+    }
+
+    return null;
+}
+window.parseProfileIdQuery = parseProfileIdQuery;
+
+function checkProfileIdMatch(p, pidQuery) {
+    const rawPid = String(p.profileId || p.profile_id || p['Profile ID'] || p.Profile_ID || p.id || '').trim();
+    if (!rawPid) return false;
+
+    if (pidQuery.type === 'numeric') {
+        const pMatch = rawPid.match(/^(?:nn[\s\-_/]+)?(\d{4})[\s\-_/]+(\d+)$/i);
+        if (pMatch) {
+            const pYear = pMatch[1];
+            const pSerial = parseInt(pMatch[2], 10);
+            return (pYear === pidQuery.year && pSerial === pidQuery.serialInt);
+        }
+        return false;
+    }
+
+    if (pidQuery.type === 'serial_only') {
+        // Matches NN-YYYY-34 or NN-34 with the exact serial integer
+        const pMatch = rawPid.match(/^(?:nn[\s\-_/]+)?(?:\d{4}[\s\-_/]+)?(\d+)$/i);
+        if (pMatch) {
+            const pSerial = parseInt(pMatch[1], 10);
+            return pSerial === pidQuery.serialInt;
+        }
+        return false;
+    }
+
+    if (pidQuery.type === 'year_prefix') {
+        // Matches NN-2026 prefix against any NN-2026-X profile
+        const pMatch = rawPid.match(/^(?:nn[\s\-_/]+)?(\d{4})[\s\-_/]+(\d+)$/i);
+        if (pMatch) {
+            return pMatch[1] === pidQuery.year;
+        }
+        return false;
+    }
+
+    if (pidQuery.type === 'alphanumeric') {
+        const pAlpha = rawPid.match(/^nn[\s\-_/]+([a-z0-9]+(?:[\s\-_/]+[a-z0-9]+)*)$/i);
+        if (pAlpha) {
+            const pKey = 'nn-' + pAlpha[1].replace(/[\s\-_/]+/g, '-').toLowerCase();
+            return pKey === pidQuery.key;
+        }
+        return rawPid.toLowerCase() === pidQuery.key;
+    }
+
+    return false;
+}
+window.checkProfileIdMatch = checkProfileIdMatch;
+
+/**
+ * Master multi-field, multi-token composite search engine with strict Profile ID mode.
  * Matches:
+ *  - Strict Profile ID (e.g. "NN-2026-34", "2026-34", "2026 34", "NN 2026 34") -> only Profile ID field
  *  - Full Name (e.g. "Ansari Afreen")
- *  - Profile ID (e.g. "NN-2026-50", "50", "NN-2026")
  *  - Composite queries (e.g. "Ansari Afreen (NN-2026-50)", "Simran NN-2026-67")
  *  - Location combinations (e.g. "Hubli, Karnataka", "Hubli")
  *  - Mobile number (e.g. "9076055279", partials >= 4 digits)
@@ -876,6 +1125,18 @@ function matchesMasterSearch(p, query) {
     const rawQuery = String(query).trim().toLowerCase();
     if (!rawQuery) return true;
 
+    // 1. STRICT PROFILE ID SEARCH MODE
+    // When query is recognized as a Profile ID:
+    //  - Search ONLY Profile ID
+    //  - Never search candidate name, age, mobile, location, notes
+    //  - Never split into unrelated tokens
+    //  - Never fall back to composite search when no Profile ID matches
+    const pidQuery = parseProfileIdQuery(rawQuery);
+    if (pidQuery) {
+        return checkProfileIdMatch(p, pidQuery);
+    }
+
+    // 2. NORMAL COMPOSITE SEARCH (when input is not a Profile ID)
     // Field extractions with comprehensive fallbacks
     const name = String(p['Full Name'] || p.full_name || p.fullName || '').toLowerCase();
     const pid = String(p.profileId || p.profile_id || p['Profile ID'] || p.Profile_ID || p.id || '').toLowerCase();
@@ -898,7 +1159,7 @@ function matchesMasterSearch(p, query) {
         ? p.notes.map(n => (typeof n === 'string' ? n : (n.text || n.note || ''))).join(' ').toLowerCase()
         : String(p.notes || '').toLowerCase();
 
-    // 1. Digits-only phone search (full or partial >= 4 digits)
+    // 2a. Digits-only phone search (full or partial >= 4 digits)
     const rawDigits = rawQuery.replace(/\D/g, '');
     const mobileDigits = mobile.replace(/\D/g, '');
     const whatsappDigits = whatsapp.replace(/\D/g, '');
@@ -909,7 +1170,7 @@ function matchesMasterSearch(p, query) {
         }
     }
 
-    // 2. Profile ID exact, prefix, or numeric suffix match
+    // 2b. Profile ID exact, prefix, or numeric suffix match in composite mode
     if (pid) {
         if (pid === rawQuery || pid.startsWith(rawQuery) || pid.includes(rawQuery)) return true;
         const pidParts = pid.split('-');
@@ -920,12 +1181,12 @@ function matchesMasterSearch(p, query) {
         }
     }
 
-    // 3. Exact age match
+    // 2c. Exact age match
     if (age && /^\d{1,3}$/.test(rawQuery)) {
         if (parseInt(age, 10) === parseInt(rawQuery, 10)) return true;
     }
 
-    // 4. Composite searchable string combining name, ID in all standard UI formats, location, etc.
+    // 2d. Composite searchable string combining name, ID in all standard UI formats, location, etc.
     const composite = [
         name,
         pid,
@@ -954,12 +1215,7 @@ function matchesMasterSearch(p, query) {
 
     if (composite.includes(rawQuery)) return true;
 
-    // If query is an explicit Profile ID pattern (e.g. "NN-2026-34", "NN-2026"), do not decompose into split tokens
-    if (/^nn-\d+(?:-\d+)?$/i.test(rawQuery)) {
-        return false;
-    }
-
-    // 5. Tokenized multi-word search
+    // 2e. Tokenized multi-word search
     const tokens = rawQuery
         .replace(/[(),\-\/]/g, ' ')
         .split(/\s+/)
@@ -1372,7 +1628,8 @@ function getFilteredProfiles() {
     if (listType === 'shortlisted') filtered = filtered.filter(p => p.status === 'Shortlisted');
     if (listType === 'contacted') filtered = filtered.filter(p => p.status === 'Contacted');
     if (listType === 'followup') filtered = filtered.filter(p => p.status === 'Follow Up');
-    if (listType === 'closed') filtered = filtered.filter(p => p.status === 'Closed');
+    if (listType === 'closed') filtered = filtered.filter(p => (p.status || '').trim().toLowerCase() === 'closed');
+    if (listType === 'cancelled') filtered = filtered.filter(p => (p.status || '').trim().toLowerCase() === 'cancelled');
     if (listType === 'notes') filtered = filtered.filter(p => p.notes && p.notes.length > 0);
 
     // Advanced Filters
@@ -1383,8 +1640,8 @@ function getFilteredProfiles() {
     if (activeFilters.maslak && activeFilters.maslak !== 'All') filtered = filtered.filter(p => (p['Maslak'] === activeFilters.maslak || p['Maslak / Religious Background'] === activeFilters.maslak));
     if (activeFilters.minAge) filtered = filtered.filter(p => parseInt(p.Age) >= parseInt(activeFilters.minAge));
     if (activeFilters.maxAge) filtered = filtered.filter(p => parseInt(p.Age) <= parseInt(activeFilters.maxAge));
-    if (activeFilters.regFrom) filtered = filtered.filter(p => new Date(p.createdAt.split('T')[0]) >= new Date(activeFilters.regFrom));
-    if (activeFilters.regTo) filtered = filtered.filter(p => new Date(p.createdAt.split('T')[0]) <= new Date(activeFilters.regTo));
+    if (activeFilters.regFrom) filtered = filtered.filter(p => (p.createdAt || p.created_at) && new Date((p.createdAt || p.created_at).split('T')[0]) >= new Date(activeFilters.regFrom));
+    if (activeFilters.regTo) filtered = filtered.filter(p => (p.createdAt || p.created_at) && new Date((p.createdAt || p.created_at).split('T')[0]) <= new Date(activeFilters.regTo));
 
     // Global Search using Master Search
     const searchInput = document.getElementById('listSearchInput');
@@ -1406,23 +1663,39 @@ function changePage(p) {
     if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function toggleSelectPage(checked) {
+// Three-state selection system:
+// 1. UNCHECKED: No visible selectable records in filtered result set are selected.
+// 2. CHECKED: All selectable records in filtered result set are selected.
+// 3. INDETERMINATE: Some, but not all, selectable records in filtered result set are selected.
+function handleHeaderCheckboxClick(e) {
     const filtered = getFilteredProfiles();
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
-    const startIdx = (currentPage - 1) * PAGE_SIZE;
-    const pagedProfiles = filtered.slice(startIdx, startIdx + PAGE_SIZE);
-
-    pagedProfiles.forEach(p => {
-        if (checked) {
-            selectedProfileIds.add(p.id);
-        } else {
-            selectedProfileIds.delete(p.id);
+    if (filtered.length === 0) {
+        if (e && e.target) {
+            e.target.checked = false;
+            e.target.indeterminate = false;
         }
-    });
+        return;
+    }
+
+    const selectedInFiltered = filtered.filter(p => selectedProfileIds.has(p.id));
+    const allSelected = (selectedInFiltered.length === filtered.length);
+
+    if (allSelected) {
+        // Second click -> deselect all eligible visible filtered records
+        filtered.forEach(p => selectedProfileIds.delete(p.id));
+    } else {
+        // First click -> select all eligible visible filtered records
+        filtered.forEach(p => selectedProfileIds.add(p.id));
+    }
+
     renderListView();
 }
+window.handleHeaderCheckboxClick = handleHeaderCheckboxClick;
+
+function toggleSelectPage(checked) {
+    handleHeaderCheckboxClick();
+}
+window.toggleSelectPage = toggleSelectPage;
 
 function selectAllFilteredProfiles() {
     const filtered = getFilteredProfiles();
@@ -1535,18 +1808,18 @@ function updateSelectionUI(filtered = getFilteredProfiles(), pagedProfiles = nul
         }
     }
 
-    // Header Checkbox state
+    // Header Checkbox state: 3-state system
     const headerCb = document.getElementById('selectAllHeaderCheckbox');
     if (headerCb) {
-        if (pagedProfiles.length === 0) {
+        if (filtered.length === 0) {
             headerCb.checked = false;
             headerCb.indeterminate = false;
         } else {
-            const pageSelectedCount = pagedProfiles.filter(p => selectedProfileIds.has(p.id)).length;
-            if (pageSelectedCount === pagedProfiles.length) {
+            const selectedFilteredCount = filtered.filter(p => selectedProfileIds.has(p.id)).length;
+            if (selectedFilteredCount === filtered.length) {
                 headerCb.checked = true;
                 headerCb.indeterminate = false;
-            } else if (pageSelectedCount > 0) {
+            } else if (selectedFilteredCount > 0) {
                 headerCb.checked = false;
                 headerCb.indeterminate = true;
             } else {
@@ -1787,7 +2060,7 @@ function handleExportAction(type) {
     let filenameSuffix = '';
 
     if (type === 'selected') {
-        exportList = profiles.filter(p => selectedProfileIds.has(p.id));
+        exportList = getFilteredProfiles().filter(p => selectedProfileIds.has(p.id));
         if (exportList.length === 0) {
             showDialog('info', 'No Profiles Selected', 'Please select at least one profile using the checkboxes to export.');
             return;
@@ -1925,7 +2198,7 @@ function handleShareAction(type) {
     let shareList = [];
 
     if (type === 'selected') {
-        shareList = profiles.filter(p => selectedProfileIds.has(p.id));
+        shareList = getFilteredProfiles().filter(p => selectedProfileIds.has(p.id));
         if (shareList.length === 0) {
             showDialog('info', 'No Profiles Selected', 'Please select at least one profile using the checkboxes to share.');
             return;
@@ -2032,6 +2305,7 @@ function renderListView() {
         'contacted': {t: 'Contacted Profiles', s: 'Profiles where the family/candidate has already been contacted.'},
         'followup': {t: 'Follow Up', s: 'Profiles requiring follow-up communication.'},
         'closed': {t: 'Closed Profiles', s: 'Profiles that have been completed, paired or archived.'},
+        'cancelled': {t: 'Cancelled Profiles', s: 'Profiles that have been cancelled or withdrawn.'},
         'notes': {t: 'Profile Notes', s: 'Internal administrative notes on profiles.'}
     };
     if (titles[listType]) {
@@ -2090,9 +2364,32 @@ function renderListView() {
     updateSelectionUI(filtered, pagedProfiles);
 
     if (filtered.length === 0) {
-        if(thead) thead.innerHTML = '<tr><th class="p-4">Profiles</th></tr>';
-        if(tbody) tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-wine/50 text-sm italic">No profiles found for this view.</td></tr>';
-        if(mobCont) mobCont.innerHTML = '<div class="p-8 text-center text-wine/50 text-sm italic">No profiles found for this view.</div>';
+        const searchInput = document.getElementById('listSearchInput');
+        const searchVal = searchInput ? searchInput.value.trim() : '';
+        const emptyMsg = searchVal
+            ? `No profiles found matching "<span class="font-semibold text-wine">${escapeHtml(searchVal)}</span>".`
+            : `No profiles found for this view.`;
+        const adviceMsg = searchVal
+            ? `<p class="text-xs text-wine/60 mt-1">Check the Profile ID (e.g. <span class="font-mono font-medium text-wine">NN-2026-34</span> or <span class="font-mono font-medium text-wine">2026-34</span>) or adjust your search filters.</p>`
+            : '';
+
+        if(thead) thead.innerHTML = '<tr><th class="p-4 text-center">Profiles</th></tr>';
+        if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="p-12 text-center text-wine/70 text-sm">
+            <div class="max-w-md mx-auto flex flex-col items-center justify-center gap-2">
+                <div class="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center text-wine/40 mb-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <p class="font-medium text-wine/90 text-base">${emptyMsg}</p>
+                ${adviceMsg}
+            </div>
+        </td></tr>`;
+        if(mobCont) mobCont.innerHTML = `<div class="p-8 text-center text-wine/70 text-sm bg-white rounded-2xl border border-gold/20 shadow-sm flex flex-col items-center justify-center gap-2">
+            <div class="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center text-wine/40 mb-1">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <p class="font-medium text-wine/90">${emptyMsg}</p>
+            ${adviceMsg}
+        </div>`;
         if(paginationEl) paginationEl.classList.add('hidden');
         return;
     }
@@ -2116,6 +2413,7 @@ function renderListView() {
         if(thead) thead.innerHTML = `<tr>${columnsHtml}</tr>`;
         if(tbody) tbody.innerHTML = profilesArray.map(p => desktopRowFn(p, profiles.indexOf(p))).join('');
         if(mobCont) mobCont.innerHTML = profilesArray.map(p => mobileCardFn(p, profiles.indexOf(p))).join('');
+        updateSelectionUI(filtered, profilesArray);
     };
 
     if (listType === 'followup') {
@@ -2130,7 +2428,7 @@ function renderListView() {
             else upcoming.push(p);
         });
         
-        const cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Contact</th><th class="p-4">Follow-up Info</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        const cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onclick="handleHeaderCheckboxClick(event)" onchange="handleHeaderCheckboxClick(event)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer" aria-label="Select all profiles in current view"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Contact</th><th class="p-4">Follow-up Info</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         const deskRow = (p, idx) => `
             <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
                 <td class="p-4 text-center">
@@ -2218,6 +2516,7 @@ function renderListView() {
         }
         if(tbody) tbody.innerHTML = deskHtml;
         if(mobCont) mobCont.innerHTML = mobHtml;
+        updateSelectionUI(filtered, pagedProfiles);
         return;
     }
 
@@ -2259,7 +2558,7 @@ function renderListView() {
     `;
 
     if (listType === 'pending') {
-        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Reg Date</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onclick="handleHeaderCheckboxClick(event)" onchange="handleHeaderCheckboxClick(event)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer" aria-label="Select all profiles in current view"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Reg Date</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
             <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
                 <td class="p-4 text-center">
@@ -2269,7 +2568,7 @@ function renderListView() {
                 <td class="p-4"><p class="font-medium text-[14px] text-wine">${p['Full Name']|| '—'}</p><p class="text-[10px] uppercase text-wine/50">${p['Registering For']|| '—'}${p.Occupation ? ' • ' + p.Occupation : ''}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</p></td>
                 <td class="p-4 text-[13px] text-wine/80">${p.Gender|| '—'} / ${p.Age|| '—'}</td>
                 <td class="p-4 text-[13px] text-wine/80">${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</td>
-                <td class="p-4 text-[12px] text-wine/80">${p.createdAt.split('T')[0]}</td>
+                <td class="p-4 text-[12px] text-wine/80">${(p.createdAt || p.created_at || '').split('T')[0] || '—'}</td>
                 <td class="p-4">${getStatusBadge(p)}</td>
                 <td class="p-4 text-right flex justify-end gap-1 flex-wrap">
                     <button onclick="viewProfile(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">View Details</button>
@@ -2293,13 +2592,13 @@ function renderListView() {
             `<div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Gender / Age</span>${p.Gender|| '—'} • ${p.Age|| '—'}</div>
              <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</div>
              <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</div>
-             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Registered</span>${p.createdAt.split('T')[0]}</div>`,
+             <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Registered</span>${(p.createdAt || p.created_at || '').split('T')[0] || '—'}</div>`,
             `<button onclick="changeStatus(${idx},'Reviewed')" class="py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-[12px] uppercase font-bold shadow-sm active:scale-[0.98]">Review</button>
              <button onclick="changeStatus(${idx},'Shortlisted')" class="col-span-2 py-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl text-[12px] uppercase font-bold shadow-sm mt-1 active:scale-[0.98]">Shortlist</button>`
         );
     } 
     else if (listType === 'shortlisted') {
-        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Surname / Maslak</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onclick="handleHeaderCheckboxClick(event)" onchange="handleHeaderCheckboxClick(event)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer" aria-label="Select all profiles in current view"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Surname / Maslak</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
             <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
                 <td class="p-4 text-center">
@@ -2339,7 +2638,7 @@ function renderListView() {
         );
     }
     else if (listType === 'contacted') {
-        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Contact</th><th class="p-4">Contacted Date</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onclick="handleHeaderCheckboxClick(event)" onchange="handleHeaderCheckboxClick(event)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer" aria-label="Select all profiles in current view"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">City</th><th class="p-4">Contact</th><th class="p-4">Contacted Date</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
             <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
                 <td class="p-4 text-center">
@@ -2378,7 +2677,7 @@ function renderListView() {
         );
     }
     else if (listType === 'notes') {
-        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Latest Note</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onclick="handleHeaderCheckboxClick(event)" onchange="handleHeaderCheckboxClick(event)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer" aria-label="Select all profiles in current view"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Latest Note</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
             <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
                 <td class="p-4 text-center">
@@ -2435,7 +2734,7 @@ function renderListView() {
             </div>`;
     }
     else {
-        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">Location & Comm</th><th class="p-4">Contact</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
+        cols = `<th class="p-4 w-12 text-center"><input type="checkbox" id="selectAllHeaderCheckbox" onclick="handleHeaderCheckboxClick(event)" onchange="handleHeaderCheckboxClick(event)" class="w-4 h-4 rounded border-gold/40 text-wine focus:ring-wine/20 cursor-pointer" aria-label="Select all profiles in current view"></th><th class="p-4">Profile ID</th><th class="p-4">Candidate</th><th class="p-4">Gender/Age</th><th class="p-4">Location & Comm</th><th class="p-4">Contact</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th>`;
         deskRow = (p, idx) => `
             <tr class="border-b border-gold/10 hover:bg-[#FAF8F5] transition ${selectedProfileIds.has(p.id) ? 'bg-[#FAF8F5]' : ''}">
                 <td class="p-4 text-center">
@@ -3066,7 +3365,7 @@ function renderProfileModal() {
     html += `
         <div class="mb-6 flex flex-wrap gap-4 md:gap-8 p-4 md:p-5 bg-[#FAF8F5] rounded-xl border border-gold/20 shadow-sm">
             <div class="w-full md:w-auto"><span class="block text-[10px] text-wine/50 font-bold uppercase tracking-wider mb-1">Profile ID</span><span class="font-serif text-xl font-semibold text-wine">${p.profileId}</span></div>
-            <div class="w-1/2 md:w-auto"><span class="block text-[10px] text-wine/50 font-bold uppercase tracking-wider mb-1">Registration Date</span><span class="font-serif text-lg md:text-xl font-semibold text-wine">${p.createdAt.split('T')[0]}</span></div>
+            <div class="w-1/2 md:w-auto"><span class="block text-[10px] text-wine/50 font-bold uppercase tracking-wider mb-1">Registration Date</span><span class="font-serif text-lg md:text-xl font-semibold text-wine">${(p.createdAt || p.created_at || '').split('T')[0] || '—'}</span></div>
             <div class="w-1/2 md:w-auto"><span class="block text-[10px] text-wine/50 font-bold uppercase tracking-wider mb-1">Current Status</span><span class="font-serif text-lg md:text-xl font-semibold text-wine">${p.status}</span></div>
         </div>
     `;

@@ -1804,13 +1804,116 @@ function applyMatchingFilters() {
         });
     }
 
+// Self-contained strict Profile ID query parser for fallback search
+function parseMatchingProfileIdQuery(query) {
+    if (!query) return null;
+    const q = String(query).trim().toLowerCase();
+    if (!q) return null;
+
+    // Pattern 1: [NN][- /_] 4-digit-year [- /_] serial-digits (e.g. "NN-2026-34", "2026-34", "2026 34", "NN 2026 34")
+    const mNum = q.match(/^(?:nn[\s\-_/]+)?(\d{4})[\s\-_/]+(\d+)$/i);
+    if (mNum) {
+        return {
+            type: 'numeric',
+            year: mNum[1],
+            serialInt: parseInt(mNum[2], 10)
+        };
+    }
+
+    // Pattern 2: Standalone serial with NN prefix (e.g. "NN-34", "NN 34", "NN/34")
+    const mSerialOnly = q.match(/^nn[\s\-_/]+(\d{1,3})$/i);
+    if (mSerialOnly) {
+        return {
+            type: 'serial_only',
+            serialInt: parseInt(mSerialOnly[1], 10)
+        };
+    }
+
+    // Pattern 3: Prefix only with 4-digit year (e.g. "NN-2026", "NN 2026")
+    const mYearOnly = q.match(/^nn[\s\-_/]+(\d{4})$/i);
+    if (mYearOnly) {
+        return {
+            type: 'year_prefix',
+            year: mYearOnly[1]
+        };
+    }
+
+    // Pattern 4: Explicit "NN-" prefix followed by alphanumeric tokens (e.g. "NN-GROOM-01")
+    const mAlpha = q.match(/^nn[\s\-_/]+([a-z0-9]+(?:[\s\-_/]+[a-z0-9]+)*)$/i);
+    if (mAlpha) {
+        return {
+            type: 'alphanumeric',
+            key: 'nn-' + mAlpha[1].replace(/[\s\-_/]+/g, '-').toLowerCase()
+        };
+    }
+
+    return null;
+}
+
+// Self-contained strict Profile ID matcher for fallback search
+function checkMatchingProfileIdMatch(target, pidQuery) {
+    const rawPid = String(target.profileId || target.profile_id || target['Profile ID'] || target.Profile_ID || target.id || '').trim();
+    if (!rawPid) return false;
+
+    if (pidQuery.type === 'numeric') {
+        const pMatch = rawPid.match(/^(?:nn[\s\-_/]+)?(\d{4})[\s\-_/]+(\d+)$/i);
+        if (pMatch) {
+            return (pMatch[1] === pidQuery.year && parseInt(pMatch[2], 10) === pidQuery.serialInt);
+        }
+        return false;
+    }
+
+    if (pidQuery.type === 'serial_only') {
+        const pMatch = rawPid.match(/^(?:nn[\s\-_/]+)?(?:\d{4}[\s\-_/]+)?(\d+)$/i);
+        if (pMatch) {
+            return parseInt(pMatch[1], 10) === pidQuery.serialInt;
+        }
+        return false;
+    }
+
+    if (pidQuery.type === 'year_prefix') {
+        const pMatch = rawPid.match(/^(?:nn[\s\-_/]+)?(\d{4})[\s\-_/]+(\d+)$/i);
+        if (pMatch) {
+            return pMatch[1] === pidQuery.year;
+        }
+        return false;
+    }
+
+    if (pidQuery.type === 'alphanumeric') {
+        const pAlpha = rawPid.match(/^nn[\s\-_/]+([a-z0-9]+(?:[\s\-_/]+[a-z0-9]+)*)$/i);
+        if (pAlpha) {
+            return ('nn-' + pAlpha[1].replace(/[\s\-_/]+/g, '-').toLowerCase()) === pidQuery.key;
+        }
+        return false;
+    }
+
+    return false;
+}
+
     if (searchVal) {
         list = list.filter(m => {
-            const pid = (m.profileId || '').toLowerCase();
-            const name = (m.fullName || '').toLowerCase();
-            const city = (m.city || '').toLowerCase();
-            const state = (m.state || '').toLowerCase();
-            return pid.includes(searchVal) || name.includes(searchVal) || city.includes(searchVal) || state.includes(searchVal);
+            const target = m.candidate || m;
+            if (typeof window !== 'undefined' && typeof window.matchesMasterSearch === 'function') {
+                return window.matchesMasterSearch(target, searchVal);
+            }
+            // Strict standalone fallback when window.matchesMasterSearch is unavailable
+            const pidQuery = (typeof window !== 'undefined' && typeof window.parseProfileIdQuery === 'function')
+                ? window.parseProfileIdQuery(searchVal)
+                : parseMatchingProfileIdQuery(searchVal);
+
+            if (pidQuery) {
+                // When query is a Profile ID, match strictly against Profile ID only - never substring match
+                return (typeof window !== 'undefined' && typeof window.checkProfileIdMatch === 'function')
+                    ? window.checkProfileIdMatch(target, pidQuery)
+                    : checkMatchingProfileIdMatch(target, pidQuery);
+            }
+
+            // Normal text composite search (ONLY when query is NOT a Profile ID)
+            const s = searchVal.trim().toLowerCase();
+            const name = String(m.fullName || target['Full Name'] || target.full_name || target.fullName || '').toLowerCase();
+            const city = String(m.city || target.City || target.city || '').toLowerCase();
+            const state = String(m.state || target.State || target.state || '').toLowerCase();
+            return name.includes(s) || city.includes(s) || state.includes(s);
         });
     }
 

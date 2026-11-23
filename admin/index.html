@@ -92,7 +92,7 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
     <div class="w-12 h-[1px] bg-gold-lt/40 mx-auto mt-4 mb-2"></div>
     <p class="text-[9px] tracking-widest text-gold-lt/50 uppercase">Admin Panel</p>
   </div>
-  
+
   <nav class="flex-1 overflow-y-auto p-5 space-y-1.5 custom-scrollbar" id="sidebarNav">
     <a href="#" data-target="dashboard" class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-burg/50 border border-gold/10 text-cream transition nav-link">
       <span class="font-medium tracking-wide">Dashboard</span>
@@ -102,6 +102,9 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
     </a>
     <a href="#" data-target="pending" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
       <span class="font-medium tracking-wide">Pending Review</span>
+    </a>
+    <a href="#" data-target="reviewed" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
+      <span class="font-medium tracking-wide">Reviewed</span>
     </a>
     <a href="#" data-target="matching" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-cream/60 hover:bg-white/5 transition nav-link">
       <span class="font-medium tracking-wide flex items-center justify-between w-full">
@@ -177,18 +180,18 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
   <!-- SCROLL AREA -->
   <div class="flex-1 overflow-y-auto p-4 md:p-8 lg:px-10 pb-20 custom-scrollbar" id="mainScrollArea">
-    
+
     <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="page-view flex flex-col gap-8">
-      <!-- 4 INTERACTIVE DASHBOARD KPI CARDS -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5" id="dashKpiCards">
-        <div 
-          onclick="navigate('all')" 
+      <!-- 8 INTERACTIVE DASHBOARD KPI CARDS -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4" id="dashKpiCards">
+        <div
+          onclick="navigate('all')"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('all');}"
-          tabindex="0" 
+          tabindex="0"
           role="button"
           aria-label="View All Profiles"
-          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
         >
           <div class="flex justify-between items-start">
             <div>
@@ -199,13 +202,13 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
           </div>
         </div>
 
-        <div 
-          onclick="navigate('pending')" 
+        <div
+          onclick="navigate('pending')"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('pending');}"
-          tabindex="0" 
+          tabindex="0"
           role="button"
           aria-label="View Pending Review Profiles"
-          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
         >
           <div class="flex justify-between items-start">
             <div>
@@ -216,13 +219,30 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
           </div>
         </div>
 
-        <div 
-          onclick="navigate('shortlisted')" 
+        <div
+          onclick="navigate('reviewed')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('reviewed');}"
+          tabindex="0"
+          role="button"
+          aria-label="View Reviewed Profiles"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statReviewed">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Reviewed</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
+        </div>
+
+        <div
+          onclick="navigate('shortlisted')"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('shortlisted');}"
-          tabindex="0" 
+          tabindex="0"
           role="button"
           aria-label="View Shortlisted Profiles"
-          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
         >
           <div class="flex justify-between items-start">
             <div>
@@ -233,18 +253,69 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
           </div>
         </div>
 
-        <div 
-          onclick="navigate('followup')" 
+        <div
+          onclick="navigate('contacted')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('contacted');}"
+          tabindex="0"
+          role="button"
+          aria-label="View Contacted Profiles"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statContacted">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Contacted</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
+        </div>
+
+        <div
+          onclick="navigate('followup')"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('followup');}"
-          tabindex="0" 
+          tabindex="0"
           role="button"
           aria-label="View Follow Up Due Profiles"
-          class="glass-card p-4 md:p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
         >
           <div class="flex justify-between items-start">
             <div>
               <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statFollowUp">0</h3>
               <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Follow Up Due</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
+        </div>
+
+        <div
+          onclick="navigate('closed')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('closed');}"
+          tabindex="0"
+          role="button"
+          aria-label="View Closed Profiles"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statClosed">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Closed</p>
+            </div>
+            <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
+          </div>
+        </div>
+
+        <div
+          onclick="navigate('notes')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('notes');}"
+          tabindex="0"
+          role="button"
+          aria-label="View Profiles with Notes"
+          class="glass-card p-3.5 md:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-gold/50 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-wine/40 group relative overflow-hidden"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-2xl md:text-3xl font-serif text-wine font-semibold mb-0.5 group-hover:text-burg transition-colors" id="statNotes">0</h3>
+              <p class="text-[11px] md:text-sm font-medium text-wine/80 uppercase md:capitalize tracking-wider md:tracking-normal">Notes</p>
             </div>
             <span class="text-wine/30 group-hover:text-wine/70 group-hover:translate-x-0.5 transition-all text-sm font-bold" aria-hidden="true">→</span>
           </div>
@@ -260,24 +331,24 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
           </div>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
             <div class="relative flex-1 sm:w-64 md:w-72">
-              <input 
-                type="text" 
-                id="dashSearchInput" 
-                placeholder="Search recent..." 
+              <input
+                type="text"
+                id="dashSearchInput"
+                placeholder="Search recent..."
                 class="w-full px-4 py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[15px] md:text-sm text-wine placeholder:text-wine/40 focus:outline-none focus:border-wine/50 transition pr-9"
               >
-              <button 
-                type="button" 
-                id="dashSearchClearBtn" 
-                onclick="clearDashSearch()" 
-                class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-wine/40 hover:text-wine p-1 text-xs rounded-full hover:bg-wine/10 transition" 
+              <button
+                type="button"
+                id="dashSearchClearBtn"
+                onclick="clearDashSearch()"
+                class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-wine/40 hover:text-wine p-1 text-xs rounded-full hover:bg-wine/10 transition"
                 title="Clear Search"
               >✕</button>
             </div>
-            <button 
-              type="button" 
-              id="dashFilterBtn" 
-              onclick="openDashboardFilter()" 
+            <button
+              type="button"
+              id="dashFilterBtn"
+              onclick="openDashboardFilter()"
               class="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gold/20 bg-[#FAF8F5] sm:bg-white rounded-xl text-[14px] md:text-sm font-medium text-wine hover:bg-gray-50 transition shadow-sm relative shrink-0"
             >
               <svg class="w-4 h-4 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
@@ -403,9 +474,48 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
           <button id="selectAllFilteredBtn" onclick="selectAllFilteredProfiles()" class="font-bold underline ml-2 hover:text-wine/80">Select all 45 filtered profiles</button>
         </div>
 
-        <div class="p-4 md:p-6 border-b border-gold/10 bg-white flex flex-col md:flex-row gap-3 md:gap-4 items-center">
-          <input type="text" id="listSearchInput" placeholder="Search by name, ID..." class="w-full md:flex-1 px-4 py-3 md:py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[16px] md:text-sm focus:outline-none">
-          <button onclick="openFilterModal()" class="w-full md:w-auto px-5 py-3 md:py-2.5 border border-gold/20 rounded-xl text-[16px] md:text-sm hover:bg-gray-50 transition font-medium">Filter</button>
+        <div class="p-4 md:p-6 border-b border-gold/10 bg-white flex flex-col md:flex-row gap-3 md:gap-4 items-stretch md:items-center">
+          <div class="relative flex-1">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-wine/40 pointer-events-none">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </span>
+            <input
+              type="text"
+              id="listSearchInput"
+              placeholder="Search by name, ID, city, state, maslak..."
+              class="w-full pl-10 pr-9 py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-[15px] md:text-sm text-wine placeholder:text-wine/40 focus:outline-none focus:border-wine/50 transition"
+            >
+            <button
+              type="button"
+              id="listSearchClearBtn"
+              onclick="clearListSearch()"
+              class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-wine/40 hover:text-wine p-1 text-xs rounded-full hover:bg-wine/10 transition"
+              title="Clear Search"
+            >✕</button>
+          </div>
+          <div class="flex items-center gap-2.5 w-full md:w-auto">
+            <select
+              id="quickListStatusFilter"
+              onchange="handleQuickStatusFilter(this.value)"
+              class="flex-1 md:flex-initial px-3.5 py-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-sm font-medium text-wine focus:outline-none focus:border-wine/50 transition cursor-pointer"
+            >
+              <option value="All">All Statuses</option>
+              <option value="New">Pending Review (New)</option>
+              <option value="Reviewed">Reviewed</option>
+              <option value="Shortlisted">Shortlisted</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Follow Up">Follow Up</option>
+              <option value="Closed">Closed</option>
+            </select>
+            <button
+              onclick="openFilterModal()"
+              class="px-4 py-2.5 border border-gold/20 bg-[#FAF8F5] md:bg-white rounded-xl text-sm font-medium text-wine hover:bg-gray-50 transition shadow-sm relative shrink-0 inline-flex items-center gap-2"
+            >
+              <svg class="w-4 h-4 text-wine/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              <span>Filter</span>
+              <span id="listActiveFilterDot" class="hidden w-2 h-2 rounded-full bg-wine"></span>
+            </button>
+          </div>
         </div>
         <div id="activeFiltersContainer" class="p-4 bg-[#FAF8F5] border-b border-gold/10 hidden flex gap-2 flex-wrap items-center"></div>
         <div class="hidden md:block overflow-x-auto">
@@ -457,8 +567,8 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
             <div class="relative">
               <div class="flex items-center border border-gold/30 rounded-xl px-3 py-2 bg-cream/20 focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/20 transition">
                 <svg class="w-4 h-4 text-wine/50 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="text" id="matchProfileSearchInput" placeholder="Type Profile ID (e.g. NN-2026-01) or Name..." class="w-full bg-transparent text-sm text-wine placeholder-wine/40 focus:outline-none" autocomplete="off" oninput="handleMatchProfileSearch(this.value)">
-                <button id="matchClearSelectedProfileBtn" onclick="clearSelectedMatchingProfile()" class="hidden text-wine/40 hover:text-wine ml-1">
+                <input type="text" id="matchProfileSearchInput" placeholder="Type Profile ID (e.g. NN-2026-01) or Name..." class="w-full bg-transparent text-sm text-wine placeholder-wine/40 focus:outline-none" autocomplete="off" oninput="handleMatchProfileSearch(this.value)" onkeydown="if(event.key==='Escape') clearSelectedMatchingProfile()">
+                <button type="button" id="matchClearSelectedProfileBtn" onclick="clearSelectedMatchingProfile()" class="hidden text-wine/40 hover:text-wine p-1 text-xs rounded-full hover:bg-wine/10 transition shrink-0 ml-1" title="Clear search & selection">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
               </div>
@@ -816,12 +926,121 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
     </div>
     <div class="p-4 md:p-6 overflow-y-auto space-y-4 text-sm flex-1">
       <select id="fltGender" class="w-full p-2 border rounded"><option value="All">Gender: All</option><option value="Male">Male</option><option value="Female">Female</option></select>
-      <select id="fltStatus" class="w-full p-2 border rounded"><option value="All">Status: All</option><option value="New">New</option><option value="Reviewed">Reviewed</option><option value="Shortlisted">Shortlisted</option><option value="Contacted">Contacted</option><option value="Follow Up">Follow Up</option></select>
+      <select id="fltStatus" class="w-full p-2 border rounded"><option value="All">Status: All</option><option value="New">New</option><option value="Reviewed">Reviewed</option><option value="Shortlisted">Shortlisted</option><option value="Contacted">Contacted</option><option value="Follow Up">Follow Up</option><option value="Closed">Closed</option></select>
       <select id="fltCity" class="w-full p-2 border rounded"></select>
     </div>
     <div class="p-4 border-t flex gap-2">
       <button onclick="clearFilters()" class="flex-1 p-2 border rounded text-sm">Clear</button>
       <button onclick="applyFilters()" class="flex-1 p-2 bg-wine text-white rounded text-sm">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE STATUS MODAL -->
+<div id="changeStatusModal" class="fixed inset-0 z-[160] hidden flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-[#320A16]/60 backdrop-blur-sm" onclick="closeChangeStatusModal()"></div>
+  <div class="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gold/25 overflow-hidden animate-scale-up flex flex-col gap-4">
+    <div class="flex items-center justify-between pb-3 border-b border-gold/15">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-full bg-gold/20 text-wine flex items-center justify-center font-bold text-base">
+          ⚡
+        </div>
+        <div>
+          <h3 class="font-serif text-lg font-bold text-wine">Update Profile Status</h3>
+          <p class="text-xs text-wine/60" id="statusModalTargetSubtitle">Select new status for candidate</p>
+        </div>
+      </div>
+      <button onclick="closeChangeStatusModal()" class="text-wine/40 hover:text-wine text-2xl font-bold leading-none p-1">&times;</button>
+    </div>
+
+    <!-- Target Candidate Info -->
+    <div class="bg-[#FAF8F5] border border-gold/20 rounded-xl p-3 text-xs text-wine flex items-center justify-between">
+      <div>
+        <div class="font-semibold text-wine text-sm" id="statusModalCandidateName">—</div>
+        <div class="text-wine/60 font-mono text-[11px] mt-0.5" id="statusModalCandidateId">—</div>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] uppercase font-bold text-wine/50 block">Current Status</span>
+        <span id="statusModalCurrentBadge" class="inline-block mt-0.5 px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-gray-100 text-gray-700 border border-gray-200">—</span>
+      </div>
+    </div>
+
+    <!-- Status Selection Pills -->
+    <div>
+      <label class="block text-xs font-semibold text-wine/80 mb-2 uppercase tracking-wider">Choose New Status</label>
+      <div class="grid grid-cols-2 gap-2" id="statusModalPillsContainer">
+        <!-- New (Pending Review) -->
+        <button type="button" onclick="selectStatusOption('New')" data-status="New" class="status-option-btn text-left p-2.5 rounded-xl border border-gold/20 hover:border-gold/60 bg-[#FAF8F5] transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-wine">New</div>
+            <div class="text-[10px] text-wine/50">Pending Review</div>
+          </div>
+          <span class="status-check-icon text-xs text-gold hidden font-bold">✓</span>
+        </button>
+
+        <!-- Reviewed -->
+        <button type="button" onclick="selectStatusOption('Reviewed')" data-status="Reviewed" class="status-option-btn text-left p-2.5 rounded-xl border border-gold/20 hover:border-gold/60 bg-[#FAF8F5] transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-blue-900">Reviewed</div>
+            <div class="text-[10px] text-wine/50">Approved Candidate</div>
+          </div>
+          <span class="status-check-icon text-xs text-gold hidden font-bold">✓</span>
+        </button>
+
+        <!-- Shortlisted -->
+        <button type="button" onclick="selectStatusOption('Shortlisted')" data-status="Shortlisted" class="status-option-btn text-left p-2.5 rounded-xl border border-gold/20 hover:border-gold/60 bg-[#FAF8F5] transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-amber-900">Shortlisted</div>
+            <div class="text-[10px] text-wine/50">Potential Match</div>
+          </div>
+          <span class="status-check-icon text-xs text-gold hidden font-bold">✓</span>
+        </button>
+
+        <!-- Contacted -->
+        <button type="button" onclick="selectStatusOption('Contacted')" data-status="Contacted" class="status-option-btn text-left p-2.5 rounded-xl border border-gold/20 hover:border-gold/60 bg-[#FAF8F5] transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-indigo-900">Contacted</div>
+            <div class="text-[10px] text-wine/50">In Communication</div>
+          </div>
+          <span class="status-check-icon text-xs text-gold hidden font-bold">✓</span>
+        </button>
+
+        <!-- Follow Up -->
+        <button type="button" onclick="selectStatusOption('Follow Up')" data-status="Follow Up" class="status-option-btn text-left p-2.5 rounded-xl border border-gold/20 hover:border-gold/60 bg-[#FAF8F5] transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-emerald-900">Follow Up</div>
+            <div class="text-[10px] text-wine/50">Scheduled Action</div>
+          </div>
+          <span class="status-check-icon text-xs text-gold hidden font-bold">✓</span>
+        </button>
+
+        <!-- Closed -->
+        <button type="button" onclick="selectStatusOption('Closed')" data-status="Closed" class="status-option-btn text-left p-2.5 rounded-xl border border-gold/20 hover:border-gold/60 bg-[#FAF8F5] transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-gray-700">Closed</div>
+            <div class="text-[10px] text-wine/50">Archived / Complete</div>
+          </div>
+          <span class="status-check-icon text-xs text-gold hidden font-bold">✓</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Optional Notes / Reason for Change -->
+    <div id="statusModalReasonContainer">
+      <label class="block text-xs font-semibold text-wine/80 mb-1" id="statusModalReasonLabel">Admin Note / Reason (Optional):</label>
+      <textarea id="statusModalReasonInput" rows="2" placeholder="e.g. Verified documents, spoke with guardian, Nikah solemnized..." class="w-full p-2.5 bg-[#FAF8F5] border border-gold/20 rounded-xl text-xs text-wine placeholder:text-wine/40 focus:outline-none focus:border-wine/50 transition"></textarea>
+    </div>
+
+    <!-- Error message display if any -->
+    <p id="statusModalError" class="text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200 hidden font-medium text-center"></p>
+
+    <!-- Actions -->
+    <div class="pt-2 border-t border-gold/15 flex gap-2.5">
+      <button type="button" onclick="closeChangeStatusModal()" class="flex-1 py-2.5 px-4 border border-gold/20 rounded-xl text-sm font-medium text-wine/70 hover:bg-gray-50 transition">Cancel</button>
+      <button type="button" id="statusModalSaveBtn" onclick="confirmProfileStatusChange()" class="flex-1 py-2.5 px-4 bg-wine hover:bg-burg text-cream font-semibold rounded-xl text-sm shadow-md transition inline-flex items-center justify-center gap-2">
+        <svg id="statusModalSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <span id="statusModalSaveBtnText">Update Status</span>
+      </button>
     </div>
   </div>
 </div>
@@ -950,7 +1169,7 @@ tailwind.config = { theme: { extend: { colors: { wine: '#5B1226', burg: '#8A2340
 
     <div class="py-3 space-y-3 flex-1 overflow-y-auto custom-scrollbar">
       <p class="text-xs text-wine/70">Select an individual candidate to add to your shortlist independently without pairing.</p>
-      
+
       <div class="relative">
         <input type="text" id="singleShortlistSearchInput" oninput="searchProfilesForSingleShortlist(this.value)" placeholder="Search candidate by name, Profile ID, or city..." class="w-full pl-9 pr-3 py-2 rounded-xl border border-gold/25 bg-[#FAF8F5] text-xs text-wine placeholder-wine/40 focus:outline-none focus:ring-1 focus:ring-gold focus:bg-white transition">
         <svg class="w-4 h-4 text-wine/40 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>

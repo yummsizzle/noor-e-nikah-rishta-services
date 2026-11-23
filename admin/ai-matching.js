@@ -768,6 +768,17 @@ async function initMatchingView() {
     // Set direction to current state or default 'bride'
     setMatchingDirection(matchingState.direction || 'bride', false);
 
+    // Bind keyboard Escape on search input
+    const matchSearchInput = document.getElementById('matchProfileSearchInput');
+    if (matchSearchInput && !matchSearchInput.dataset.bound) {
+        matchSearchInput.dataset.bound = 'true';
+        matchSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                clearSelectedMatchingProfile();
+            }
+        });
+    }
+
     // If profile was already selected, refresh summary
     if (matchingState.selectedProfileId) {
         selectMatchingProfile(matchingState.selectedProfileId);
@@ -822,9 +833,24 @@ function setMatchingDirection(direction, clearCurrent = true) {
 // Search profiles for autocomplete dropdown
 function handleMatchProfileSearch(query) {
     const dropdown = document.getElementById('matchProfileDropdown');
-    if (!dropdown) return;
+    const clearBtn = document.getElementById('matchClearSelectedProfileBtn');
+    const rawVal = query !== undefined && query !== null ? String(query) : '';
+    const q = rawVal.trim().toLowerCase();
 
-    const q = (query || '').trim().toLowerCase();
+    // Toggle clear button immediately on typing
+    if (clearBtn) {
+        if (rawVal.trim().length > 0 || matchingState.selectedProfileId) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+    }
+
+    if (!q) {
+        if (dropdown) dropdown.classList.add('hidden');
+        return;
+    }
+    if (!dropdown) return;
     const allProfiles = window.getProfiles ? window.getProfiles() : (typeof profiles !== 'undefined' ? profiles : []);
     const expectedGender = matchingState.direction === 'bride' ? 'Female' : 'Male';
 
@@ -832,6 +858,10 @@ function handleMatchProfileSearch(query) {
         const g = (p.Gender || p.gender || '').trim();
         if (g.toLowerCase() !== expectedGender.toLowerCase()) return false;
         if (!q) return true;
+
+        if (typeof window.matchesMasterSearch === 'function') {
+            return window.matchesMasterSearch(p, q);
+        }
 
         const pid = (p.profileId || p.profile_id || '').toLowerCase();
         const name = (p['Full Name'] || p.full_name || '').toLowerCase();
@@ -890,6 +920,20 @@ function selectMatchingProfile(profileId) {
 
     if (!p) {
         console.warn('[AI Matching] Profile not found:', profileId);
+        return;
+    }
+
+    // Strict client-side gender validation against current search direction
+    const expectedGender = matchingState.direction === 'bride' ? 'Female' : 'Male';
+    const profileGender = (p.Gender || p.gender || '').trim();
+    if (profileGender.toLowerCase() !== expectedGender.toLowerCase()) {
+        const errorMsg = `Selected profile (${profileId} - ${p['Full Name'] || p.full_name}) has gender "${profileGender || 'unspecified'}", but current direction is searching for a ${expectedGender}. Please select a valid ${expectedGender} profile.`;
+        console.warn('[AI Matching] Gender mismatch in selectMatchingProfile:', errorMsg);
+        if (typeof showDialog === 'function') {
+            showDialog('warning', 'Gender Mismatch', errorMsg);
+        } else {
+            alert(errorMsg);
+        }
         return;
     }
 
@@ -1005,6 +1049,9 @@ function clearSelectedMatchingProfile() {
 
     const clearBtn = document.getElementById('matchClearSelectedProfileBtn');
     if (clearBtn) clearBtn.classList.add('hidden');
+
+    const dropdown = document.getElementById('matchProfileDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
 
     const card = document.getElementById('matchSelectedProfileCard');
     if (card) card.classList.add('hidden');
@@ -1912,7 +1959,7 @@ const PairWorkflowService = {
             bride: {
                 profile_id: b.profileId || b.profile_id || bId,
                 full_name: b['Full Name'] || b.full_name || 'Bride',
-                gender: 'Female',
+                gender: (b.Gender || b.gender || '').trim(),
                 date_of_birth: b['Date of Birth'] || b.date_of_birth || '',
                 age: b.Age || b.age || '—',
                 maslak: b.Maslak || b.maslak || '—',
@@ -1927,7 +1974,7 @@ const PairWorkflowService = {
             groom: {
                 profile_id: g.profileId || g.profile_id || gId,
                 full_name: g['Full Name'] || g.full_name || 'Groom',
-                gender: 'Male',
+                gender: (g.Gender || g.gender || '').trim(),
                 date_of_birth: g['Date of Birth'] || g.date_of_birth || '',
                 age: g.Age || g.age || '—',
                 maslak: g.Maslak || g.maslak || '—',
@@ -1944,7 +1991,8 @@ const PairWorkflowService = {
 
     async getPairs(statusFilter = 'Active') {
         let list = [];
-        if (!window.IS_MOCK_PREVIEW && window.supabaseClient && typeof window.supabaseClient.rpc === 'function') {
+        const isSupabaseLive = !window.IS_MOCK_PREVIEW && window.supabaseClient && typeof window.supabaseClient.rpc === 'function';
+        if (isSupabaseLive) {
             try {
                 const { data, error } = await window.supabaseClient.rpc('admin_get_pairs', {
                     p_status: statusFilter === 'History' ? 'All' : statusFilter
@@ -1953,19 +2001,20 @@ const PairWorkflowService = {
                     list = data.map(p => this.enrichPairWithProfiles(p));
                 }
             } catch (e) {
-                console.warn('[Pairs] RPC admin_get_pairs failed, falling back to local store:', e);
+                console.warn('[Pairs] RPC admin_get_pairs failed:', e);
             }
-        }
-        if (list.length === 0) {
+        } else if (window.IS_MOCK_PREVIEW) {
+            // ONLY fall back to localStorage if explicitly running in standalone fixture preview mode
             list = this.getLocalPairs().map(p => this.enrichPairWithProfiles(p));
         }
 
-        if (statusFilter === 'Active') {
+        const normFilter = (statusFilter || 'Active').trim();
+        if (normFilter.toLowerCase() === 'active') {
             return list.filter(p => p.status === 'Active');
-        } else if (statusFilter === 'History' || statusFilter === 'Undone') {
+        } else if (normFilter.toLowerCase() === 'history' || normFilter.toLowerCase() === 'undone') {
             return list.filter(p => p.status !== 'Active');
-        } else if (statusFilter !== 'All') {
-            return list.filter(p => (p.status || '').toLowerCase() === statusFilter.toLowerCase());
+        } else if (normFilter.toLowerCase() !== 'all') {
+            return list.filter(p => (p.status || '').toLowerCase() === normFilter.toLowerCase());
         }
         return list;
     },
@@ -1987,6 +2036,21 @@ const PairWorkflowService = {
         const allProfiles = window.getProfiles ? window.getProfiles() : (typeof profiles !== 'undefined' ? profiles : []);
         const bProfile = allProfiles.find(p => (p.profileId || p.profile_id) === brideId);
         const gProfile = allProfiles.find(p => (p.profileId || p.profile_id) === groomId);
+
+        // Strict client-side gender pre-validation: Bride MUST be Female, Groom MUST be Male
+        if (bProfile) {
+            const bGender = (bProfile.Gender || bProfile.gender || '').trim().toLowerCase();
+            if (bGender !== 'female') {
+                throw new Error(`Profile ${brideId} (${bProfile['Full Name'] || bProfile.full_name || 'Bride'}) is not Female (Gender: ${bProfile.Gender || bProfile.gender || 'unspecified'}). Matrimonial pairs strictly require a Female Bride.`);
+            }
+        }
+        if (gProfile) {
+            const gGender = (gProfile.Gender || gProfile.gender || '').trim().toLowerCase();
+            if (gGender !== 'male') {
+                throw new Error(`Profile ${groomId} (${gProfile['Full Name'] || gProfile.full_name || 'Groom'}) is not Male (Gender: ${gProfile.Gender || gProfile.gender || 'unspecified'}). Matrimonial pairs strictly require a Male Groom.`);
+            }
+        }
+
         const bOrigStatus = bProfile ? (bProfile.status || 'New') : 'New';
         const gOrigStatus = gProfile ? (gProfile.status || 'New') : 'New';
 
@@ -2268,6 +2332,24 @@ const PairWorkflowService = {
     async manageShortlist(action, brideId, groomId, stage = 'Shortlisted', notes = '') {
         if (!brideId || !groomId) throw new Error('Both Bride Profile ID and Groom Profile ID are required.');
 
+        if (action === 'add') {
+            const allProfiles = window.getProfiles ? window.getProfiles() : (typeof profiles !== 'undefined' ? profiles : []);
+            const bProfile = allProfiles.find(p => (p.profileId || p.profile_id) === brideId);
+            const gProfile = allProfiles.find(p => (p.profileId || p.profile_id) === groomId);
+            if (bProfile) {
+                const bGender = (bProfile.Gender || bProfile.gender || '').trim().toLowerCase();
+                if (bGender !== 'female') {
+                    throw new Error(`Profile ${brideId} (${bProfile['Full Name'] || bProfile.full_name || 'Bride'}) is not Female (Gender: ${bProfile.Gender || bProfile.gender || 'unspecified'}). Pair shortlist strictly requires a Female Bride.`);
+                }
+            }
+            if (gProfile) {
+                const gGender = (gProfile.Gender || gProfile.gender || '').trim().toLowerCase();
+                if (gGender !== 'male') {
+                    throw new Error(`Profile ${groomId} (${gProfile['Full Name'] || gProfile.full_name || 'Groom'}) is not Male (Gender: ${gProfile.Gender || gProfile.gender || 'unspecified'}). Pair shortlist strictly requires a Male Groom.`);
+                }
+            }
+        }
+
         if (!window.IS_MOCK_PREVIEW && window.supabaseClient && typeof window.supabaseClient.rpc === 'function') {
             try {
                 const { data, error } = await window.supabaseClient.rpc('admin_manage_shortlist', {
@@ -2542,6 +2624,24 @@ async function confirmMatrimonialPair(brideId, groomId) {
     const allProfiles = window.getProfiles ? window.getProfiles() : (typeof profiles !== 'undefined' ? profiles : []);
     const bride = allProfiles.find(p => (p.profileId || p.profile_id) === brideId) || { full_name: 'Bride', status: 'New' };
     const groom = allProfiles.find(p => (p.profileId || p.profile_id) === groomId) || { full_name: 'Groom', status: 'New' };
+
+    // Strict client-side gender pre-validation: Bride MUST be Female, Groom MUST be Male
+    const bGender = (bride.Gender || bride.gender || '').trim().toLowerCase();
+    const gGender = (groom.Gender || groom.gender || '').trim().toLowerCase();
+
+    if (bGender !== 'female') {
+        const errorMsg = `Invalid Bride profile (${brideId} - ${bride['Full Name'] || bride.full_name}): Gender must be Female, but found "${bride.Gender || bride.gender || 'unspecified'}". Matrimonial pairs strictly require a Female Bride and Male Groom.`;
+        console.error('[Pairs] Gender validation failed:', errorMsg);
+        showDialog('danger', 'Gender Validation Error', errorMsg);
+        return;
+    }
+
+    if (gGender !== 'male') {
+        const errorMsg = `Invalid Groom profile (${groomId} - ${groom['Full Name'] || groom.full_name}): Gender must be Male, but found "${groom.Gender || groom.gender || 'unspecified'}". Matrimonial pairs strictly require a Female Bride and Male Groom.`;
+        console.error('[Pairs] Gender validation failed:', errorMsg);
+        showDialog('danger', 'Gender Validation Error', errorMsg);
+        return;
+    }
 
     const brideStatus = bride.status || 'New';
     const groomStatus = groom.status || 'New';

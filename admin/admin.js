@@ -284,7 +284,7 @@ function getStoredOrHashView() {
     try {
         const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
         const stored = sessionStorage.getItem('noor_admin_active_view');
-        const validViews = ['dashboard', 'all', 'pending', 'shortlisted', 'followup', 'closed', 'pairs', 'matching', 'contacted', 'notes', 'export'];
+        const validViews = ['dashboard', 'all', 'pending', 'reviewed', 'shortlisted', 'followup', 'closed', 'pairs', 'matching', 'contacted', 'notes', 'export'];
         if (hash && validViews.includes(hash)) return hash;
         if (stored && validViews.includes(stored)) return stored;
     } catch(e) {}
@@ -660,24 +660,24 @@ if (logoutBtnEl) {
 function updateSidebarBadges() {
     const counts = {
         pending: profiles.filter(p => p.status === 'New').length,
+        reviewed: profiles.filter(p => p.status === 'Reviewed').length,
         shortlisted: profiles.filter(p => p.status === 'Shortlisted').length,
-        followup: profiles.filter(p => p.status === 'Follow Up').length
+        contacted: profiles.filter(p => p.status === 'Contacted').length,
+        followup: profiles.filter(p => p.status === 'Follow Up').length,
+        closed: profiles.filter(p => p.status === 'Closed').length,
+        notes: profiles.filter(p => p.notes && p.notes.length > 0).length
     };
     
     document.querySelectorAll('.nav-link').forEach(link => {
         const target = link.getAttribute('data-target');
-        if (['pending', 'shortlisted', 'followup'].includes(target)) {
+        if (['pending', 'reviewed', 'shortlisted', 'contacted', 'followup', 'closed', 'notes'].includes(target)) {
             let badge = link.querySelector('.nav-badge');
             if (!badge) {
                 badge = document.createElement('span');
                 badge.className = 'nav-badge bg-white/20 px-2 py-0.5 rounded text-[10px] ml-auto font-bold';
                 link.appendChild(badge);
             }
-            badge.innerText = counts[target];
-
-// Supabase Data Mapping
-
-
+            badge.innerText = counts[target] !== undefined ? counts[target] : 0;
             badge.style.display = counts[target] > 0 ? 'inline-block' : 'none';
         }
     });
@@ -739,7 +739,7 @@ function navigate(view, updateHash = true) {
         document.getElementById('sidebarOverlay').classList.add('hidden');
     }
     
-    if (['all', 'pending', 'contacted', 'notes'].includes(view)) {
+    if (['all', 'pending', 'reviewed', 'contacted', 'notes'].includes(view)) {
         document.getElementById('view-list').classList.remove('hidden');
         listType = view;
         renderListView();
@@ -771,7 +771,7 @@ function lockModalScroll() {
 function unlockModalScroll() {
     const openModals = [
         'profileModal', 'filterModal', 'followUpModal', 
-        'deleteQueryModal', 'shareWhatsAppModal', 'tempDialog'
+        'deleteQueryModal', 'shareWhatsAppModal', 'tempDialog', 'changeStatusModal'
     ].some(id => {
         const el = document.getElementById(id);
         return el && !el.classList.contains('hidden');
@@ -817,19 +817,31 @@ function initDashboard() {
     updateSidebarBadges();
     
     const pendingCount = profiles.filter(p => p.status === 'New').length;
+    const reviewedCount = profiles.filter(p => p.status === 'Reviewed').length;
     const shortCount = profiles.filter(p => p.status === 'Shortlisted').length;
+    const contactedCount = profiles.filter(p => p.status === 'Contacted').length;
     const fuCount = profiles.filter(p => p.status === 'Follow Up').length;
+    const closedCount = profiles.filter(p => p.status === 'Closed').length;
+    const notesCount = profiles.filter(p => p.notes && p.notes.length > 0).length;
 
-    // Update KPI Card Numbers
+    // Update 8 Interactive KPI Card Numbers
     const elTotal = document.getElementById('statTotal');
     const elPending = document.getElementById('statPending');
+    const elReviewed = document.getElementById('statReviewed');
     const elShort = document.getElementById('statShortlisted');
+    const elContacted = document.getElementById('statContacted');
     const elFu = document.getElementById('statFollowUp');
+    const elClosed = document.getElementById('statClosed');
+    const elNotes = document.getElementById('statNotes');
 
     if (elTotal) elTotal.textContent = profiles.length;
     if (elPending) elPending.textContent = pendingCount;
+    if (elReviewed) elReviewed.textContent = reviewedCount;
     if (elShort) elShort.textContent = shortCount;
+    if (elContacted) elContacted.textContent = contactedCount;
     if (elFu) elFu.textContent = fuCount;
+    if (elClosed) elClosed.textContent = closedCount;
+    if (elNotes) elNotes.textContent = notesCount;
 
     // Ensure Dashboard Search Input is bound
     const searchInput = document.getElementById('dashSearchInput');
@@ -847,6 +859,82 @@ function initDashboard() {
 
     renderDashboardRecent();
 }
+
+/**
+ * Master multi-field, multi-token composite search engine.
+ * Matches:
+ *  - Full Name (e.g. "Ansari Afreen")
+ *  - Profile ID (e.g. "NN-2026-50", "50")
+ *  - Composite queries (e.g. "Ansari Afreen (NN-2026-50)", "Simran NN-2026-67")
+ *  - Location combinations (e.g. "Hubli, Karnataka", "Hubli")
+ *  - Substring tokens, case-insensitively, stripping brackets/commas/punctuation
+ */
+function matchesMasterSearch(p, query) {
+    if (!query) return true;
+    const rawQuery = String(query).trim().toLowerCase();
+    if (!rawQuery) return true;
+
+    // Field extractions with fallbacks
+    const name = String(p['Full Name'] || p.full_name || '').toLowerCase();
+    const pid = String(p.profileId || p.Profile_ID || p.id || '').toLowerCase();
+    const city = String(p.City || p.city || '').toLowerCase();
+    const state = String(p.State || p.state || '').toLowerCase();
+    const nativePlace = String(p['Native Place'] || p.native_place || '').toLowerCase();
+    const familyLocation = String(p['Family Location'] || p.family_location || '').toLowerCase();
+    const occupation = String(p.Occupation || p.occupation || '').toLowerCase();
+    const education = String(p.Education || p.education || '').toLowerCase();
+    const maritalStatus = String(p['Marital Status'] || p.marital_status || '').toLowerCase();
+    const gender = String(p.Gender || p.gender || '').toLowerCase();
+    const age = String(p.Age || p.age || '').toLowerCase();
+    const surname = String(p['Surname / Biradari'] || p.surname_biradari || '').toLowerCase();
+    const maslak = String(p.Maslak || p.maslak || p['Maslak / Religious Background'] || '').toLowerCase();
+    const mobile = String(p.Mobile || p.mobile || '').toLowerCase();
+    const whatsapp = String(p.WhatsApp || p.whatsapp || '').toLowerCase();
+    const email = String(p['Email Address'] || p.email_address || p.email || '').toLowerCase();
+    const status = String(p.status || '').toLowerCase();
+
+    // Composite searchable string combining name, ID in all standard UI formats, location, etc.
+    const composite = [
+        name,
+        pid,
+        `${name} (${pid})`,
+        `${name} ${pid}`,
+        `${pid} - ${name}`,
+        city,
+        state,
+        `${city}, ${state}`,
+        `${city} ${state}`,
+        nativePlace,
+        familyLocation,
+        occupation,
+        education,
+        maritalStatus,
+        gender,
+        age,
+        surname,
+        maslak,
+        mobile,
+        whatsapp,
+        email,
+        status
+    ].join(' ');
+
+    // 1. Direct substring check against composite representation
+    if (composite.includes(rawQuery)) return true;
+
+    // 2. Tokenized multi-word search
+    const tokens = rawQuery
+        .replace(/[(),\-\/]/g, ' ')
+        .split(/\s+/)
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+
+    if (tokens.length === 0) return true;
+
+    // Every token must match somewhere in the composite string
+    return tokens.every(token => composite.includes(token));
+}
+window.matchesMasterSearch = matchesMasterSearch;
 
 function getDashboardRecentProfiles() {
     let list = [...profiles];
@@ -880,47 +968,12 @@ function getDashboardRecentProfiles() {
         list = list.filter(p => p.createdAt && new Date(p.createdAt.split('T')[0]) <= new Date(activeFilters.regTo));
     }
 
-    // 2. Multi-field Dashboard Search Query
+    // 2. Multi-field Dashboard Search Query using Master Search
     const searchInput = document.getElementById('dashSearchInput');
-    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const query = searchInput ? searchInput.value.trim() : '';
 
     if (query) {
-        list = list.filter(p => {
-            const searchableFields = [
-                p['Full Name'],
-                p.profileId,
-                p.Gender,
-                p.Age ? String(p.Age) : '',
-                p.City,
-                p.State,
-                p['Native Place'],
-                p['Family Location'],
-                p.Education,
-                p.Occupation,
-                p.Salary,
-                p['Salary (₹)'],
-                formatSalary(p.Salary),
-                p['Marital Status'],
-                p.Mobile,
-                p.WhatsApp,
-                p['Guardian Name'],
-                p.Relationship,
-                p.status,
-                p.createdAt ? p.createdAt.split('T')[0] : '',
-                p['Mother Tongue'],
-                p['Languages Known'],
-                p['Surname / Biradari'],
-                p.Maslak,
-                p['Maslak / Religious Background'],
-                p['Email Address'],
-                p['Registering For']
-            ];
-
-            return searchableFields.some(val => {
-                if (val === undefined || val === null) return false;
-                return String(val).toLowerCase().includes(query);
-            });
-        });
+        list = list.filter(p => matchesMasterSearch(p, query));
     }
 
     // 3. Newest-registration-first sort order
@@ -1191,6 +1244,7 @@ function clearFilters() {
     const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     setVal('fltGender', 'All');
     setVal('fltStatus', 'All');
+    setVal('quickListStatusFilter', 'All');
     setVal('fltCity', 'All');
     setVal('fltMinAge', '');
     setVal('fltMaxAge', '');
@@ -1203,11 +1257,45 @@ function clearFilters() {
     applyFilters();
 }
 
-document.getElementById('listSearchInput').addEventListener('input', () => {
+function clearListSearch() {
+    const searchInput = document.getElementById('listSearchInput');
+    if (searchInput) searchInput.value = '';
+    const clearBtn = document.getElementById('listSearchClearBtn');
+    if (clearBtn) clearBtn.classList.add('hidden');
     currentPage = 1;
     selectedProfileIds.clear();
     renderListView();
-});
+}
+window.clearListSearch = clearListSearch;
+
+function handleQuickStatusFilter(val) {
+    if (!val || val === 'All') {
+        activeFilters.status = 'All';
+    } else {
+        activeFilters.status = val;
+    }
+    const fltStatus = document.getElementById('fltStatus');
+    if (fltStatus) fltStatus.value = activeFilters.status;
+
+    currentPage = 1;
+    selectedProfileIds.clear();
+    renderListView();
+}
+window.handleQuickStatusFilter = handleQuickStatusFilter;
+
+const listSearchInputEl = document.getElementById('listSearchInput');
+if (listSearchInputEl) {
+    listSearchInputEl.addEventListener('input', () => {
+        currentPage = 1;
+        selectedProfileIds.clear();
+        renderListView();
+    });
+    listSearchInputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            clearListSearch();
+        }
+    });
+}
 
 // View Helpers
 function getStatusBadge(p) {
@@ -1233,9 +1321,11 @@ function getFilteredProfiles() {
     
     // Module Filters
     if (listType === 'pending') filtered = filtered.filter(p => p.status === 'New');
+    if (listType === 'reviewed') filtered = filtered.filter(p => p.status === 'Reviewed');
     if (listType === 'shortlisted') filtered = filtered.filter(p => p.status === 'Shortlisted');
     if (listType === 'contacted') filtered = filtered.filter(p => p.status === 'Contacted');
     if (listType === 'followup') filtered = filtered.filter(p => p.status === 'Follow Up');
+    if (listType === 'closed') filtered = filtered.filter(p => p.status === 'Closed');
     if (listType === 'notes') filtered = filtered.filter(p => p.notes && p.notes.length > 0);
 
     // Advanced Filters
@@ -1249,11 +1339,11 @@ function getFilteredProfiles() {
     if (activeFilters.regFrom) filtered = filtered.filter(p => new Date(p.createdAt.split('T')[0]) >= new Date(activeFilters.regFrom));
     if (activeFilters.regTo) filtered = filtered.filter(p => new Date(p.createdAt.split('T')[0]) <= new Date(activeFilters.regTo));
 
-    // Global Search
+    // Global Search using Master Search
     const searchInput = document.getElementById('listSearchInput');
-    const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const term = searchInput ? searchInput.value.trim() : '';
     if (term) {
-        filtered = filtered.filter(p => Object.values(p).some(v => String(v).toLowerCase().includes(term)));
+        filtered = filtered.filter(p => matchesMasterSearch(p, term));
     }
     return filtered;
 }
@@ -1890,14 +1980,34 @@ function renderListView() {
     const titles = {
         'all': {t: 'All Profiles', s: 'Manage and view all registered matrimonial profiles.'},
         'pending': {t: 'Pending Review', s: `Profiles submitted but not yet reviewed. (${filtered.length} pending)`},
+        'reviewed': {t: 'Reviewed Profiles', s: `Candidate profiles that have been reviewed and approved. (${filtered.length} profiles)`},
         'shortlisted': {t: 'Shortlisted Profiles', s: 'Profiles selected for possible matchmaking consideration.'},
         'contacted': {t: 'Contacted Profiles', s: 'Profiles where the family/candidate has already been contacted.'},
         'followup': {t: 'Follow Up', s: 'Profiles requiring follow-up communication.'},
+        'closed': {t: 'Closed Profiles', s: 'Profiles that have been completed, paired or archived.'},
         'notes': {t: 'Profile Notes', s: 'Internal administrative notes on profiles.'}
     };
     if (titles[listType]) {
         document.getElementById('listTitle').innerText = titles[listType].t;
         document.getElementById('listSubtitle').innerText = titles[listType].s;
+    }
+
+    // Synchronize search clear button, quick status dropdown & filter dot
+    const listSearchInput = document.getElementById('listSearchInput');
+    const listSearchClearBtn = document.getElementById('listSearchClearBtn');
+    if (listSearchClearBtn && listSearchInput) {
+        if (listSearchInput.value.trim()) listSearchClearBtn.classList.remove('hidden');
+        else listSearchClearBtn.classList.add('hidden');
+    }
+    const quickStatusEl = document.getElementById('quickListStatusFilter');
+    if (quickStatusEl) {
+        quickStatusEl.value = activeFilters.status || 'All';
+    }
+    const listFilterDot = document.getElementById('listActiveFilterDot');
+    if (listFilterDot) {
+        const hasFilters = Object.entries(activeFilters).some(([k, v]) => v && v !== 'All');
+        if (hasFilters) listFilterDot.classList.remove('hidden');
+        else listFilterDot.classList.add('hidden');
     }
 
     // Filter Chips Render
@@ -2300,7 +2410,7 @@ function renderListView() {
                         <svg class="w-3 h-3 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
                         <span>Share</span>
                     </button>
-                    <button onclick="promptStatus()" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">Status</button>
+                    <button onclick="promptStatus(${idx})" class="px-2.5 py-1.5 bg-white border border-gold/30 rounded-lg text-[10px] uppercase font-bold text-wine shadow-sm">Status</button>
                     <button onclick="openDeleteQueryModal(${idx})" class="px-2.5 py-1.5 bg-red-50 border border-red-200/70 text-[#C9436B] hover:bg-red-100 rounded-lg text-[10px] uppercase font-bold shadow-sm transition inline-flex items-center gap-1" title="Delete Query">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         <span>Delete</span>
@@ -2311,12 +2421,205 @@ function renderListView() {
             `<div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Gender / Age</span>${p.Gender|| '—'} • ${p.Age|| '—'}</div>
              <div><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Location</span>${p.City ? (p.State ? `${p.City}, ${p.State}` : p.City) : (p.State || '—')}</div>
              <div class="col-span-2"><span class="block text-[10px] font-bold uppercase text-wine/40 mb-0.5">Profession / Salary</span>${p.Occupation || '—'}${p.Salary ? ' • ' + formatSalary(p.Salary) : ''}</div>`,
-            `<button onclick="activeProfileIndex=${idx}; promptStatus()" class="py-3 bg-[#FAF8F5] border border-gold/30 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm">Change Status</button>`
+            `<button onclick="promptStatus(${idx})" class="py-3 bg-[#FAF8F5] border border-gold/30 rounded-xl text-[12px] uppercase font-bold text-wine shadow-sm">Change Status</button>`
         );
     }
     
     renderTableAndCards(pagedProfiles, cols, deskRow, mobCard);
 }
+
+function getStatusBadgeClass(st) {
+    if (st === 'New') return 'bg-green-100 text-green-800 border border-green-200';
+    if (st === 'Reviewed') return 'bg-teal-50 text-teal-800 border border-teal-200';
+    if (st === 'Shortlisted') return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+    if (st === 'Follow Up') return 'bg-purple-100 text-purple-800 border border-purple-200';
+    if (st === 'Contacted') return 'bg-blue-100 text-blue-800 border border-blue-200';
+    if (st === 'Closed') return 'bg-gray-100 text-gray-500 border border-gray-200';
+    return 'bg-gray-100 text-gray-700 border border-gray-200';
+}
+
+let pendingStatusChoice = null;
+let isUpdatingStatus = false;
+
+function promptStatus(idx) {
+    if (idx !== undefined && idx !== null && idx >= 0) {
+        activeProfileIndex = idx;
+    }
+    if (activeProfileIndex === -1 || !profiles[activeProfileIndex]) {
+        console.warn("[Admin] promptStatus called without active profile");
+        return;
+    }
+    openChangeStatusModal(activeProfileIndex);
+}
+window.promptStatus = promptStatus;
+
+function openChangeStatusModal(idx) {
+    if (idx !== undefined && idx !== null && idx >= 0) {
+        activeProfileIndex = idx;
+    }
+    const p = profiles[activeProfileIndex];
+    if (!p) return;
+
+    lockModalScroll();
+    const modal = document.getElementById('changeStatusModal');
+    if (!modal) {
+        // Fallback to basic dialog if modal not found
+        const opts = ['New', 'Reviewed', 'Shortlisted', 'Contacted', 'Follow Up', 'Closed'];
+        showDialog('info', 'Change Status', 'Select new status for this profile:', (val) => {
+            changeStatus(activeProfileIndex, val, true);
+        }, true, 'select', opts, p.status || 'New');
+        return;
+    }
+
+    const nameEl = document.getElementById('statusModalCandidateName');
+    const idEl = document.getElementById('statusModalCandidateId');
+    const badgeEl = document.getElementById('statusModalCurrentBadge');
+    const reasonInput = document.getElementById('statusModalReasonInput');
+    const errorEl = document.getElementById('statusModalError');
+    const saveBtn = document.getElementById('statusModalSaveBtn');
+    const spinner = document.getElementById('statusModalSpinner');
+    const saveText = document.getElementById('statusModalSaveBtnText');
+
+    if (nameEl) nameEl.textContent = p['Full Name'] || p.full_name || 'Candidate';
+    if (idEl) idEl.textContent = p.profileId || p.Profile_ID || p.id || '—';
+    if (badgeEl) {
+        badgeEl.textContent = p.status || 'New';
+        badgeEl.className = 'inline-block mt-0.5 px-2 py-0.5 rounded text-[11px] font-bold uppercase ' + getStatusBadgeClass(p.status);
+    }
+    if (reasonInput) reasonInput.value = '';
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('hidden');
+    }
+    if (saveBtn) saveBtn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+    if (saveText) saveText.textContent = 'Update Status';
+    isUpdatingStatus = false;
+
+    // Select current status pill by default
+    selectStatusOption(p.status || 'New');
+
+    modal.classList.remove('hidden');
+}
+window.openChangeStatusModal = openChangeStatusModal;
+
+function closeChangeStatusModal() {
+    if (isUpdatingStatus) return;
+    const modal = document.getElementById('changeStatusModal');
+    if (modal) modal.classList.add('hidden');
+    unlockModalScroll();
+}
+window.closeChangeStatusModal = closeChangeStatusModal;
+
+function selectStatusOption(statusVal) {
+    pendingStatusChoice = statusVal;
+    const container = document.getElementById('statusModalPillsContainer');
+    if (container) {
+        container.querySelectorAll('.status-option-btn').forEach(btn => {
+            const btnStatus = btn.getAttribute('data-status');
+            const checkIcon = btn.querySelector('.status-check-icon');
+            if (btnStatus === statusVal) {
+                btn.classList.add('border-gold', 'bg-gold/15', 'ring-2', 'ring-gold/40');
+                btn.classList.remove('border-gold/20', 'bg-[#FAF8F5]');
+                if (checkIcon) checkIcon.classList.remove('hidden');
+            } else {
+                btn.classList.remove('border-gold', 'bg-gold/15', 'ring-2', 'ring-gold/40');
+                btn.classList.add('border-gold/20', 'bg-[#FAF8F5]');
+                if (checkIcon) checkIcon.classList.add('hidden');
+            }
+        });
+    }
+
+    const reasonLabel = document.getElementById('statusModalReasonLabel');
+    const reasonInput = document.getElementById('statusModalReasonInput');
+    if (statusVal === 'Closed') {
+        if (reasonLabel) reasonLabel.textContent = 'Reason for Closing Profile (Optional):';
+        if (reasonInput) reasonInput.placeholder = 'e.g. Solemnized Nikah elsewhere, matched through Noor-e-Nikah, withdrew profile...';
+    } else {
+        if (reasonLabel) reasonLabel.textContent = 'Admin Note / Reason (Optional):';
+        if (reasonInput) reasonInput.placeholder = 'e.g. Verified documents, spoke with guardian, scheduled call...';
+    }
+}
+window.selectStatusOption = selectStatusOption;
+
+async function confirmProfileStatusChange() {
+    if (isUpdatingStatus) return;
+    if (!pendingStatusChoice) {
+        const errorEl = document.getElementById('statusModalError');
+        if (errorEl) {
+            errorEl.textContent = 'Please choose a status.';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    const p = profiles[activeProfileIndex];
+    if (!p) {
+        closeChangeStatusModal();
+        return;
+    }
+
+    isUpdatingStatus = true;
+    const saveBtn = document.getElementById('statusModalSaveBtn');
+    const spinner = document.getElementById('statusModalSpinner');
+    const saveText = document.getElementById('statusModalSaveBtnText');
+    const errorEl = document.getElementById('statusModalError');
+
+    if (saveBtn) saveBtn.disabled = true;
+    if (spinner) spinner.classList.remove('hidden');
+    if (saveText) saveText.textContent = 'Updating...';
+    if (errorEl) errorEl.classList.add('hidden');
+
+    const nowStr = new Date().toISOString();
+    const updateData = { status: pendingStatusChoice, updated_at: nowStr };
+    if (pendingStatusChoice === 'Contacted' && !p.contactedAt) updateData.contacted_at = nowStr;
+    if (pendingStatusChoice === 'Closed' && !p.closedAt) updateData.closed_at = nowStr;
+
+    const reasonInput = document.getElementById('statusModalReasonInput');
+    const reasonText = reasonInput ? reasonInput.value.trim() : '';
+    if (reasonText) {
+        if (!p.notes) p.notes = [];
+        p.notes.push({
+            id: Math.random().toString(36).substr(2, 5),
+            text: `[Status: ${pendingStatusChoice}] ${reasonText}`,
+            date: nowStr
+        });
+        updateData.notes = p.notes;
+    }
+
+    try {
+        const { error } = await window.supabaseClient.from('profiles').update(updateData).eq('id', p.id);
+        if (error) throw error;
+
+        p.status = pendingStatusChoice;
+        p.updatedAt = nowStr;
+        if (updateData.contacted_at) p.contactedAt = nowStr;
+        if (updateData.closed_at) p.closedAt = nowStr;
+
+        isUpdatingStatus = false;
+        closeChangeStatusModal();
+
+        updateSidebarBadges();
+        renderListView();
+        if (currentView === 'dashboard') initDashboard();
+        if (!document.getElementById('profileModal').classList.contains('hidden')) {
+            renderProfileModal();
+        }
+
+        showAdminNotification(`Status updated to "${pendingStatusChoice}" for ${p['Full Name'] || p.profileId}`, 'success');
+    } catch(err) {
+        console.error('[Admin] Status update failed:', err);
+        isUpdatingStatus = false;
+        if (saveBtn) saveBtn.disabled = false;
+        if (spinner) spinner.classList.add('hidden');
+        if (saveText) saveText.textContent = 'Update Status';
+        if (errorEl) {
+            errorEl.textContent = 'Failed to update status in Supabase. Please retry.';
+            errorEl.classList.remove('hidden');
+        }
+    }
+}
+window.confirmProfileStatusChange = confirmProfileStatusChange;
 
 async function changeStatus(idx, st, reRenderModal = false) {
     const p = profiles[idx];
@@ -2343,17 +2646,6 @@ async function changeStatus(idx, st, reRenderModal = false) {
         console.error(err);
         showDialog('info', 'Error', 'Failed to update status.');
     }
-}
-
-function promptStatus() {
-    const opts = ['New', 'Reviewed', 'Shortlisted', 'Contacted', 'Follow Up', 'Closed'];
-
-// Supabase Data Mapping
-
-
-    showDialog('info', 'Change Status', 'Select new status for this profile:', (val) => {
-        changeStatus(activeProfileIndex, val, true);
-    }, true, 'select', opts);
 }
 
 function openFollowUp(idx) {

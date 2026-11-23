@@ -119,15 +119,17 @@ function showDialog(type, title, message, onConfirm = null, showInput = false, i
         : 'btn-wine';
 
     const dialogHTML = `
-    <div id="tempDialog" class="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-0 md:p-4">
+    <div id="tempDialog" class="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4">
         <div class="absolute inset-0 bg-[#320A16]/60 backdrop-blur-sm" onclick="closeTempDialog()"></div>
-        <div class="relative bg-ivory w-full max-w-sm rounded-t-[24px] md:rounded-[20px] shadow-2xl p-6 border border-gold/20 flex flex-col items-center text-center animate-slide-up md:animate-none">
-            <h3 class="font-serif text-2xl text-wine font-semibold mb-2">${title}</h3>
-            <p class="text-wine/70 text-sm mb-6 leading-relaxed">${message}</p>
-            ${inputHtml}
-            <div class="flex flex-col md:flex-row w-full gap-3">
-                <button onclick="closeTempDialog()" class="w-full py-3.5 md:py-3 bg-[#FAF8F5] border border-gold/20 text-wine rounded-xl text-[16px] md:text-sm font-medium hover:bg-white transition">${cancelBtnText}</button>
-                <button id="dialogConfirmBtn" class="w-full py-3.5 md:py-3 ${confirmBtnClass} rounded-xl text-[16px] md:text-sm font-medium shadow-md transition">${confirmBtnText}</button>
+        <div class="relative bg-ivory w-full max-w-md max-h-[90vh] rounded-[20px] shadow-2xl p-5 sm:p-6 border border-gold/20 flex flex-col animate-slide-up md:animate-none">
+            <h3 class="font-serif text-xl sm:text-2xl text-wine font-semibold mb-2 text-center shrink-0">${title}</h3>
+            <div class="overflow-y-auto custom-scrollbar my-2 max-h-[55vh] px-1 text-left sm:text-center">
+                <p class="text-wine/80 text-xs sm:text-sm leading-relaxed whitespace-pre-line break-words">${message}</p>
+                ${inputHtml}
+            </div>
+            <div class="flex flex-col-reverse sm:flex-row w-full gap-2.5 pt-3 mt-1 border-t border-gold/15 shrink-0">
+                <button onclick="closeTempDialog()" class="w-full py-2.5 sm:py-3 bg-[#FAF8F5] border border-gold/20 text-wine rounded-xl text-sm font-medium hover:bg-white transition">${cancelBtnText}</button>
+                <button id="dialogConfirmBtn" class="w-full py-2.5 sm:py-3 ${confirmBtnClass} rounded-xl text-sm font-medium shadow-md transition">${confirmBtnText}</button>
             </div>
         </div>
     </div>`;
@@ -157,6 +159,11 @@ function closeTempDialog() {
 // Data Load (Supabase)
 async function loadData() {
     try {
+        const loginScreen = document.getElementById('loginScreen');
+        if (loginScreen && !loginScreen.classList.contains('hidden')) {
+            console.warn("[ADMIN DEBUG] loadData blocked: user not authenticated or unauthorized.");
+            return;
+        }
         console.log("[ADMIN DEBUG] loadData started");
         console.log("[ADMIN DEBUG] Supabase select started");
         const { data, error, status } = await window.supabaseClient.from('profiles').select('*').order('created_at', { ascending: false });
@@ -272,6 +279,34 @@ function handleRealtimeEvent(payload) {
 
 function saveData() { /* Removed in favor of direct Supabase updates */ }
 
+// Helper: Read stored route or URL hash to preserve Admin view
+function getStoredOrHashView() {
+    try {
+        const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
+        const stored = sessionStorage.getItem('noor_admin_active_view');
+        const validViews = ['dashboard', 'all', 'pending', 'shortlisted', 'followup', 'closed', 'pairs', 'matching', 'contacted', 'notes', 'export'];
+        if (hash && validViews.includes(hash)) return hash;
+        if (stored && validViews.includes(stored)) return stored;
+    } catch(e) {}
+    return 'dashboard';
+}
+
+// Designated Administrator identity constants
+const AUTHORIZED_ADMIN_UID = '0aef2513-034c-4940-a611-e43ae188190f';
+const AUTHORIZED_ADMIN_EMAIL = 'yummsizzle@gmail.com';
+
+function isAuthorizedAdmin(user) {
+    if (!user || !user.id) return false;
+    // Authoritative check: authenticated user's actual UID must match the designated Admin UID
+    return user.id === AUTHORIZED_ADMIN_UID;
+}
+
+if (typeof window !== 'undefined') {
+    window.AUTHORIZED_ADMIN_UID = AUTHORIZED_ADMIN_UID;
+    window.AUTHORIZED_ADMIN_EMAIL = AUTHORIZED_ADMIN_EMAIL;
+    window.isAuthorizedAdmin = isAuthorizedAdmin;
+}
+
 // Initialization
 async function initializeAuth() {
     console.log("[ADMIN DEBUG] initializeAuth started");
@@ -310,7 +345,21 @@ async function initializeAuth() {
     
     console.log("[ADMIN DEBUG] authenticated =", !!session);
     if (session) {
-        console.log("[ADMIN DEBUG] session detected. UID:", session.user.id);
+        // Authoritative check: verify authenticated user's actual UID against designated Admin UID
+        if (!isAuthorizedAdmin(session.user)) {
+            console.warn("[ADMIN AUTH] Unauthorized session detected (UID: " + session.user?.id + "). Immediate sign-out.");
+            await window.supabaseClient.auth.signOut();
+            const loginScreen = document.getElementById('loginScreen');
+            if (loginScreen) loginScreen.classList.remove('hidden');
+            const loginError = document.getElementById('loginError');
+            if (loginError) {
+                loginError.textContent = 'Access denied. Only the authorized administrator account can access this panel.';
+                loginError.classList.remove('hidden');
+            }
+            return;
+        }
+
+        console.log("[ADMIN DEBUG] Authorized administrator session verified. UID:", session.user.id);
         const loginScreen = document.getElementById('loginScreen');
         if (loginScreen) loginScreen.classList.add('hidden');
         
@@ -318,7 +367,8 @@ async function initializeAuth() {
         if (migrateBtn) migrateBtn.classList.remove('hidden');
         
         loadData();
-        navigate('dashboard');
+        const initialView = getStoredOrHashView();
+        navigate(initialView, false);
     } else {
         const loginScreen = document.getElementById('loginScreen');
         if (loginScreen) loginScreen.classList.remove('hidden');
@@ -326,7 +376,7 @@ async function initializeAuth() {
     console.log("[ADMIN DEBUG] initializeAuth completed");
 
     // Listen for future auth state changes
-    window.supabaseClient.auth.onAuthStateChange((event, session) => {
+    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
             console.log("[ADMIN DEBUG] PASSWORD_RECOVERY event received, redirecting to reset-password.html");
             window.location.href = '/admin/reset-password.html' + window.location.hash;
@@ -334,6 +384,20 @@ async function initializeAuth() {
         }
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             console.log("[ADMIN DEBUG] Auth state changed to", event, "UID:", session?.user?.id);
+            if (!session?.user || !isAuthorizedAdmin(session.user)) {
+                console.warn("[ADMIN AUTH] Unauthorized UID detected in onAuthStateChange:", session?.user?.id);
+                await window.supabaseClient.auth.signOut();
+                const loginScreen = document.getElementById('loginScreen');
+                if (loginScreen) loginScreen.classList.remove('hidden');
+                const loginError = document.getElementById('loginError');
+                if (loginError) {
+                    loginError.textContent = 'Access denied. Unauthorized administrator account.';
+                    loginError.classList.remove('hidden');
+                }
+                return;
+            }
+
+            console.log("[ADMIN AUTH] Authorized administrator confirmed in onAuthStateChange.");
             const loginScreen = document.getElementById('loginScreen');
             if (loginScreen) loginScreen.classList.add('hidden');
             
@@ -341,11 +405,17 @@ async function initializeAuth() {
             if (migrateBtn) migrateBtn.classList.remove('hidden');
             
             loadData();
-            navigate('dashboard');
+            const targetView = getStoredOrHashView();
+            navigate(targetView, false);
         } else if (event === 'SIGNED_OUT') {
             const loginScreen = document.getElementById('loginScreen');
             if (loginScreen) loginScreen.classList.remove('hidden');
             
+            try {
+                sessionStorage.removeItem('noor_admin_active_view');
+                sessionStorage.removeItem('noor_ai_matching_state');
+            } catch(e) {}
+
             // Hide dashboard if visible
             const sections = ['dashboardSection', 'allProfilesSection', 'settingsSection'];
             sections.forEach(id => {
@@ -366,21 +436,27 @@ async function initializeAuth() {
 console.log("[ADMIN DEBUG] DOM ready");
 initializeAuth();
 
-document.getElementById('togglePasswordBtn').addEventListener('click', () => {
-    const pwdInput = document.getElementById('adminPassword');
-    const eyeIcon = document.getElementById('eyeIcon');
-    if (pwdInput.type === 'password') {
-        pwdInput.type = 'text';
-        eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />`;
-        document.getElementById('togglePasswordBtn').setAttribute('aria-label', 'Hide password');
-    } else {
-        pwdInput.type = 'password';
-        eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
-        document.getElementById('togglePasswordBtn').setAttribute('aria-label', 'Show password');
-    }
-});
+const togglePwdBtn = document.getElementById('togglePasswordBtn');
+if (togglePwdBtn) {
+    togglePwdBtn.addEventListener('click', () => {
+        const pwdInput = document.getElementById('adminPassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+        if (!pwdInput || !eyeIcon) return;
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />`;
+            togglePwdBtn.setAttribute('aria-label', 'Hide password');
+        } else {
+            pwdInput.type = 'password';
+            eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+            togglePwdBtn.setAttribute('aria-label', 'Show password');
+        }
+    });
+}
 
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
+const loginFormEl = document.getElementById('loginForm');
+if (loginFormEl) {
+    loginFormEl.addEventListener('submit', async (e) => {
     e.preventDefault();
     console.log("[LOGIN] submit triggered");
     
@@ -417,7 +493,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     
     try {
         console.log("[LOGIN] calling signInWithPassword");
-        const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password: pwd });
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password: pwd });
         console.log("[LOGIN] auth response received");
         
         if (error) {
@@ -429,8 +505,22 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             }
             errorEl.classList.remove('hidden');
         } else {
-            console.log("[LOGIN] login success");
+            const user = data?.user;
+            if (!isAuthorizedAdmin(user)) {
+                console.warn("[LOGIN] Authentication succeeded, but UID does not match designated Admin UID:", user?.id);
+                await window.supabaseClient.auth.signOut();
+                errorEl.textContent = 'Access denied. You are not authorized to access the Noor-E-Nikah Admin Panel.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            console.log("[LOGIN] login success for admin UID:", user.id);
             errorEl.classList.add('hidden');
+            const loginScreen = document.getElementById('loginScreen');
+            if (loginScreen) loginScreen.classList.add('hidden');
+            const migrateBtn = document.getElementById('migrateDataBtn');
+            if (migrateBtn) migrateBtn.classList.remove('hidden');
+            loadData();
+            navigate(getStoredOrHashView(), false);
         }
     } catch (err) {
         console.error("Login Error:", err);
@@ -442,6 +532,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         btn.disabled = false;
     }
 });
+}
 
 // Forgot Password UI toggle & submission
 const forgotLink = document.getElementById('forgotPasswordLink');
@@ -555,12 +646,15 @@ if (forgotForm) {
     });
 }
 
-document.getElementById('logoutBtn').addEventListener('click', () => {
-    showDialog('info', 'Logout', 'Are you sure you want to logout?', async () => {
-        await window.supabaseClient.auth.signOut();
-        location.reload();
+const logoutBtnEl = document.getElementById('logoutBtn');
+if (logoutBtnEl) {
+    logoutBtnEl.addEventListener('click', () => {
+        showDialog('info', 'Logout', 'Are you sure you want to logout?', async () => {
+            await window.supabaseClient.auth.signOut();
+            location.reload();
+        });
     });
-});
+}
 
 // Sidebar 
 function updateSidebarBadges() {
@@ -607,11 +701,28 @@ document.getElementById('sidebarOverlay').addEventListener('click', () => {
 
 initDeleteQueryModalListeners();
 
-function navigate(view) {
+function navigate(view, updateHash = true) {
+    const loginScreen = document.getElementById('loginScreen');
+    if (loginScreen && !loginScreen.classList.contains('hidden')) {
+        console.warn("[ADMIN NAVIGATE] Blocked navigation while login screen is visible.");
+        return;
+    }
+    if (!view) view = 'dashboard';
     currentView = view;
     currentPage = 1;
     selectedProfileIds.clear();
     closeAllDropdowns();
+
+    // Persist active view in sessionStorage
+    try {
+        sessionStorage.setItem('noor_admin_active_view', view);
+    } catch(e) {}
+
+    // Update browser URL hash so Back/Forward and Refresh work seamlessly
+    if (updateHash && window.location.hash !== '#' + view) {
+        window.history.pushState(null, '', '#' + view);
+    }
+
     document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.nav-link').forEach(el => {
         el.classList.remove('bg-burg/50', 'border-gold/10', 'text-cream');
@@ -628,15 +739,29 @@ function navigate(view) {
         document.getElementById('sidebarOverlay').classList.add('hidden');
     }
     
-    if (['all', 'pending', 'shortlisted', 'contacted', 'followup', 'notes'].includes(view)) {
+    if (['all', 'pending', 'contacted', 'notes'].includes(view)) {
         document.getElementById('view-list').classList.remove('hidden');
         listType = view;
         renderListView();
     } else {
-        document.getElementById('view-' + view).classList.remove('hidden');
-        if(view === 'dashboard') initDashboard();
+        const viewEl = document.getElementById('view-' + view);
+        if (viewEl) viewEl.classList.remove('hidden');
+        if (view === 'dashboard') initDashboard();
+        if (view === 'matching' && typeof initMatchingView === 'function') initMatchingView();
+        if (view === 'pairs' && typeof initPairsView === 'function') initPairsView();
+        if (view === 'shortlisted' && typeof initShortlistedPairsView === 'function') initShortlistedPairsView();
+        if (view === 'followup' && typeof initFollowupPairsView === 'function') initFollowupPairsView();
+        if (view === 'closed' && typeof initClosedPairsView === 'function') initClosedPairsView();
     }
 }
+
+// Listen to browser Back/Forward navigation
+window.addEventListener('hashchange', () => {
+    const hashView = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
+    if (hashView && hashView !== currentView) {
+        navigate(hashView, false);
+    }
+});
 
 // Modal & Body Scroll Lock Helpers
 function lockModalScroll() {

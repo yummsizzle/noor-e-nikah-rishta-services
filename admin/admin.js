@@ -864,9 +864,11 @@ function initDashboard() {
  * Master multi-field, multi-token composite search engine.
  * Matches:
  *  - Full Name (e.g. "Ansari Afreen")
- *  - Profile ID (e.g. "NN-2026-50", "50")
+ *  - Profile ID (e.g. "NN-2026-50", "50", "NN-2026")
  *  - Composite queries (e.g. "Ansari Afreen (NN-2026-50)", "Simran NN-2026-67")
  *  - Location combinations (e.g. "Hubli, Karnataka", "Hubli")
+ *  - Mobile number (e.g. "9076055279", partials >= 4 digits)
+ *  - Age (e.g. "22", "24")
  *  - Substring tokens, case-insensitively, stripping brackets/commas/punctuation
  */
 function matchesMasterSearch(p, query) {
@@ -874,26 +876,56 @@ function matchesMasterSearch(p, query) {
     const rawQuery = String(query).trim().toLowerCase();
     if (!rawQuery) return true;
 
-    // Field extractions with fallbacks
-    const name = String(p['Full Name'] || p.full_name || '').toLowerCase();
-    const pid = String(p.profileId || p.Profile_ID || p.id || '').toLowerCase();
+    // Field extractions with comprehensive fallbacks
+    const name = String(p['Full Name'] || p.full_name || p.fullName || '').toLowerCase();
+    const pid = String(p.profileId || p.profile_id || p['Profile ID'] || p.Profile_ID || p.id || '').toLowerCase();
     const city = String(p.City || p.city || '').toLowerCase();
     const state = String(p.State || p.state || '').toLowerCase();
     const nativePlace = String(p['Native Place'] || p.native_place || '').toLowerCase();
     const familyLocation = String(p['Family Location'] || p.family_location || '').toLowerCase();
-    const occupation = String(p.Occupation || p.occupation || '').toLowerCase();
+    const occupation = String(p.Occupation || p.occupation || p.Profession || p.profession || '').toLowerCase();
     const education = String(p.Education || p.education || '').toLowerCase();
     const maritalStatus = String(p['Marital Status'] || p.marital_status || '').toLowerCase();
     const gender = String(p.Gender || p.gender || '').toLowerCase();
     const age = String(p.Age || p.age || '').toLowerCase();
     const surname = String(p['Surname / Biradari'] || p.surname_biradari || '').toLowerCase();
     const maslak = String(p.Maslak || p.maslak || p['Maslak / Religious Background'] || '').toLowerCase();
-    const mobile = String(p.Mobile || p.mobile || '').toLowerCase();
+    const mobile = String(p.Mobile || p.mobile || p.contact_number || p.phone || '').toLowerCase();
     const whatsapp = String(p.WhatsApp || p.whatsapp || '').toLowerCase();
     const email = String(p['Email Address'] || p.email_address || p.email || '').toLowerCase();
     const status = String(p.status || '').toLowerCase();
+    const notesStr = Array.isArray(p.notes)
+        ? p.notes.map(n => (typeof n === 'string' ? n : (n.text || n.note || ''))).join(' ').toLowerCase()
+        : String(p.notes || '').toLowerCase();
 
-    // Composite searchable string combining name, ID in all standard UI formats, location, etc.
+    // 1. Digits-only phone search (full or partial >= 4 digits)
+    const rawDigits = rawQuery.replace(/\D/g, '');
+    const mobileDigits = mobile.replace(/\D/g, '');
+    const whatsappDigits = whatsapp.replace(/\D/g, '');
+
+    if (rawDigits.length >= 4) {
+        if ((mobileDigits && mobileDigits.includes(rawDigits)) || (whatsappDigits && whatsappDigits.includes(rawDigits))) {
+            return true;
+        }
+    }
+
+    // 2. Profile ID exact, prefix, or numeric suffix match
+    if (pid) {
+        if (pid === rawQuery || pid.startsWith(rawQuery) || pid.includes(rawQuery)) return true;
+        const pidParts = pid.split('-');
+        const serialPart = pidParts[pidParts.length - 1];
+        if (serialPart) {
+            if (serialPart === rawQuery) return true;
+            if (serialPart.replace(/^0+/, '') === rawQuery.replace(/^0+/, '')) return true;
+        }
+    }
+
+    // 3. Exact age match
+    if (age && /^\d{1,3}$/.test(rawQuery)) {
+        if (parseInt(age, 10) === parseInt(rawQuery, 10)) return true;
+    }
+
+    // 4. Composite searchable string combining name, ID in all standard UI formats, location, etc.
     const composite = [
         name,
         pid,
@@ -916,13 +948,18 @@ function matchesMasterSearch(p, query) {
         mobile,
         whatsapp,
         email,
-        status
+        status,
+        notesStr
     ].join(' ');
 
-    // 1. Direct substring check against composite representation
     if (composite.includes(rawQuery)) return true;
 
-    // 2. Tokenized multi-word search
+    // If query is an explicit Profile ID pattern (e.g. "NN-2026-34", "NN-2026"), do not decompose into split tokens
+    if (/^nn-\d+(?:-\d+)?$/i.test(rawQuery)) {
+        return false;
+    }
+
+    // 5. Tokenized multi-word search
     const tokens = rawQuery
         .replace(/[(),\-\/]/g, ' ')
         .split(/\s+/)
@@ -931,8 +968,18 @@ function matchesMasterSearch(p, query) {
 
     if (tokens.length === 0) return true;
 
-    // Every token must match somewhere in the composite string
-    return tokens.every(token => composite.includes(token));
+    // Every token must match somewhere in the composite string or field fallbacks
+    return tokens.every(token => {
+        if (composite.includes(token)) return true;
+        if (pid) {
+            const parts = pid.split('-');
+            const last = parts[parts.length - 1];
+            if (last && (last === token || last.replace(/^0+/, '') === token.replace(/^0+/, ''))) return true;
+        }
+        const tDigits = token.replace(/\D/g, '');
+        if (tDigits.length >= 4 && (mobileDigits.includes(tDigits) || whatsappDigits.includes(tDigits))) return true;
+        return false;
+    });
 }
 window.matchesMasterSearch = matchesMasterSearch;
 

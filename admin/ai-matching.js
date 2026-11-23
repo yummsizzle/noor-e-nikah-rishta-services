@@ -632,9 +632,17 @@ const AIMatchingEngine = {
 
         // Top 5 Recommended: First 5 entries of the overall ordered list
         const top5 = evaluated.slice(0, 5);
+        const top5Ids = new Set(top5.map(m => String(m.profileId || m.profile_id || (m.candidate && (m.candidate.profileId || m.candidate.profile_id)))));
 
-        // Result Groups
+        // Result Groups (complete group matches preserving algorithm contract)
         const groups = [];
+        // Remaining Groups strictly partitioned: Top5ProfileIDs ∩ RemainingGroupProfileIDs = ∅
+        const remainingGroups = [];
+        const remainingMatches = evaluated.filter(item => {
+            const pid = String(item.profileId || item.profile_id || (item.candidate && (item.candidate.profileId || item.candidate.profile_id)));
+            return !top5Ids.has(pid);
+        });
+
         const isSpecialSelected = this.isSpecialNonMaslak(sMaslak);
         const hasSameMaslakSelected = !isSpecialSelected && adminSelectedMaslaks.some(m => this.normalizeMaslak(m) === sMaslakNorm);
         if (hasSameMaslakSelected) {
@@ -645,6 +653,15 @@ const AIMatchingEngine = {
                 title: `Same Maslak Matches — ${sMaslak}`,
                 matches: sameMatches,
                 count: sameMatches.length
+            });
+
+            const sameRemaining = remainingMatches.filter(item => item.groupType === 'SAME_MASLAK');
+            remainingGroups.push({
+                groupType: 'SAME_MASLAK',
+                maslak: sMaslak,
+                title: `Same Maslak Matches — ${sMaslak}`,
+                matches: sameRemaining,
+                count: sameRemaining.length
             });
         }
 
@@ -657,6 +674,15 @@ const AIMatchingEngine = {
                 title: `Additional Maslak Matches — ${maslak}`,
                 matches: addMatches,
                 count: addMatches.length
+            });
+
+            const addRemaining = remainingMatches.filter(item => item.groupType === 'ADDITIONAL_MASLAK' && this.normalizeMaslak(item.matchedMaslak) === this.normalizeMaslak(maslak));
+            remainingGroups.push({
+                groupType: 'ADDITIONAL_MASLAK',
+                maslak: maslak,
+                title: `Additional Maslak Matches — ${maslak}`,
+                matches: addRemaining,
+                count: addRemaining.length
             });
         }
 
@@ -675,7 +701,8 @@ const AIMatchingEngine = {
             },
             allOrderedMatches: evaluated,
             top5,
-            groups
+            groups,
+            remainingGroups
         };
     }
 };
@@ -855,6 +882,10 @@ function handleMatchProfileSearch(query) {
     const expectedGender = matchingState.direction === 'bride' ? 'Female' : 'Male';
 
     const filtered = allProfiles.filter(p => {
+        // Enforce strict target profile eligibility: ONLY 'New' (Pending Review) and 'Reviewed' profiles
+        const status = (p.status || '').trim();
+        if (status !== 'New' && status !== 'Reviewed') return false;
+
         const g = (p.Gender || p.gender || '').trim();
         if (g.toLowerCase() !== expectedGender.toLowerCase()) return false;
         if (!q) return true;
@@ -931,6 +962,19 @@ function selectMatchingProfile(profileId) {
         console.warn('[AI Matching] Gender mismatch in selectMatchingProfile:', errorMsg);
         if (typeof showDialog === 'function') {
             showDialog('warning', 'Gender Mismatch', errorMsg);
+        } else {
+            alert(errorMsg);
+        }
+        return;
+    }
+
+    // Strict client-side status eligibility validation: ONLY 'New' and 'Reviewed'
+    const profileStatus = (p.status || '').trim();
+    if (profileStatus !== 'New' && profileStatus !== 'Reviewed') {
+        const errorMsg = `Selected profile (${profileId} - ${p['Full Name'] || p.full_name}) has status "${profileStatus || 'unspecified'}", but AI Matching only accepts profiles with status "New" (Pending Review) or "Reviewed".`;
+        console.warn('[AI Matching] Status eligibility rejection in selectMatchingProfile:', errorMsg);
+        if (typeof showDialog === 'function') {
+            showDialog('warning', 'Ineligible Status', errorMsg);
         } else {
             alert(errorMsg);
         }
@@ -1240,11 +1284,13 @@ function updateQuickCountNotice(p, allProfiles) {
     const notice = document.getElementById('matchEligibleCandidateQuickCount');
     if (!notice) return;
     const targetGender = matchingState.direction === 'bride' ? 'Male' : 'Female';
-    const totalOpposite = allProfiles.filter(item => {
-        return (item.Gender || item.gender || '').trim().toLowerCase() === targetGender.toLowerCase();
+    const eligibleOpposite = allProfiles.filter(item => {
+        const itemGender = (item.Gender || item.gender || '').trim().toLowerCase();
+        const itemStatus = (item.status || '').trim();
+        return itemGender === targetGender.toLowerCase() && (itemStatus === 'New' || itemStatus === 'Reviewed');
     }).length;
 
-    notice.textContent = `Ready to search across ${totalOpposite} registered ${targetGender.toLowerCase()} profiles.`;
+    notice.textContent = `Ready to search across ${eligibleOpposite} eligible ${targetGender.toLowerCase()} profiles (New & Reviewed).`;
 }
 
 // Transform server RPC response into UI match structure
@@ -1290,9 +1336,12 @@ function transformRpcResult(data) {
 
     const orderedMatches = (data.paginated_matches || []).map(mapCandidate);
     const top5Matches = (data.top5 || []).map(mapCandidate);
+    const top5Ids = new Set(top5Matches.map(m => String(m.profileId || m.profile_id)));
 
-    // Build groups from ordered matches
+    // Build groups from ordered matches (both complete groups and strictly partitioned remaining groups)
     const groupedMap = new Map();
+    const remainingGroupedMap = new Map();
+
     orderedMatches.forEach(item => {
         const groupKey = item.matchedMaslak;
         if (!groupedMap.has(groupKey)) {
@@ -1304,6 +1353,21 @@ function transformRpcResult(data) {
             });
         }
         groupedMap.get(groupKey).matches.push(item);
+
+        // Partition remaining groups: strictly exclude candidates featured in Top 5!
+        // INVARIANT: Top5ProfileIDs ∩ RemainingGroupProfileIDs = ∅
+        const pid = String(item.profileId || item.profile_id);
+        if (!top5Ids.has(pid)) {
+            if (!remainingGroupedMap.has(groupKey)) {
+                remainingGroupedMap.set(groupKey, {
+                    groupType: item.groupType,
+                    maslak: groupKey,
+                    title: item.isSameMaslak ? `Same Maslak Matches — ${groupKey}` : `Additional Maslak Matches — ${groupKey}`,
+                    matches: []
+                });
+            }
+            remainingGroupedMap.get(groupKey).matches.push(item);
+        }
     });
 
     return {
@@ -1321,7 +1385,8 @@ function transformRpcResult(data) {
         },
         allOrderedMatches: orderedMatches,
         top5: top5Matches,
-        groups: Array.from(groupedMap.values())
+        groups: Array.from(groupedMap.values()),
+        remainingGroups: Array.from(remainingGroupedMap.values())
     };
 }
 
@@ -1331,6 +1396,12 @@ async function runAIMatching() {
     const sProfile = matchingState.selectedProfile;
     if (!sProfile) {
         showDialog('warning', 'Profile Required', 'Please select a profile to find matches.');
+        return;
+    }
+
+    const targetStatus = (sProfile.status || '').trim();
+    if (targetStatus !== 'New' && targetStatus !== 'Reviewed') {
+        showDialog('warning', 'Ineligible Target Profile', `Selected profile ${sProfile.profileId || sProfile.profile_id} has status "${targetStatus}". AI Matching strictly requires target profiles to be "New" or "Reviewed".`);
         return;
     }
 
@@ -1530,9 +1601,22 @@ function renderGroupedResults(result) {
     const container = document.getElementById('matchGroupsContainer');
     if (!container) return;
 
+    // Deduplication partition: Use remainingGroups or filter out top5 candidates
+    // INVARIANT: Top5ProfileIDs ∩ RemainingGroupProfileIDs = ∅
+    const top5Ids = new Set((result.top5 || []).map(m => String(m.profileId || m.profile_id)));
+    const groupsToRender = (result.remainingGroups && result.remainingGroups.length > 0)
+        ? result.remainingGroups
+        : (result.groups || []).map(g => ({
+            ...g,
+            matches: (g.matches || []).filter(m => !top5Ids.has(String(m.profileId || m.profile_id)))
+        }));
+
     let html = '';
-    result.groups.forEach(group => {
+    groupsToRender.forEach(group => {
         const isPrimary = (group.groupType === 'SAME_MASLAK');
+        const remainingMatches = (group.matches || []).filter(m => !top5Ids.has(String(m.profileId || m.profile_id)));
+        const candidateCount = remainingMatches.length;
+
         html += `
             <div class="bg-white border ${isPrimary ? 'border-emerald-300' : 'border-gold/20'} rounded-2xl p-5 shadow-sm space-y-4">
                 <div class="flex items-center justify-between pb-3 border-b border-gold/15">
@@ -1540,17 +1624,17 @@ function renderGroupedResults(result) {
                         <span class="w-3 h-3 rounded-full ${isPrimary ? 'bg-emerald-500' : 'bg-gold'}"></span>
                         <div>
                             <h3 class="font-serif text-lg font-bold text-wine">${group.title}</h3>
-                            <p class="text-xs text-wine/60">Ranked by closest age gap in days and mutual preferences.</p>
+                            <p class="text-xs text-wine/60">Ranked by closest age gap in days and mutual preferences (excluding Top 5).</p>
                         </div>
                     </div>
                     <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${isPrimary ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-gold/20 text-wine border border-gold/40'}">
-                        ${group.matches.length} ${group.matches.length === 1 ? 'Candidate' : 'Candidates'}
+                        ${candidateCount} ${candidateCount === 1 ? 'Candidate' : 'Candidates'}
                     </span>
                 </div>
-                ${group.matches.length === 0 
-                    ? '<div class="text-center py-6 text-wine/40 text-xs italic">No candidates found in this Maslak group.</div>'
+                ${candidateCount === 0
+                    ? '<div class="text-center py-6 text-wine/40 text-xs italic">All candidates in this group are featured in Top 5 Recommended.</div>'
                     : `<div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
-                        ${group.matches.slice(0, 12).map((m, idx) => createMatchCardHtml(m, idx + 1, false)).join('')}
+                        ${remainingMatches.slice(0, 12).map((m, idx) => createMatchCardHtml(m, idx + 1, false)).join('')}
                        </div>`
                 }
             </div>
@@ -2867,6 +2951,9 @@ async function renderShortlistedUnifiedView() {
     let filteredSingles = singleShortlists;
     if (searchVal) {
         filteredSingles = filteredSingles.filter(p => {
+            if (typeof window.matchesMasterSearch === 'function') {
+                return window.matchesMasterSearch(p, searchVal);
+            }
             const pid = (p.profileId || p.profile_id || '').toLowerCase();
             const name = (p.fullName || p.full_name || p['Full Name'] || '').toLowerCase();
             const city = (p.city || p.City || '').toLowerCase();
@@ -2879,6 +2966,12 @@ async function renderShortlistedUnifiedView() {
     let filteredPairs = pairShortlists;
     if (searchVal) {
         filteredPairs = filteredPairs.filter(item => {
+            if (typeof window.matchesMasterSearch === 'function') {
+                const bMatch = item.bride ? window.matchesMasterSearch(item.bride, searchVal) : false;
+                const gMatch = item.groom ? window.matchesMasterSearch(item.groom, searchVal) : false;
+                const noteMatch = (item.admin_notes || '').toLowerCase().includes(searchVal);
+                if (bMatch || gMatch || noteMatch) return true;
+            }
             const bPid = (item.bride?.profile_id || '').toLowerCase();
             const bName = (item.bride?.full_name || '').toLowerCase();
             const gPid = (item.groom?.profile_id || '').toLowerCase();
@@ -3136,6 +3229,9 @@ function renderSingleShortlistSearchResults(query) {
     let list = allProfiles;
     if (q) {
         list = list.filter(p => {
+            if (typeof window.matchesMasterSearch === 'function') {
+                return window.matchesMasterSearch(p, q);
+            }
             const pid = (p.profileId || p.profile_id || '').toLowerCase();
             const name = (p.fullName || p.full_name || p['Full Name'] || '').toLowerCase();
             const city = (p.city || p.City || '').toLowerCase();

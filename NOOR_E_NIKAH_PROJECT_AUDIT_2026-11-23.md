@@ -270,7 +270,8 @@ node scratch/test_ai_matching_comprehensive.js
 | Unified Shortlisted UI | `scratch/test_shortlisted_unified.js` | 8 | **8** | 0 | 0 |
 | Frontend RPC Contract | `scratch/test_frontend_rpc_contract.js` | 2 | **2** | 0 | 0 |
 | Master AI Matching Engine | `scratch/test_ai_matching_comprehensive.js` | 153 | **153** | 0 | 0 |
-| **CUMULATIVE TOTAL** | **13 Test Suites** | **531** | **531 (100%)** | **0** | **0** |
+| Single-Admin Authentication | `scratch/test_admin_auth_single_account.js` | 23 | **23** | 0 | 0 |
+| **CUMULATIVE TOTAL** | **14 Test Suites** | **554** | **554 (100%)** | **0** | **0** |
 
 ---
 

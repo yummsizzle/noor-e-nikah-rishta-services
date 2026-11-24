@@ -1022,54 +1022,64 @@ tailwind.config = {
                 <p id="salaryHelper" class="mt-1 text-xs text-[#7C1D38]/60">Enter your salary in Indian Rupees.</p>
               </div>
               <div class="field"><label for="city">City / Current Location</label><input id="city" name="City" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
-              <div class="field">
+              <div class="field relative" id="stateContainer">
                 <label for="state">State</label>
-                <input
-                  id="state"
-                  name="State"
-                  type="text"
-                  list="indianStatesList"
-                  placeholder="e.g. Maharashtra"
-                  autocomplete="off"
+                <div class="relative">
+                  <input
+                    id="state"
+                    name="State"
+                    type="text"
+                    readonly
+                    placeholder="Select state"
+                    autocomplete="off"
+                    class="w-full pr-10 cursor-pointer select-none"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-autocomplete="none"
+                    aria-controls="stateDropdown"
+                    aria-haspopup="listbox"
+                  >
+                  <button
+                    type="button"
+                    id="stateToggleBtn"
+                    tabindex="-1"
+                    aria-label="Toggle state options"
+                    class="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-wine/50 hover:text-wine transition focus:outline-none"
+                  >
+                    <svg id="stateChevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Custom Accessible Dropdown Popup with Search -->
+                <div
+                  id="stateDropdown"
+                  class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFDF9] border border-gold/40 rounded-xl shadow-xl overflow-hidden"
+                  style="box-shadow: 0 12px 28px -6px rgba(91,18,38,0.18), 0 6px 12px -4px rgba(91,18,38,0.1);"
+                  role="listbox"
                 >
-                <datalist id="indianStatesList">
-                  <option value="Andhra Pradesh"></option>
-                  <option value="Arunachal Pradesh"></option>
-                  <option value="Assam"></option>
-                  <option value="Bihar"></option>
-                  <option value="Chhattisgarh"></option>
-                  <option value="Goa"></option>
-                  <option value="Gujarat"></option>
-                  <option value="Haryana"></option>
-                  <option value="Himachal Pradesh"></option>
-                  <option value="Jharkhand"></option>
-                  <option value="Karnataka"></option>
-                  <option value="Kerala"></option>
-                  <option value="Madhya Pradesh"></option>
-                  <option value="Maharashtra"></option>
-                  <option value="Manipur"></option>
-                  <option value="Meghalaya"></option>
-                  <option value="Mizoram"></option>
-                  <option value="Nagaland"></option>
-                  <option value="Odisha"></option>
-                  <option value="Punjab"></option>
-                  <option value="Rajasthan"></option>
-                  <option value="Sikkim"></option>
-                  <option value="Tamil Nadu"></option>
-                  <option value="Telangana"></option>
-                  <option value="Tripura"></option>
-                  <option value="Uttar Pradesh"></option>
-                  <option value="Uttarakhand"></option>
-                  <option value="West Bengal"></option>
-                  <option value="Andaman and Nicobar Islands"></option>
-                  <option value="Chandigarh"></option>
-                  <option value="Dadra and Nagar Haveli and Daman and Diu"></option>
-                  <option value="Delhi (NCT)"></option>
-                  <option value="Jammu and Kashmir"></option>
-                  <option value="Ladakh"></option>
-                  <option value="Lakshadweep"></option>
-                  <option value="Puducherry"></option>
-                </datalist>
+                  <!-- Search Input Header -->
+                  <div class="p-2 bg-[#FAF8F5] border-b border-gold/20">
+                    <div class="relative">
+                      <input
+                        id="stateSearchInput"
+                        type="text"
+                        placeholder="Search state..."
+                        autocomplete="off"
+                        class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gold/30 rounded-lg text-wine placeholder-wine/40 focus:outline-none focus:border-wine/60"
+                      >
+                      <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-wine/40 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <!-- Scrollable Options List -->
+                  <div id="stateOptionList" class="max-h-[220px] overflow-y-auto divide-y divide-gold/15 py-1">
+                    <!-- Dynamic state options rendered here -->
+                  </div>
+                </div>
               </div>
               <div class="field"><label for="motherTongue">Mother Tongue</label><input id="motherTongue" name="Mother Tongue" type="text" placeholder="e.g. Urdu"></div>
               <div class="field"><label for="languages">Languages Known</label><input id="languages" name="Languages Known" type="text" placeholder="e.g. Urdu, Hindi, English"></div>
@@ -2490,7 +2500,8 @@ function setupCustomDropdown({
   dropdownId,
   optionListId,
   options,
-  onSelect
+  onSelect,
+  searchInputId
 }) {
   const container = document.getElementById(containerId);
   const input = document.getElementById(inputId);
@@ -2498,15 +2509,26 @@ function setupCustomDropdown({
   const chevron = document.getElementById(chevronId);
   const dropdown = document.getElementById(dropdownId);
   const optionList = document.getElementById(optionListId);
+  const searchInput = searchInputId ? document.getElementById(searchInputId) : null;
 
   if (!container || !input || !dropdown || !optionList) return null;
 
   let highlightedIndex = -1;
+  let currentOptions = [...options];
 
   function renderOptions() {
     const currentVal = (input.value || '').trim();
-    optionList.innerHTML = options.map((opt, idx) => {
-      const isSelected = (currentVal === opt.value) || (!currentVal && !opt.value);
+    if (currentOptions.length === 0) {
+      optionList.innerHTML = `
+        <div class="px-3.5 py-4 text-center text-xs text-wine/60 italic">
+          No matching options found
+        </div>
+      `;
+      return;
+    }
+
+    optionList.innerHTML = currentOptions.map((opt, idx) => {
+      const isSelected = (currentVal.toLowerCase() === opt.value.toLowerCase()) || (!currentVal && !opt.value);
       const isHighlighted = idx === highlightedIndex;
       let activeClasses = 'text-[#3B1119] hover:bg-wine/10 hover:text-wine';
       if (isSelected && opt.value) {
@@ -2542,6 +2564,19 @@ function setupCustomDropdown({
     }
   }
 
+  function adjustPosition() {
+    dropdown.classList.remove('bottom-full', 'mb-1.5');
+    dropdown.classList.add('top-full', 'mt-1.5');
+    const containerRect = container.getBoundingClientRect();
+    const dropdownHeight = dropdown.offsetHeight || 260;
+    const spaceBelow = window.innerHeight - containerRect.bottom;
+    const spaceAbove = containerRect.top;
+    if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+      dropdown.classList.remove('top-full', 'mt-1.5');
+      dropdown.classList.add('bottom-full', 'mb-1.5');
+    }
+  }
+
   function openDropdown() {
     if (typeof closeHeightDropdown === 'function') closeHeightDropdown();
     if (typeof dobCalendarCtrl?.close === 'function') dobCalendarCtrl.close();
@@ -2552,14 +2587,30 @@ function setupCustomDropdown({
       if (el !== chevron) el.classList.remove('rotate-180');
     });
 
-    highlightedIndex = options.findIndex(o => o.value === input.value);
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    currentOptions = [...options];
+
+    highlightedIndex = currentOptions.findIndex(o => o.value.toLowerCase() === (input.value || '').trim().toLowerCase());
     if (highlightedIndex < 0) highlightedIndex = 0;
     renderOptions();
+
     dropdown.classList.remove('hidden');
     dropdown.classList.add('custom-popup-open');
     input.setAttribute('aria-expanded', 'true');
     if (chevron) {
       chevron.classList.add('rotate-180', 'custom-chevron-open');
+    }
+
+    adjustPosition();
+
+    if (searchInput) {
+      setTimeout(() => {
+        if (window.innerWidth >= 640 && searchInput) {
+          searchInput.focus();
+        }
+      }, 50);
     }
   }
 
@@ -2571,12 +2622,18 @@ function setupCustomDropdown({
       chevron.classList.remove('rotate-180', 'custom-chevron-open');
     }
     highlightedIndex = -1;
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    currentOptions = [...options];
   }
 
   function toggleDropdown() {
     if (dropdown.classList.contains('hidden')) {
       openDropdown();
-      input.focus();
+      if (!searchInput) {
+        input.focus();
+      }
     } else {
       closeDropdown();
     }
@@ -2604,21 +2661,25 @@ function setupCustomDropdown({
         openDropdown();
         return;
       }
-      highlightedIndex = (highlightedIndex + 1) % options.length;
-      renderOptions();
+      if (currentOptions.length > 0) {
+        highlightedIndex = (highlightedIndex + 1) % currentOptions.length;
+        renderOptions();
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (!isOpen) {
         openDropdown();
         return;
       }
-      highlightedIndex = (highlightedIndex - 1 + options.length) % options.length;
-      renderOptions();
+      if (currentOptions.length > 0) {
+        highlightedIndex = (highlightedIndex - 1 + currentOptions.length) % currentOptions.length;
+        renderOptions();
+      }
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (isOpen) {
-        if (highlightedIndex >= 0 && options[highlightedIndex]) {
-          selectOption(options[highlightedIndex].value);
+        if (highlightedIndex >= 0 && currentOptions[highlightedIndex]) {
+          selectOption(currentOptions[highlightedIndex].value);
         }
       } else {
         openDropdown();
@@ -2635,6 +2696,53 @@ function setupCustomDropdown({
     }
   });
 
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const query = searchInput.value.trim().toLowerCase();
+      if (!query) {
+        currentOptions = [...options];
+      } else {
+        currentOptions = options.filter(opt => {
+          if (!opt.value) return false;
+          const labelMatch = opt.label && opt.label.toLowerCase().includes(query);
+          const valMatch = opt.value && opt.value.toLowerCase().includes(query);
+          const subMatch = opt.sub && opt.sub.toLowerCase().includes(query);
+          return labelMatch || valMatch || subMatch;
+        });
+      }
+      highlightedIndex = currentOptions.length > 0 ? 0 : -1;
+      renderOptions();
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (currentOptions.length > 0) {
+          highlightedIndex = (highlightedIndex + 1) % currentOptions.length;
+          renderOptions();
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (currentOptions.length > 0) {
+          highlightedIndex = (highlightedIndex - 1 + currentOptions.length) % currentOptions.length;
+          renderOptions();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && currentOptions[highlightedIndex]) {
+          selectOption(currentOptions[highlightedIndex].value);
+          input.focus();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeDropdown();
+        input.focus();
+      } else if (e.key === 'Tab') {
+        closeDropdown();
+      }
+    });
+  }
+
   if (toggleBtn) {
     toggleBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -2648,6 +2756,7 @@ function setupCustomDropdown({
     if (optEl) {
       const val = optEl.dataset.value;
       selectOption(val !== undefined ? val : '');
+      input.focus();
     }
   });
 
@@ -2719,6 +2828,58 @@ const skinColourDropdownCtrl = setupCustomDropdown({
     { value: 'Fair', label: 'Fair' },
     { value: 'Wheatish', label: 'Wheatish' },
     { value: 'Brown', label: 'Brown' }
+  ]
+});
+
+// Initialize State Dropdown (Searchable Indian States and Union Territories)
+const stateDropdownCtrl = setupCustomDropdown({
+  containerId: 'stateContainer',
+  inputId: 'state',
+  toggleBtnId: 'stateToggleBtn',
+  chevronId: 'stateChevron',
+  dropdownId: 'stateDropdown',
+  optionListId: 'stateOptionList',
+  searchInputId: 'stateSearchInput',
+  options: [
+    { value: '', label: '— Select state (optional) —' },
+    // 28 Indian States
+    { value: 'Andhra Pradesh', label: 'Andhra Pradesh', sub: 'State' },
+    { value: 'Arunachal Pradesh', label: 'Arunachal Pradesh', sub: 'State' },
+    { value: 'Assam', label: 'Assam', sub: 'State' },
+    { value: 'Bihar', label: 'Bihar', sub: 'State' },
+    { value: 'Chhattisgarh', label: 'Chhattisgarh', sub: 'State' },
+    { value: 'Goa', label: 'Goa', sub: 'State' },
+    { value: 'Gujarat', label: 'Gujarat', sub: 'State' },
+    { value: 'Haryana', label: 'Haryana', sub: 'State' },
+    { value: 'Himachal Pradesh', label: 'Himachal Pradesh', sub: 'State' },
+    { value: 'Jharkhand', label: 'Jharkhand', sub: 'State' },
+    { value: 'Karnataka', label: 'Karnataka', sub: 'State' },
+    { value: 'Kerala', label: 'Kerala', sub: 'State' },
+    { value: 'Madhya Pradesh', label: 'Madhya Pradesh', sub: 'State' },
+    { value: 'Maharashtra', label: 'Maharashtra', sub: 'State' },
+    { value: 'Manipur', label: 'Manipur', sub: 'State' },
+    { value: 'Meghalaya', label: 'Meghalaya', sub: 'State' },
+    { value: 'Mizoram', label: 'Mizoram', sub: 'State' },
+    { value: 'Nagaland', label: 'Nagaland', sub: 'State' },
+    { value: 'Odisha', label: 'Odisha', sub: 'State' },
+    { value: 'Punjab', label: 'Punjab', sub: 'State' },
+    { value: 'Rajasthan', label: 'Rajasthan', sub: 'State' },
+    { value: 'Sikkim', label: 'Sikkim', sub: 'State' },
+    { value: 'Tamil Nadu', label: 'Tamil Nadu', sub: 'State' },
+    { value: 'Telangana', label: 'Telangana', sub: 'State' },
+    { value: 'Tripura', label: 'Tripura', sub: 'State' },
+    { value: 'Uttar Pradesh', label: 'Uttar Pradesh', sub: 'State' },
+    { value: 'Uttarakhand', label: 'Uttarakhand', sub: 'State' },
+    { value: 'West Bengal', label: 'West Bengal', sub: 'State' },
+    // 8 Union Territories
+    { value: 'Andaman and Nicobar Islands', label: 'Andaman and Nicobar Islands', sub: 'UT' },
+    { value: 'Chandigarh', label: 'Chandigarh', sub: 'UT' },
+    { value: 'Dadra and Nagar Haveli and Daman and Diu', label: 'Dadra and Nagar Haveli and Daman and Diu', sub: 'UT' },
+    { value: 'Delhi (NCT)', label: 'Delhi (NCT)', sub: 'UT' },
+    { value: 'Jammu and Kashmir', label: 'Jammu and Kashmir', sub: 'UT' },
+    { value: 'Ladakh', label: 'Ladakh', sub: 'UT' },
+    { value: 'Lakshadweep', label: 'Lakshadweep', sub: 'UT' },
+    { value: 'Puducherry', label: 'Puducherry', sub: 'UT' }
   ]
 });
 
@@ -2880,6 +3041,7 @@ function setupDobCalendar() {
     if (typeof registeringForDropdownCtrl?.close === 'function') registeringForDropdownCtrl.close();
     if (typeof maslakDropdownCtrl?.close === 'function') maslakDropdownCtrl.close();
     if (typeof skinColourDropdownCtrl?.close === 'function') skinColourDropdownCtrl.close();
+    if (typeof stateDropdownCtrl?.close === 'function') stateDropdownCtrl.close();
 
     const parsed = parseInputDate(input.value);
     if (parsed) {
@@ -3628,6 +3790,9 @@ document.getElementById('newEntry').addEventListener('click', () => {
   }
   if (typeof skinColourDropdownCtrl?.close === 'function') {
     skinColourDropdownCtrl.close();
+  }
+  if (typeof stateDropdownCtrl?.close === 'function') {
+    stateDropdownCtrl.close();
   }
   if (typeof dobCalendarCtrl?.close === 'function') {
     dobCalendarCtrl.close();

@@ -4,6 +4,7 @@ const fieldMapToDb = {
     'Age': 'age', 'Marital Status': 'marital_status', 'Height': 'height', 'Education': 'education',
     'Occupation': 'occupation', 'Salary': 'salary', 'Salary (₹)': 'salary',
     'City': 'city', 'State': 'state', 'Mother Tongue': 'mother_tongue', 'Languages Known': 'languages_known',
+    'Skin Colour': 'skin_colour',
     'Father Occupation': 'father_occupation', "Father's Occupation": 'father_occupation',
     'Mother Occupation': 'mother_occupation', "Mother's Occupation": 'mother_occupation',
     'Brothers': 'brothers', 'Sisters': 'sisters',
@@ -70,6 +71,7 @@ function convertFromDb(row) {
     uiData['State'] = row.state || uiData['State'] || '';
     uiData['Salary'] = (row.salary !== null && row.salary !== undefined) ? String(row.salary) : '';
     uiData['Salary (₹)'] = uiData['Salary'];
+    uiData['Skin Colour'] = row.skin_colour || uiData['Skin Colour'] || '';
 
     return uiData;
 }
@@ -1939,6 +1941,7 @@ const CSV_COLUMNS = [
     { key: 'Date of Birth', label: 'Date of Birth' },
     { key: 'Marital Status', label: 'Marital Status' },
     { key: 'Height', label: 'Height' },
+    { key: 'Skin Colour', label: 'Skin Colour' },
     // Professional
     { key: 'Education', label: 'Education' },
     { key: 'Occupation', label: 'Occupation' },
@@ -2105,7 +2108,9 @@ function formatSingleProfileWhatsApp(p, includeContact = false) {
     msg += `Registering For: ${p['Registering For'] || '—'}\n`;
     msg += `Gender / Age: ${p.Gender || '—'} • ${p.Age ? p.Age + ' yrs' : '—'}\n`;
     msg += `Marital Status: ${p['Marital Status'] || '—'}\n`;
-    msg += `Height: ${p.Height || '—'}\n\n`;
+    msg += `Height: ${p.Height || '—'}\n`;
+    if (p['Skin Colour']) msg += `Skin Colour: ${p['Skin Colour']}\n`;
+    msg += `\n`;
 
     msg += `🎓 EDUCATION & PROFESSION\n`;
     msg += `Education: ${p.Education || '—'}\n`;
@@ -3328,7 +3333,7 @@ function confirmDelete(idx) {
 
 // Profile Modal (View/Edit)
 const pFields = [
-    {group: 'BASIC', f: ['Full Name', 'Registering For', 'Gender', 'Age', 'Date of Birth', 'Marital Status', 'Height']},
+    {group: 'BASIC', f: ['Full Name', 'Registering For', 'Gender', 'Age', 'Date of Birth', 'Marital Status', 'Height', 'Skin Colour']},
     {group: 'PROFESSIONAL', f: ['Education', 'Occupation', 'Salary (₹)', 'City', 'State', 'Mother Tongue', 'Languages Known']},
     {group: 'FAMILY & RELIGIOUS', f: ['Surname / Biradari', "Father's Occupation", "Mother's Occupation", 'Brothers', 'Sisters', 'Native Place', 'Family Type', 'Maslak', 'Religious Preference']},
     {group: 'ABOUT CANDIDATE', f: ['About Candidate']},
@@ -3460,6 +3465,54 @@ function renderProfileModal() {
                         <span class="absolute left-3 text-wine/60 font-semibold text-sm select-none pointer-events-none">₹</span>
                         <input type="number" min="0" step="1" id="${safeId}" value="${val.replace(/"/g,'&quot;')}" placeholder="e.g. 25000" class="w-full bg-[#FAF8F5] pl-8 pr-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50">
                     </div></div>`;
+                } else if (key === 'Skin Colour') {
+                    html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
+                    <select id="${safeId}" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50">
+                        <option value="">Select skin colour</option>
+                        <option value="Fair" ${val === 'Fair' ? 'selected' : ''}>Fair</option>
+                        <option value="Wheatish" ${val === 'Wheatish' ? 'selected' : ''}>Wheatish</option>
+                        <option value="Brown" ${val === 'Brown' ? 'selected' : ''}>Brown</option>
+                    </select></div>`;
+                } else if (key === 'Maslak' || key === 'Maslak / Religious Background') {
+                    const maslakOptions = [
+                        'Sunni',
+                        'Deobandi',
+                        'Ahle Hadees',
+                        'Ahle Sunnat',
+                        'Other',
+                        'Prefer not to say',
+                        'Wahabi'
+                    ];
+                    let optsHtml = '<option value="">— Select (optional) —</option>';
+                    let valMatched = false;
+                    maslakOptions.forEach(m => {
+                        const sel = val.toLowerCase() === m.toLowerCase();
+                        if (sel) valMatched = true;
+                        optsHtml += `<option value="${m}" ${sel ? 'selected' : ''}>${m}</option>`;
+                    });
+                    if (val && !valMatched) {
+                        optsHtml += `<option value="${val.replace(/"/g,'&quot;')}" selected>${val.replace(/"/g,'&quot;')}</option>`;
+                    }
+                    html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
+                    <select id="${safeId}" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50">
+                        ${optsHtml}
+                    </select></div>`;
+                } else if (key === 'Registering For') {
+                    const regOptions = ['My Son', 'My Daughter', 'My Self'];
+                    let optsHtml = '<option value="">— Select —</option>';
+                    let valMatched = false;
+                    regOptions.forEach(r => {
+                        const sel = val.toLowerCase() === r.toLowerCase();
+                        if (sel) valMatched = true;
+                        optsHtml += `<option value="${r}" ${sel ? 'selected' : ''}>${r}</option>`;
+                    });
+                    if (val && !valMatched) {
+                        optsHtml += `<option value="${val.replace(/"/g,'&quot;')}" selected>${val.replace(/"/g,'&quot;')}</option>`;
+                    }
+                    html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
+                    <select id="${safeId}" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50">
+                        ${optsHtml}
+                    </select></div>`;
                 } else {
                     html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1.5">${key}</span>
                     <input type="text" id="${safeId}" value="${val.replace(/"/g,'&quot;')}" class="w-full bg-[#FAF8F5] px-4 md:px-3 py-3 md:py-2.5 border border-gold/30 rounded-xl text-[16px] md:text-[14px] text-wine focus:outline-none focus:border-wine/50"></div>`;
@@ -3468,6 +3521,8 @@ function renderProfileModal() {
                 let displayVal = val !== '' ? val : '—';
                 if ((key === 'Salary (₹)' || key === 'Salary') && val !== '') {
                     displayVal = formatSalary(val) + ' / month';
+                } else if (key === 'Skin Colour' && (!val || val === '—')) {
+                    displayVal = 'Not Provided';
                 }
                 html += `<div class="${colClass}"><span class="block text-[10px] font-bold text-wine/40 uppercase tracking-widest mb-1">${key}</span><span class="block text-[16px] md:text-[15px] text-wine font-medium break-words ${isFullWidth ? 'whitespace-pre-line leading-relaxed' : ''}">${displayVal}</span></div>`;
             }
@@ -3638,6 +3693,12 @@ async function saveProfile() {
                     const trimmed = (val || '').trim();
                     updateData['state'] = trimmed || null;
                     p['State'] = trimmed;
+                } else if (f === 'Skin Colour') {
+                    const trimmed = (val || '').trim();
+                    const validColours = ['Fair', 'Wheatish', 'Brown'];
+                    const finalVal = validColours.includes(trimmed) ? trimmed : null;
+                    updateData['skin_colour'] = finalVal;
+                    p['Skin Colour'] = finalVal || '';
                 } else {
                     updateData[fieldMapToDb[f]] = val || null;
                 }

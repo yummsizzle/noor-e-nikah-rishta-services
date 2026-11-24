@@ -124,6 +124,48 @@ tailwind.config = {
   .field input::placeholder,.field textarea::placeholder{color:#B79AA1}
   .field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%238A2340' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5z'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.6rem}
+
+  /* Custom DOB Calendar Header Selects override (prevents .field select style contamination) */
+  .field select.dob-header-select,
+  #dobMonthSelect,
+  #dobYearSelect {
+    width: auto !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    padding: 0 1.25rem 0 0.5rem !important;
+    font-size: 0.75rem !important;
+    line-height: 28px !important;
+    font-family: 'Cormorant Garamond', Georgia, serif !important;
+    font-weight: 600 !important;
+    color: #FFF8F1 !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(201, 162, 39, 0.45) !important;
+    border-radius: 6px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFF8F1' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.35rem center !important;
+    background-size: 10px 10px !important;
+    box-shadow: none !important;
+  }
+  .field select.dob-header-select option,
+  #dobMonthSelect option,
+  #dobYearSelect option {
+    color: #3B1119 !important;
+    background-color: #FFFDF9 !important;
+  }
+  #dobYearSelect {
+    min-width: 68px !important;
+    max-width: 76px !important;
+    flex-shrink: 0 !important;
+    text-align: left !important;
+  }
+  #dobMonthSelect {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
   .radio-pill{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;border-radius:999px;
     border:1px solid rgba(138,35,64,.25);background:#FFFDFA;cursor:pointer;font-size:.98rem;transition:.25s;user-select:none}
   .radio-pill input{accent-color:#E8735A;width:1.05rem;height:1.05rem}
@@ -716,14 +758,47 @@ tailwind.config = {
             <div class="gold-line mb-6"></div>
 
             <div class="grid sm:grid-cols-2 gap-5">
-              <div class="field">
+              <div class="field relative" id="registeringForContainer">
                 <label for="registeringFor">Registering For *</label>
-                <select id="registeringFor" name="Registering For" required>
-                  <option value="">— Please select —</option>
-                  <option value="My Son">My Son</option>
-                  <option value="My Daughter">My Daughter</option>
-                  <option value="My Self">My Self</option>
-                </select>
+                <div class="relative">
+                  <input
+                    id="registeringFor"
+                    name="Registering For"
+                    type="text"
+                    readonly
+                    placeholder="— Please select —"
+                    autocomplete="off"
+                    class="w-full pr-10 cursor-pointer select-none"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-autocomplete="none"
+                    aria-controls="registeringForDropdown"
+                    aria-haspopup="listbox"
+                  >
+                  <button
+                    type="button"
+                    id="registeringForToggleBtn"
+                    tabindex="-1"
+                    aria-label="Toggle registering for options"
+                    class="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-wine/50 hover:text-wine transition focus:outline-none"
+                  >
+                    <svg id="registeringForChevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Custom Accessible Dropdown Popup -->
+                <div
+                  id="registeringForDropdown"
+                  class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFDF9] border border-gold/40 rounded-xl shadow-xl overflow-hidden"
+                  style="box-shadow: 0 12px 28px -6px rgba(91,18,38,0.18), 0 6px 12px -4px rgba(91,18,38,0.1);"
+                  role="listbox"
+                >
+                  <div id="registeringForOptionList" class="max-h-[220px] overflow-y-auto divide-y divide-gold/15 py-1">
+                    <!-- Dynamic options rendered here -->
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label for="fullName">Full Name *</label>
@@ -737,9 +812,111 @@ tailwind.config = {
                 </div>
                 <p id="genderAutoHelp" class="mt-1 text-xs text-[#7C1D38]/60 hidden"></p>
               </div>
-              <div class="field">
+              <div class="field relative" id="dobContainer">
                 <label for="dob">Date of Birth</label>
-                <input id="dob" name="Date of Birth" type="date" max="" />
+                <div class="relative">
+                  <input
+                    id="dob"
+                    name="Date of Birth"
+                    type="text"
+                    readonly
+                    placeholder="YYYY-MM-DD"
+                    autocomplete="off"
+                    class="w-full pr-10 cursor-pointer select-none"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-haspopup="dialog"
+                    aria-controls="dobCalendarPopup"
+                  >
+                  <button
+                    type="button"
+                    id="dobToggleBtn"
+                    tabindex="-1"
+                    aria-label="Open date of birth calendar"
+                    class="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-wine/50 hover:text-wine transition focus:outline-none"
+                  >
+                    <svg id="dobCalendarIcon" class="w-4 h-4 text-wine/60 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Custom Accessible Date Picker Calendar Popup -->
+                <div
+                  id="dobCalendarPopup"
+                  class="hidden absolute left-0 right-0 sm:right-auto sm:w-[320px] top-full mt-1.5 z-50 bg-[#FFFDF9] border border-gold/40 rounded-2xl shadow-2xl overflow-hidden select-none"
+                  style="box-shadow: 0 16px 36px -6px rgba(91,18,38,0.2), 0 8px 16px -4px rgba(91,18,38,0.1);"
+                  role="dialog"
+                  aria-label="Date of Birth Calendar"
+                >
+                  <!-- Calendar Header -->
+                  <div class="dob-calendar-header flex items-center justify-between px-2 py-2 sm:px-3 sm:py-2.5 bg-gradient-to-r from-wine to-[#7C1D38] text-cream border-b border-gold/30">
+                    <button
+                      type="button"
+                      id="dobPrevMonthBtn"
+                      aria-label="Previous month"
+                      class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg hover:bg-white/15 transition text-cream/80 hover:text-white focus:outline-none"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    <div class="flex items-center justify-center gap-1 sm:gap-2 flex-1 min-w-0 mx-1">
+                      <select
+                        id="dobMonthSelect"
+                        aria-label="Select month"
+                        class="dob-header-select bg-white/15 hover:bg-white/20 text-cream rounded-lg px-2 py-0 border border-gold/30 focus:outline-none text-xs font-serif font-medium cursor-pointer h-7 flex-1 min-w-0"
+                      >
+                        <!-- Populated dynamically: Full or Abbreviated Month Names -->
+                      </select>
+
+                      <select
+                        id="dobYearSelect"
+                        aria-label="Select year"
+                        class="dob-header-select bg-white/15 hover:bg-white/20 text-cream rounded-lg px-2 py-0 border border-gold/30 focus:outline-none text-xs font-serif font-medium cursor-pointer h-7 flex-shrink-0 min-w-[68px] text-left"
+                      >
+                        <!-- Populated dynamically: Current Year down to 1940 -->
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      id="dobNextMonthBtn"
+                      aria-label="Next month"
+                      class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg hover:bg-white/15 transition text-cream/80 hover:text-white focus:outline-none"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <!-- Weekday Header Row -->
+                  <div class="grid grid-cols-7 bg-[#FAF8F5] border-b border-gold/20 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider text-wine/60">
+                    <span>Su</span>
+                    <span>Mo</span>
+                    <span>Tu</span>
+                    <span>We</span>
+                    <span>Th</span>
+                    <span>Fr</span>
+                    <span>Sa</span>
+                  </div>
+
+                  <!-- Days Grid -->
+                  <div id="dobDaysGrid" class="grid grid-cols-7 gap-1 p-2 text-center text-xs">
+                    <!-- Dynamic date cells -->
+                  </div>
+
+                  <!-- Calendar Footer -->
+                  <div class="flex items-center justify-between px-3 py-2 bg-[#FAF8F5] border-t border-gold/20 text-[11px] font-semibold">
+                    <button type="button" id="dobClearBtn" class="text-wine/60 hover:text-wine transition px-2 py-0.5 rounded hover:bg-wine/10">Clear</button>
+                    <div class="flex items-center gap-1">
+                      <button type="button" id="dobTodayBtn" class="text-wine hover:text-burg transition px-2 py-0.5 rounded hover:bg-wine/10">Today</button>
+                      <button type="button" id="dobCloseBtn" class="bg-wine text-cream px-2.5 py-0.5 rounded hover:bg-wine/90 transition shadow-sm">Done</button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label for="age">Age *</label>
@@ -769,12 +946,12 @@ tailwind.config = {
                   <span>Height</span>
                 </label>
                 <div class="relative">
-                  <input 
-                    id="height" 
-                    name="Height" 
-                    type="text" 
-                    placeholder="Enter height (e.g. 5.5, 5 ft 6 in, or 168 cm)" 
-                    autocomplete="off" 
+                  <input
+                    id="height"
+                    name="Height"
+                    type="text"
+                    placeholder="Enter height (e.g. 5.5, 5 ft 6 in, or 168 cm)"
+                    autocomplete="off"
                     class="w-full pr-10"
                     role="combobox"
                     aria-expanded="false"
@@ -782,11 +959,11 @@ tailwind.config = {
                     aria-controls="heightDropdown"
                     aria-haspopup="listbox"
                   >
-                  <button 
-                    type="button" 
-                    id="heightToggleBtn" 
+                  <button
+                    type="button"
+                    id="heightToggleBtn"
                     tabindex="-1"
-                    aria-label="Toggle height suggestions" 
+                    aria-label="Toggle height suggestions"
                     class="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-wine/50 hover:text-wine transition focus:outline-none"
                   >
                     <svg id="heightChevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -796,8 +973,8 @@ tailwind.config = {
                 </div>
 
                 <!-- Custom Accessible Combobox Suggestion Panel -->
-                <div 
-                  id="heightDropdown" 
+                <div
+                  id="heightDropdown"
                   class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFDF9] border border-gold/40 rounded-xl shadow-xl overflow-hidden"
                   style="box-shadow: 0 12px 28px -6px rgba(91,18,38,0.18), 0 6px 12px -4px rgba(91,18,38,0.1);"
                   role="listbox"
@@ -832,13 +1009,13 @@ tailwind.config = {
                 <label for="salary">Salary (₹)</label>
                 <div class="relative flex items-center">
                   <span class="absolute left-3.5 text-wine/70 font-semibold text-base select-none pointer-events-none">₹</span>
-                  <input 
-                    id="salary" 
-                    name="Salary" 
-                    type="number" 
-                    min="0" 
-                    step="1" 
-                    placeholder="e.g. 25000" 
+                  <input
+                    id="salary"
+                    name="Salary"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 25000"
                     style="padding-left: 2.1rem;"
                   >
                 </div>
@@ -847,11 +1024,11 @@ tailwind.config = {
               <div class="field"><label for="city">City / Current Location</label><input id="city" name="City" type="text" placeholder="e.g. Mira Road, Mumbai"></div>
               <div class="field">
                 <label for="state">State</label>
-                <input 
-                  id="state" 
-                  name="State" 
-                  type="text" 
-                  list="indianStatesList" 
+                <input
+                  id="state"
+                  name="State"
+                  type="text"
+                  list="indianStatesList"
                   placeholder="e.g. Maharashtra"
                   autocomplete="off"
                 >
@@ -895,7 +1072,49 @@ tailwind.config = {
                 </datalist>
               </div>
               <div class="field"><label for="motherTongue">Mother Tongue</label><input id="motherTongue" name="Mother Tongue" type="text" placeholder="e.g. Urdu"></div>
-              <div class="field sm:col-span-2"><label for="languages">Languages Known</label><input id="languages" name="Languages Known" type="text" placeholder="e.g. Urdu, Hindi, English"></div>
+              <div class="field"><label for="languages">Languages Known</label><input id="languages" name="Languages Known" type="text" placeholder="e.g. Urdu, Hindi, English"></div>
+              <div class="field relative" id="skinColourContainer">
+                <label for="skinColour">Skin Colour</label>
+                <div class="relative">
+                  <input
+                    id="skinColour"
+                    name="Skin Colour"
+                    type="text"
+                    readonly
+                    placeholder="Select skin colour"
+                    autocomplete="off"
+                    class="w-full pr-10 cursor-pointer select-none"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-autocomplete="none"
+                    aria-controls="skinColourDropdown"
+                    aria-haspopup="listbox"
+                  >
+                  <button
+                    type="button"
+                    id="skinColourToggleBtn"
+                    tabindex="-1"
+                    aria-label="Toggle skin colour options"
+                    class="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-wine/50 hover:text-wine transition focus:outline-none"
+                  >
+                    <svg id="skinColourChevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Custom Accessible Dropdown Popup -->
+                <div
+                  id="skinColourDropdown"
+                  class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFDF9] border border-gold/40 rounded-xl shadow-xl overflow-hidden"
+                  style="box-shadow: 0 12px 28px -6px rgba(91,18,38,0.18), 0 6px 12px -4px rgba(91,18,38,0.1);"
+                  role="listbox"
+                >
+                  <div id="skinColourOptionList" class="max-h-[220px] overflow-y-auto divide-y divide-gold/15 py-1">
+                    <!-- Dynamic options rendered here -->
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -908,13 +1127,47 @@ tailwind.config = {
             </div>
             <div class="gold-line mb-6"></div>
             <div class="grid sm:grid-cols-2 gap-5">
-              <div class="field">
+              <div class="field relative" id="maslakContainer">
                 <label for="maslak">Maslak / Religious Background</label>
-                <select id="maslak" name="Maslak">
-                  <option value="">— Select (optional) —</option>
-                  <option>Sunni</option><option>Deobandi</option><option>Ahle Hadees</option>
-                  <option>Ahle Sunnat</option><option>Other</option><option>Prefer not to say</option>
-                </select>
+                <div class="relative">
+                  <input
+                    id="maslak"
+                    name="Maslak"
+                    type="text"
+                    readonly
+                    placeholder="— Select (optional) —"
+                    autocomplete="off"
+                    class="w-full pr-10 cursor-pointer select-none"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-autocomplete="none"
+                    aria-controls="maslakDropdown"
+                    aria-haspopup="listbox"
+                  >
+                  <button
+                    type="button"
+                    id="maslakToggleBtn"
+                    tabindex="-1"
+                    aria-label="Toggle maslak options"
+                    class="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-wine/50 hover:text-wine transition focus:outline-none"
+                  >
+                    <svg id="maslakChevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Custom Accessible Dropdown Popup -->
+                <div
+                  id="maslakDropdown"
+                  class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFDF9] border border-gold/40 rounded-xl shadow-xl overflow-hidden"
+                  style="box-shadow: 0 12px 28px -6px rgba(91,18,38,0.18), 0 6px 12px -4px rgba(91,18,38,0.1);"
+                  role="listbox"
+                >
+                  <div id="maslakOptionList" class="max-h-[220px] overflow-y-auto divide-y divide-gold/15 py-1">
+                    <!-- Dynamic options rendered here -->
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label for="maslakPref">Maslak Preference for Match</label>
@@ -1261,7 +1514,7 @@ tailwind.config = {
 
   <!-- Modal Container -->
   <div id="devModalCard" class="dev-modal-card relative z-10 w-full max-w-[490px] rounded-[24px] sm:rounded-[28px] border border-[#3E3222] bg-[#0E0E12] p-5 sm:p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_-10px_rgba(201,162,39,0.18)] text-white animate-modal-in flex flex-col justify-between">
-    
+
     <!-- Top Header: Badge, Available Pill, Close Button -->
     <div class="dev-header flex items-center justify-between gap-2 mb-3 sm:mb-3.5">
       <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
@@ -1371,7 +1624,7 @@ tailwind.config = {
       <div class="dev-social-title text-[9.5px] sm:text-[10.5px] font-bold tracking-[0.18em] text-[#8E8675] uppercase mb-2 sm:mb-2.5">
         CONNECT WITH DEVELOPER
       </div>
-      
+
       <!-- 8 Authentic Social Icons Row -->
       <div class="flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap">
         <!-- 1. Website (Globe) -->
@@ -1640,7 +1893,7 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
   /* ---------- DOB & Age Auto-calculation ---------- */
   const dobInput = document.getElementById('dob');
   const ageInput = document.getElementById('age');
-  
+
   // set max date to today
   const today = new Date().toISOString().split('T')[0];
   dobInput.setAttribute('max', today);
@@ -1649,7 +1902,7 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
       const ageVal = parseInt(ageInput.value);
       const genderEl = document.querySelector('input[name="Gender"]:checked');
       const errBox = document.getElementById('formError');
-      
+
       if (!isNaN(ageVal) && genderEl) {
           const gender = genderEl.value;
           if ( (gender === 'Female' && ageVal < 18) || (gender === 'Male' && ageVal < 21) ) {
@@ -1696,10 +1949,10 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
           age--;
       }
       ageInput.value = age > 0 ? age : 0;
-      
+
       checkEligibility();
   });
-  
+
   document.querySelectorAll('input[name="Gender"]').forEach(r => {
       r.addEventListener('change', checkEligibility);
   });
@@ -1803,11 +2056,11 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
     if (matchNumericFeet) {
       const feetVal = parseFloat(matchNumericFeet[1]);
-      
+
       // Acceptable range for manual numeric feet values: 3 through 8 inclusive
       if (feetVal >= 3 && feetVal <= 8) {
         // Preserve entered value in a consistent and readable format without mangling
-        const hasUnit = raw.toLowerCase().includes('ft') || raw.toLowerCase().includes('feet') || 
+        const hasUnit = raw.toLowerCase().includes('ft') || raw.toLowerCase().includes('feet') ||
                         raw.toLowerCase().includes('foot') || raw.includes("'");
         const formattedVal = hasUnit ? raw : `${matchNumericFeet[1]} ft`;
         return { valid: true, value: formattedVal };
@@ -1827,8 +2080,8 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
     // 2. Feet & Inches formats (e.g. "5 ft 6 in", "5'6\"", "5 ft 6", "6 ft 0 in", "5 6")
     const ftInRegex = /^(\d)\s*(?:ft|feet|'|foot)?(?:\s*(\d{1,2}(?:\.\d+)?)\s*(?:in|inches|inch|")?)?$/i;
-    const hasFtMarker = raw.toLowerCase().includes('ft') || raw.toLowerCase().includes('feet') || 
-                        raw.toLowerCase().includes('foot') || raw.includes("'") || 
+    const hasFtMarker = raw.toLowerCase().includes('ft') || raw.toLowerCase().includes('feet') ||
+                        raw.toLowerCase().includes('foot') || raw.includes("'") ||
                         raw.toLowerCase().includes('in') || raw.includes('"');
 
     if (hasFtMarker || /^\d\s+\d{1,2}(?:\.\d+)?$/.test(raw) || /^\d\s*'\s*\d{1,2}(?:\.\d+)?"?$/.test(raw)) {
@@ -1858,9 +2111,9 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
     }
 
     // 4. Any impossible, negative, or non-numeric values
-    return { 
-      valid: false, 
-      error: 'Please enter height in feet between 3 and 8, for example 5 or 5.5 (or select from suggestions).' 
+    return {
+      valid: false,
+      error: 'Please enter height in feet between 3 and 8, for example 5 or 5.5 (or select from suggestions).'
     };
   }
 
@@ -1962,7 +2215,7 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
       }
 
       return `
-        <div 
+        <div
           class="height-option px-3.5 py-2.5 cursor-pointer text-sm flex items-center justify-between transition-colors ${activeClasses}"
           data-value="${item.value}"
           data-index="${idx}"
@@ -2022,7 +2275,7 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
     });
     heightInput.addEventListener('keydown', (e) => {
       const isOpen = heightDropdown && !heightDropdown.classList.contains('hidden');
-      
+
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         if (!isOpen) {
@@ -2228,6 +2481,591 @@ const STORE = 'noorEnikahSubmissions';
 const form = document.getElementById('rishtaForm');
 const errBox = document.getElementById('formError');
 
+/* ---------- Reusable Noor-E-Nikah Custom Accessible Dropdown Component ---------- */
+function setupCustomDropdown({
+  containerId,
+  inputId,
+  toggleBtnId,
+  chevronId,
+  dropdownId,
+  optionListId,
+  options,
+  onSelect
+}) {
+  const container = document.getElementById(containerId);
+  const input = document.getElementById(inputId);
+  const toggleBtn = document.getElementById(toggleBtnId);
+  const chevron = document.getElementById(chevronId);
+  const dropdown = document.getElementById(dropdownId);
+  const optionList = document.getElementById(optionListId);
+
+  if (!container || !input || !dropdown || !optionList) return null;
+
+  let highlightedIndex = -1;
+
+  function renderOptions() {
+    const currentVal = (input.value || '').trim();
+    optionList.innerHTML = options.map((opt, idx) => {
+      const isSelected = (currentVal === opt.value) || (!currentVal && !opt.value);
+      const isHighlighted = idx === highlightedIndex;
+      let activeClasses = 'text-[#3B1119] hover:bg-wine/10 hover:text-wine';
+      if (isSelected && opt.value) {
+        activeClasses = 'bg-wine/15 text-wine font-semibold';
+      } else if (isHighlighted) {
+        activeClasses = 'bg-wine/10 text-wine';
+      }
+
+      const subText = opt.sub ? `<span class="text-[11px] text-wine/50 ml-2">${opt.sub}</span>` : '';
+      const checkIcon = (isSelected && opt.value) ? `<span class="text-wine font-bold text-xs ml-2 select-none">✓</span>` : '';
+
+      return `
+        <div
+          class="custom-dropdown-option px-3.5 py-2.5 cursor-pointer text-sm flex items-center justify-between transition-colors ${activeClasses}"
+          data-value="${opt.value}"
+          data-index="${idx}"
+          role="option"
+          aria-selected="${isSelected}"
+        >
+          <div class="flex items-center justify-between w-full">
+            <span class="${opt.value ? 'font-medium' : 'text-wine/60 italic'}">${opt.label}</span>
+            <div class="flex items-center gap-1.5">${subText}${checkIcon}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (highlightedIndex >= 0) {
+      const activeEl = optionList.querySelector(`[data-index="${highlightedIndex}"]`);
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }
+
+  function openDropdown() {
+    if (typeof closeHeightDropdown === 'function') closeHeightDropdown();
+    if (typeof dobCalendarCtrl?.close === 'function') dobCalendarCtrl.close();
+    document.querySelectorAll('.custom-popup-open').forEach(el => {
+      if (el !== dropdown) el.classList.add('hidden');
+    });
+    document.querySelectorAll('.custom-chevron-open').forEach(el => {
+      if (el !== chevron) el.classList.remove('rotate-180');
+    });
+
+    highlightedIndex = options.findIndex(o => o.value === input.value);
+    if (highlightedIndex < 0) highlightedIndex = 0;
+    renderOptions();
+    dropdown.classList.remove('hidden');
+    dropdown.classList.add('custom-popup-open');
+    input.setAttribute('aria-expanded', 'true');
+    if (chevron) {
+      chevron.classList.add('rotate-180', 'custom-chevron-open');
+    }
+  }
+
+  function closeDropdown() {
+    dropdown.classList.add('hidden');
+    dropdown.classList.remove('custom-popup-open');
+    input.setAttribute('aria-expanded', 'false');
+    if (chevron) {
+      chevron.classList.remove('rotate-180', 'custom-chevron-open');
+    }
+    highlightedIndex = -1;
+  }
+
+  function toggleDropdown() {
+    if (dropdown.classList.contains('hidden')) {
+      openDropdown();
+      input.focus();
+    } else {
+      closeDropdown();
+    }
+  }
+
+  function selectOption(val) {
+    input.value = val;
+    input.style.borderColor = '';
+    closeDropdown();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    if (typeof onSelect === 'function') onSelect(val);
+  }
+
+  input.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDropdown();
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const isOpen = !dropdown.classList.contains('hidden');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) {
+        openDropdown();
+        return;
+      }
+      highlightedIndex = (highlightedIndex + 1) % options.length;
+      renderOptions();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) {
+        openDropdown();
+        return;
+      }
+      highlightedIndex = (highlightedIndex - 1 + options.length) % options.length;
+      renderOptions();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (isOpen) {
+        if (highlightedIndex >= 0 && options[highlightedIndex]) {
+          selectOption(options[highlightedIndex].value);
+        }
+      } else {
+        openDropdown();
+      }
+    } else if (e.key === 'Escape') {
+      if (isOpen) {
+        e.preventDefault();
+        closeDropdown();
+      }
+    } else if (e.key === 'Tab') {
+      if (isOpen) {
+        closeDropdown();
+      }
+    }
+  });
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleDropdown();
+    });
+  }
+
+  optionList.addEventListener('click', (e) => {
+    const optEl = e.target.closest('.custom-dropdown-option');
+    if (optEl) {
+      const val = optEl.dataset.value;
+      selectOption(val !== undefined ? val : '');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener('touchstart', (e) => {
+    if (!container.contains(e.target)) {
+      closeDropdown();
+    }
+  }, { passive: true });
+
+  return {
+    open: openDropdown,
+    close: closeDropdown,
+    select: selectOption
+  };
+}
+
+// Initialize Registering For Dropdown
+const registeringForDropdownCtrl = setupCustomDropdown({
+  containerId: 'registeringForContainer',
+  inputId: 'registeringFor',
+  toggleBtnId: 'registeringForToggleBtn',
+  chevronId: 'registeringForChevron',
+  dropdownId: 'registeringForDropdown',
+  optionListId: 'registeringForOptionList',
+  options: [
+    { value: '', label: '— Please select —' },
+    { value: 'My Son', label: 'My Son' },
+    { value: 'My Daughter', label: 'My Daughter' },
+    { value: 'My Self', label: 'My Self' }
+  ]
+});
+
+// Initialize Maslak Dropdown (with Wahabi)
+const maslakDropdownCtrl = setupCustomDropdown({
+  containerId: 'maslakContainer',
+  inputId: 'maslak',
+  toggleBtnId: 'maslakToggleBtn',
+  chevronId: 'maslakChevron',
+  dropdownId: 'maslakDropdown',
+  optionListId: 'maslakOptionList',
+  options: [
+    { value: '', label: '— Select (optional) —' },
+    { value: 'Sunni', label: 'Sunni' },
+    { value: 'Deobandi', label: 'Deobandi' },
+    { value: 'Ahle Hadees', label: 'Ahle Hadees' },
+    { value: 'Ahle Sunnat', label: 'Ahle Sunnat' },
+    { value: 'Other', label: 'Other' },
+    { value: 'Prefer not to say', label: 'Prefer not to say' },
+    { value: 'Wahabi', label: 'Wahabi' }
+  ]
+});
+
+// Initialize Skin Colour Dropdown
+const skinColourDropdownCtrl = setupCustomDropdown({
+  containerId: 'skinColourContainer',
+  inputId: 'skinColour',
+  toggleBtnId: 'skinColourToggleBtn',
+  chevronId: 'skinColourChevron',
+  dropdownId: 'skinColourDropdown',
+  optionListId: 'skinColourOptionList',
+  options: [
+    { value: '', label: 'Select skin colour' },
+    { value: 'Fair', label: 'Fair' },
+    { value: 'Wheatish', label: 'Wheatish' },
+    { value: 'Brown', label: 'Brown' }
+  ]
+});
+
+/* ---------- Reusable Noor-E-Nikah Custom Accessible Date Picker Calendar ---------- */
+function setupDobCalendar() {
+  const container = document.getElementById('dobContainer');
+  const input = document.getElementById('dob');
+  const toggleBtn = document.getElementById('dobToggleBtn');
+  const popup = document.getElementById('dobCalendarPopup');
+  const prevBtn = document.getElementById('dobPrevMonthBtn');
+  const nextBtn = document.getElementById('dobNextMonthBtn');
+  const monthSelect = document.getElementById('dobMonthSelect');
+  const yearSelect = document.getElementById('dobYearSelect');
+  const daysGrid = document.getElementById('dobDaysGrid');
+  const clearBtn = document.getElementById('dobClearBtn');
+  const todayBtn = document.getElementById('dobTodayBtn');
+  const closeBtn = document.getElementById('dobCloseBtn');
+
+  if (!container || !input || !popup || !daysGrid) return null;
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const currentDay = today.getDate();
+
+  // Populate year select options: from currentYear down to 1940
+  if (yearSelect && yearSelect.options.length === 0) {
+    let yearHtml = '';
+    for (let y = currentYear; y >= 1940; y--) {
+      yearHtml += `<option value="${y}" class="text-wine bg-white">${y}</option>`;
+    }
+    yearSelect.innerHTML = yearHtml;
+  }
+
+  // State: default view to ~22 years ago if empty
+  let viewYear = currentYear - 22;
+  let viewMonth = currentMonth;
+
+  // Month names for responsive display
+  const MONTH_NAMES_FULL = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const MONTH_NAMES_SHORT = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  let currentMonthFormat = ''; // 'full' or 'short'
+
+  function updateMonthOptions() {
+    if (!monthSelect) return;
+    const headerEl = popup.querySelector('.dob-calendar-header');
+    let availableWidth = 0;
+    if (headerEl && headerEl.clientWidth > 0) {
+      availableWidth = headerEl.clientWidth;
+    } else if (popup.clientWidth > 0) {
+      availableWidth = popup.clientWidth;
+    } else if (container.clientWidth > 0) {
+      availableWidth = container.clientWidth;
+    } else if (typeof window !== 'undefined' && window.innerWidth) {
+      availableWidth = window.innerWidth < 640 ? 290 : 320;
+    }
+
+    // When horizontal space is limited (< 315px), display standard 3-letter abbreviation
+    // When sufficient space is available (>= 315px), display complete month name
+    const useShort = (availableWidth < 315);
+    const targetFormat = useShort ? 'short' : 'full';
+
+    if (currentMonthFormat === targetFormat && monthSelect.options.length === 12) {
+      return;
+    }
+
+    currentMonthFormat = targetFormat;
+    const names = useShort ? MONTH_NAMES_SHORT : MONTH_NAMES_FULL;
+    const currentVal = (monthSelect && monthSelect.value !== '') ? monthSelect.value : String(viewMonth);
+
+    let html = '';
+    for (let m = 0; m < 12; m++) {
+      html += `<option value="${m}" class="text-wine bg-white">${names[m]}</option>`;
+    }
+    monthSelect.innerHTML = html;
+    monthSelect.value = currentVal;
+  }
+
+  // Initial population of month options
+  updateMonthOptions();
+
+  function parseInputDate(str) {
+    if (!str) return null;
+    const parts = str.trim().split('-');
+    if (parts.length !== 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+    return { y, m, d };
+  }
+
+  function formatZero(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function renderCalendar() {
+    updateMonthOptions();
+    if (monthSelect) monthSelect.value = String(viewMonth);
+    if (yearSelect) yearSelect.value = String(viewYear);
+
+    const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+    const parsedSelected = parseInputDate(input.value);
+
+    let html = '';
+
+    // Previous month padding cells
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const pDay = daysInPrevMonth - i;
+      html += `<div class="p-1 text-center text-wine/25 text-[11px] select-none flex items-center justify-center">${pDay}</div>`;
+    }
+
+    // Current month cells
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateObj = new Date(viewYear, viewMonth, day);
+      const isFuture = dateObj > new Date(currentYear, currentMonth, currentDay, 23, 59, 59);
+      const isToday = (viewYear === currentYear && viewMonth === currentMonth && day === currentDay);
+      const isSelected = parsedSelected && (parsedSelected.y === viewYear && parsedSelected.m === viewMonth && parsedSelected.d === day);
+
+      let cellClasses = 'w-8 h-8 mx-auto flex items-center justify-center rounded-lg text-[12px] font-medium transition';
+
+      if (isFuture) {
+        cellClasses += ' text-wine/20 cursor-not-allowed pointer-events-none opacity-40';
+      } else if (isSelected) {
+        cellClasses += ' bg-wine text-cream font-bold shadow-sm ring-1 ring-gold/50 cursor-pointer';
+      } else if (isToday) {
+        cellClasses += ' border border-wine/50 text-wine font-semibold hover:bg-wine/10 cursor-pointer';
+      } else {
+        cellClasses += ' text-[#3B1119] hover:bg-wine/10 hover:text-wine cursor-pointer';
+      }
+
+      const dateStr = `${viewYear}-${formatZero(viewMonth + 1)}-${formatZero(day)}`;
+
+      html += `
+        <button
+          type="button"
+          class="${cellClasses}"
+          data-date="${dateStr}"
+          ${isFuture ? 'disabled aria-disabled="true"' : ''}
+          aria-label="${dateStr}"
+        >${day}</button>
+      `;
+    }
+
+    daysGrid.innerHTML = html;
+  }
+
+  function openCalendar() {
+    if (typeof closeHeightDropdown === 'function') closeHeightDropdown();
+    if (typeof registeringForDropdownCtrl?.close === 'function') registeringForDropdownCtrl.close();
+    if (typeof maslakDropdownCtrl?.close === 'function') maslakDropdownCtrl.close();
+    if (typeof skinColourDropdownCtrl?.close === 'function') skinColourDropdownCtrl.close();
+
+    const parsed = parseInputDate(input.value);
+    if (parsed) {
+      viewYear = parsed.y;
+      viewMonth = parsed.m;
+    } else {
+      viewYear = Math.min(currentYear - 22, currentYear);
+      viewMonth = currentMonth;
+    }
+
+    renderCalendar();
+    popup.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+    updateMonthOptions();
+  }
+
+  function closeCalendar() {
+    popup.classList.add('hidden');
+    input.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleCalendar() {
+    if (popup.classList.contains('hidden')) {
+      openCalendar();
+      input.focus();
+    } else {
+      closeCalendar();
+    }
+  }
+
+  function selectDate(dateStr) {
+    input.value = dateStr;
+    input.style.borderColor = '';
+    closeCalendar();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  input.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleCalendar();
+  });
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleCalendar();
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      viewMonth--;
+      if (viewMonth < 0) {
+        viewMonth = 11;
+        viewYear--;
+      }
+      renderCalendar();
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (viewYear > currentYear || (viewYear === currentYear && viewMonth >= currentMonth)) {
+        return;
+      }
+      viewMonth++;
+      if (viewMonth > 11) {
+        viewMonth = 0;
+        viewYear++;
+      }
+      renderCalendar();
+    });
+  }
+
+  if (monthSelect) {
+    monthSelect.addEventListener('change', (e) => {
+      viewMonth = parseInt(e.target.value, 10);
+      renderCalendar();
+    });
+  }
+
+  if (yearSelect) {
+    yearSelect.addEventListener('change', (e) => {
+      viewYear = parseInt(e.target.value, 10);
+      renderCalendar();
+    });
+  }
+
+  daysGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-date]');
+    if (btn && !btn.disabled) {
+      selectDate(btn.dataset.date);
+    }
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      selectDate('');
+    });
+  }
+
+  if (todayBtn) {
+    todayBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      viewYear = currentYear;
+      viewMonth = currentMonth;
+      renderCalendar();
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeCalendar();
+    });
+  }
+
+  // Keyboard navigation
+  input.addEventListener('keydown', (e) => {
+    const isOpen = !popup.classList.contains('hidden');
+    if (e.key === 'Escape') {
+      if (isOpen) {
+        e.preventDefault();
+        closeCalendar();
+      }
+    } else if (e.key === 'Tab') {
+      if (isOpen) {
+        closeCalendar();
+      }
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      if (!isOpen) {
+        e.preventDefault();
+        openCalendar();
+      }
+    }
+  });
+
+  // Outside click / touch dismissal
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target)) {
+      closeCalendar();
+    }
+  });
+
+  document.addEventListener('touchstart', (e) => {
+    if (!container.contains(e.target)) {
+      closeCalendar();
+    }
+  }, { passive: true });
+
+  // Observe resizing to switch month name format responsively
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => {
+      if (!popup.classList.contains('hidden')) {
+        updateMonthOptions();
+      }
+    });
+    ro.observe(popup);
+    if (container) ro.observe(container);
+  }
+
+  window.addEventListener('resize', () => {
+    if (!popup.classList.contains('hidden')) {
+      updateMonthOptions();
+    }
+  });
+
+  return {
+    open: openCalendar,
+    close: closeCalendar,
+    select: selectDate,
+    render: renderCalendar,
+    updateMonthOptions: updateMonthOptions
+  };
+}
+
+const dobCalendarCtrl = setupDobCalendar();
+window.dobCalendarCtrl = dobCalendarCtrl;
+
 /* ---------- dynamic about candidate text ---------- */
 const registeringForEl = document.getElementById('registeringFor');
 const aboutHeading = document.getElementById('aboutCandidateHeading');
@@ -2378,11 +3216,11 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
     }
   });
 }
-  
+
   form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errBox.classList.add('hidden');
-    
+
       const required = [
         ['registeringFor','Registering For'],['fullName','Full Name'],['age','Age'],
         ['guardian','Parent / Guardian Name'],['mobile','Mobile Number']
@@ -2412,7 +3250,7 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
       }
       if(!form.querySelector('input[name="Marital Status"]:checked')) missing.push('Marital Status');
       if(!document.getElementById('consent').checked) missing.push('Consent confirmation');
-    
+
       // Mobile Validation
       const rawMob = mobileEl ? mobileEl.value.trim() : '';
       const mobRegex = /^[6-9]\d{9}$/;
@@ -2494,22 +3332,36 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
       } else {
         if (salaryInput) salaryInput.style.borderColor = '';
       }
-    
+
+      // Optional Skin Colour Validation
+      const skinColourSelect = document.getElementById('skinColour');
+      const rawSkinColour = (skinColourSelect?.value || '').trim();
+      const validSkinColours = ['Fair', 'Wheatish', 'Brown'];
+      if (rawSkinColour && !validSkinColours.includes(rawSkinColour)) {
+        errBox.textContent = 'Please select a valid option for Skin Colour (Fair, Wheatish, or Brown).';
+        errBox.classList.remove('hidden');
+        errBox.scrollIntoView({behavior:'smooth', block:'center'});
+        if (skinColourSelect) skinColourSelect.style.borderColor = '#C9436B';
+        return;
+      } else {
+        if (skinColourSelect) skinColourSelect.style.borderColor = '';
+      }
+
       if(missing.length){
         errBox.textContent = 'Please complete: ' + missing.join(', ') + '.';
         errBox.classList.remove('hidden');
         errBox.scrollIntoView({behavior:'smooth', block:'center'});
         return;
       }
-  
+
       // Age / Legal Eligibility Check
       const age = parseInt(document.getElementById('age').value);
       const gender = genderInput.value;
-      
+
       if ( (gender === 'Female' && age < 18) || (gender === 'Male' && age < 21) ) {
           const legalAge = gender === 'Female' ? 18 : 21;
           const msg = `We're sorry, but matrimonial registration is available only after the minimum legal marriage age.\n\nWomen: 18+\nMen: 21+\n\nPlease check the date of birth entered.`;
-          
+
           // Show Nice UI Modal for underage
           let ageModal = document.getElementById('ageModal');
           if (!ageModal) {
@@ -2536,10 +3388,10 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
           }, 10);
           return;
       }
-    
+
       const data = { 'Submitted On': new Date().toLocaleString('en-IN') };
     new FormData(form).forEach((v,k) => { if(k !== 'photo' && String(v).trim()) data[k] = v; });
-    
+
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.textContent;
     submitBtn.textContent = 'SAVING PROFILE...';
@@ -2549,8 +3401,8 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
     // supabase-js shares localStorage. By default, if admin is logged in, this uses their token.
     // Since Admin lacks an INSERT policy, it fails. We isolate the client to force anonymous mode.
     const isolatedSupabase = window.supabase.createClient(
-        window.supabaseClient.supabaseUrl, 
-        window.supabaseClient.supabaseKey, 
+        window.supabaseClient.supabaseUrl,
+        window.supabaseClient.supabaseKey,
         { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
     );
 
@@ -2562,17 +3414,17 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             submitBtn.textContent = 'UPLOADING PHOTO...';
             const fileExt = (uploadFile.name.split('.').pop() || 'jpg').toLowerCase();
             const fileName = `profile_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
-            
+
             try {
                 const { error: uploadError } = await isolatedSupabase.storage
                     .from('profile-photos')
                     .upload(fileName, uploadFile, { upsert: false });
-                
+
                 if (uploadError) {
                     uploadError.isStorage = true;
                     throw uploadError;
                 }
-                
+
                 photoUrl = fileName;
                 data['Photo Attached'] = 'Yes (Uploaded)';
             } catch (storageErr) {
@@ -2583,7 +3435,7 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
                     code: storageErr.code || storageErr.statusCode || null,
                     details: storageErr.details || null
                 });
-                
+
                 // Photo is optional: do not prevent profile registration if storage bucket is unavailable
                 photoUrl = null;
                 data['Photo Attached'] = 'No (Photo share via WhatsApp pending)';
@@ -2593,7 +3445,7 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
         }
 
         submitBtn.textContent = 'SAVING DATA...';
-        
+
         const now = new Date();
         const currentYear = now.getFullYear();
         let profileIdStr = null;
@@ -2606,9 +3458,9 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
                 throw rpcErr;
             }
             if (
-                rpcRes && 
-                typeof rpcRes === 'object' && 
-                typeof rpcRes.profile_id === 'string' && 
+                rpcRes &&
+                typeof rpcRes === 'object' &&
+                typeof rpcRes.profile_id === 'string' &&
                 rpcRes.profile_id.trim().startsWith('NN-') &&
                 typeof rpcRes.reservation_token === 'string' &&
                 rpcRes.reservation_token.trim().length > 0
@@ -2629,9 +3481,9 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             }
             return;
         }
-        
+
         data['Profile ID'] = profileIdStr;
-        
+
         const resolvedWhatsApp = (data['WhatsApp'] || (sameAsMobileCb?.checked ? data['Mobile'] : null));
 
         const parseIntegerOrNull = (val) => {
@@ -2661,6 +3513,7 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
             state: data['State'] || null,
             mother_tongue: data['Mother Tongue'] || null,
             languages_known: data['Languages Known'] || null,
+            skin_colour: (rawSkinColour && validSkinColours.includes(rawSkinColour)) ? rawSkinColour : null,
             father_occupation: data['Father Occupation'] || null,
             mother_occupation: data['Mother Occupation'] || null,
             brothers: parseIntegerOrNull(data['Brothers']),
@@ -2700,19 +3553,19 @@ if (sameAsMobileCb && mobileEl && whatsappEl) {
         // whatsapp summary link for owner
         let msg = '*NOOR-E-NIKAH - NEW PROFILE REGISTRATION*%0A%0A';
         msg += '*Profile ID:* ' + encodeURIComponent(profileIdStr) + '%0A';
-        Object.keys(data).forEach(k => { 
+        Object.keys(data).forEach(k => {
             if (k !== 'Profile ID') {
                 if (k === 'Salary') {
                     const salNum = Number(String(data[k]).replace(/[^\d.]/g, ''));
                     const salFormatted = (!isNaN(salNum) && salNum > 0) ? ('₹' + Math.round(salNum).toLocaleString('en-IN') + ' / month') : data[k];
                     msg += '*Salary:* ' + encodeURIComponent(salFormatted) + '%0A';
                 } else {
-                    msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A'; 
+                    msg += '*' + k + ':* ' + encodeURIComponent(data[k]) + '%0A';
                 }
             }
         });
         document.getElementById('waSummary').href = 'https://wa.me/919594388960?text=' + msg;
-      
+
         form.classList.add('hidden');
         const s = document.getElementById('successBox');
         s.classList.remove('hidden');
@@ -2766,6 +3619,18 @@ document.getElementById('newEntry').addEventListener('click', () => {
   }
   if (typeof closeHeightDropdown === 'function') {
     closeHeightDropdown();
+  }
+  if (typeof registeringForDropdownCtrl?.close === 'function') {
+    registeringForDropdownCtrl.close();
+  }
+  if (typeof maslakDropdownCtrl?.close === 'function') {
+    maslakDropdownCtrl.close();
+  }
+  if (typeof skinColourDropdownCtrl?.close === 'function') {
+    skinColourDropdownCtrl.close();
+  }
+  if (typeof dobCalendarCtrl?.close === 'function') {
+    dobCalendarCtrl.close();
   }
   updateAboutCandidateText();
   document.getElementById('photoLabel').textContent = 'Tap to upload a photo (optional)';

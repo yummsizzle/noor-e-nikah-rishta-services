@@ -465,7 +465,7 @@ const AIMatchingEngine = {
         }
 
         // 3. Maslak Standard Check (Manual Review Flag)
-        const STANDARD_MASLAKS = ['deobandi', 'barelvi', 'ahle hadees', 'salafi', 'tableeghi jamaat', 'sunni', 'shia', 'ahle sunnat'];
+        const STANDARD_MASLAKS = ['deobandi', 'barelvi', 'ahle hadees', 'salafi', 'tableeghi jamaat', 'sunni', 'shia', 'ahle sunnat', 'wahabi'];
         const manualReviewRequired = !cMaslakNorm || !STANDARD_MASLAKS.includes(cMaslakNorm);
 
         const isSpecial = this.isSpecialNonMaslak(sMaslak) || this.isSpecialNonMaslak(cMaslak);
@@ -1024,7 +1024,7 @@ function renderSelectedProfileSummaryCard(p) {
     const state = p.State || p.state || '—';
 
     // Check if Maslak is non-standard
-    const STANDARD_MASLAKS = ['deobandi', 'barelvi', 'ahle hadees', 'salafi', 'tableeghi jamaat', 'sunni', 'shia', 'ahle sunnat'];
+    const STANDARD_MASLAKS = ['deobandi', 'barelvi', 'ahle hadees', 'salafi', 'tableeghi jamaat', 'sunni', 'shia', 'ahle sunnat', 'wahabi'];
     const isStandardMaslak = maslak && STANDARD_MASLAKS.includes(AIMatchingEngine.normalizeMaslak(maslak));
     const specialWarningEl = document.getElementById('matchSpecialMaslakWarning');
     if (specialWarningEl) {

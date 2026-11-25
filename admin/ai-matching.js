@@ -2024,7 +2024,7 @@ function copyMatchingProfileIdText(profileId) {
 // Export Matching Results to CSV
 function exportMatchingResultsCSV() {
     if (!matchingState.filteredMatches || matchingState.filteredMatches.length === 0) {
-        showDialog('info', 'Export Failed', 'No matches available to export.');
+        showDialog('info', 'Nothing to Export', 'No matches available to export.');
         return;
     }
 
@@ -2037,7 +2037,20 @@ function exportMatchingResultsCSV() {
         'City', 'State', 'Status', 'Match Explanation'
     ];
 
+    const expectedCount = matchingState.filteredMatches.length;
+    const sanitizeMatchCell = (val) => {
+        if (val === undefined || val === null || val === '') return '—';
+        let str = String(val).replace(/\s*[\r\n]+\s*/g, ' | ').replace(/[ \t]{2,}/g, ' ').trim();
+        if (!str) return '—';
+        if (['=', '+', '-', '@', '\t', '\r'].includes(str.charAt(0))) {
+            str = "'" + str;
+        }
+        return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const seenMatchIds = new Set();
     const rows = matchingState.filteredMatches.map(m => {
+        if (m.profileId) seenMatchIds.add(m.profileId);
         return [
             m.profileId || '',
             m.fullName || '',
@@ -2052,17 +2065,25 @@ function exportMatchingResultsCSV() {
             m.state || '',
             m.status || '',
             m.explanation || ''
-        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+        ].map(sanitizeMatchCell).join(',');
     });
 
-    const csvContent = headers.join(',') + '\n' + rows.join('\n');
+    if (rows.length !== expectedCount) {
+        console.error('[Matching Export Error] Row count mismatch', { expectedCount, actualRows: rows.length });
+        showDialog('error', 'Export Validation Failed', `Expected ${expectedCount} match rows but generated ${rows.length}. Export aborted.`);
+        return;
+    }
+
+    const csvContent = '\uFEFF' + headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',') + '\r\n' + rows.join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `NoorENikah_Matches_For_${sId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.setAttribute('download', `NoorENikah_Matches_For_${sId}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Expose functions globally for inline onclick handlers

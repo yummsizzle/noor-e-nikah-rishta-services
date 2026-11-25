@@ -97,6 +97,8 @@ window.shareModalState = shareModalState;
 let activeFilters = {};
 let activeProfileIndex = null;
 let isEditMode = false;
+let isDataLoading = false;
+let isExportInProgress = false;
 
 // Custom UI Dialog
 function showDialog(type, title, message, onConfirm = null, showInput = false, inputType = 'textarea', options = [], initialValue = '', confirmBtnText = 'Confirm', cancelBtnText = 'Cancel') {
@@ -160,6 +162,7 @@ function closeTempDialog() {
 
 // Data Load (Supabase)
 async function loadData() {
+    isDataLoading = true;
     try {
         const loginScreen = document.getElementById('loginScreen');
         if (loginScreen && !loginScreen.classList.contains('hidden')) {
@@ -167,40 +170,93 @@ async function loadData() {
             return;
         }
         console.log("[ADMIN DEBUG] loadData started");
-        console.log("[ADMIN DEBUG] Supabase select started");
-        const { data, error, status } = await window.supabaseClient.from('profiles').select('*').order('created_at', { ascending: false });
-        console.log("[ADMIN DEBUG] Supabase select finished");
-        console.log("[ADMIN DEBUG] HTTP status:", status);
-        
-        if (error) {
-            console.error("[ADMIN DEBUG] loadData SELECT error:", error);
-            throw error;
+        console.log("[ADMIN DEBUG] Supabase paginated select started");
+
+        const BATCH_SIZE = 1000;
+        const allRows = [];
+        const seenRowIds = new Set();
+        let expectedDbCount = null;
+        let lastStatus = null;
+
+        for (let pageIndex = 0; pageIndex < 100; pageIndex++) {
+            const from = pageIndex * BATCH_SIZE;
+            const to = from + BATCH_SIZE - 1;
+            const selectOptions = pageIndex === 0 ? { count: 'exact' } : undefined;
+            const { data: batch, error, status, count } = await window.supabaseClient
+                .from('profiles')
+                .select('*', selectOptions)
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: false })
+                .range(from, to);
+
+            lastStatus = status;
+            if (error) {
+                console.error("[ADMIN DEBUG] loadData SELECT error:", error);
+                throw error;
+            }
+            if (pageIndex === 0 && typeof count === 'number') {
+                expectedDbCount = count;
+            }
+
+            const batchRows = Array.isArray(batch) ? batch : [];
+            for (const row of batchRows) {
+                if (row && row.id && !seenRowIds.has(row.id)) {
+                    seenRowIds.add(row.id);
+                    allRows.push(row);
+                } else if (row && !row.id) {
+                    allRows.push(row);
+                }
+            }
+
+            if (batchRows.length < BATCH_SIZE) {
+                break;
+            }
+            if (expectedDbCount !== null && allRows.length >= expectedDbCount) {
+                break;
+            }
         }
-        
-        const inputLength = data ? data.length : 0;
+
+        console.log("[ADMIN DEBUG] Supabase select finished");
+        console.log("[ADMIN DEBUG] HTTP status:", lastStatus);
+        if (expectedDbCount !== null && allRows.length !== expectedDbCount) {
+            console.error("[ADMIN DEBUG] Paginated retrieval mismatch:", { fetched: allRows.length, expectedDbCount });
+        }
+
+        const inputLength = allRows.length;
         console.log(`[ADMIN DEBUG] rows returned = ${inputLength}`);
         console.log(`[ADMIN DEBUG] convertFromDb input = ${inputLength}`);
-        
-        profiles = data.map(convertFromDb);
+
+        profiles = allRows.map(convertFromDb);
         console.log(`[ADMIN DEBUG] convertFromDb output = ${profiles.length}`);
         console.log(`[ADMIN DEBUG] profiles array length = ${profiles.length}`);
-        
+
+        // Prune any stale selected IDs that are no longer present in loaded profiles
+        const loadedIdSet = new Set(profiles.map(p => p.id));
+        Array.from(selectedProfileIds).forEach(id => {
+            if (!loadedIdSet.has(id)) selectedProfileIds.delete(id);
+        });
+
         injectFilterUI();
         populateFilters();
         updateSidebarBadges();
-        
+        updateExportViewCounts();
+
         console.log(`[ADMIN DEBUG] currentView: ${currentView}`);
         if (currentView === 'dashboard') {
             console.log("[ADMIN DEBUG] renderDashboard called");
             initDashboard();
+        } else if (currentView === 'export') {
+            initExportView();
         } else {
             renderListView();
         }
 
         subscribeToRealtime();
-    } catch(e) { 
+    } catch(e) {
         console.error("Error loading profiles:", e);
-        profiles = []; 
+        profiles = [];
+    } finally {
+        isDataLoading = false;
     }
 }
 
@@ -853,9 +909,12 @@ function navigate(view, updateHash = true) {
         return;
     }
     if (!view) view = 'dashboard';
+    const prevView = currentView;
     currentView = view;
     currentPage = 1;
-    selectedProfileIds.clear();
+    if (view !== 'export' && !(prevView === 'export' && view === listType)) {
+        selectedProfileIds.clear();
+    }
     closeAllDropdowns();
 
     // Persist active view in sessionStorage
@@ -892,6 +951,7 @@ function navigate(view, updateHash = true) {
         listType = view;
         renderListView();
     } else {
+        if (view !== 'export') listType = 'all';
         const viewEl = document.getElementById('view-' + view);
         if (viewEl) viewEl.classList.remove('hidden');
         if (view === 'dashboard') initDashboard();
@@ -899,6 +959,7 @@ function navigate(view, updateHash = true) {
         if (view === 'pairs' && typeof initPairsView === 'function') initPairsView();
         if (view === 'shortlisted' && typeof initShortlistedPairsView === 'function') initShortlistedPairsView();
         if (view === 'followup' && typeof initFollowupPairsView === 'function') initFollowupPairsView();
+        if (view === 'export' && typeof initExportView === 'function') initExportView();
     }
 }
 
@@ -1778,6 +1839,8 @@ function updateSelectionUI(filtered = getFilteredProfiles(), pagedProfiles = nul
     const shrAllBtn = document.getElementById('shareAllBtn');
     if (shrAllBtn) shrAllBtn.disabled = allCount === 0;
 
+    if (typeof updateExportViewCounts === 'function') updateExportViewCounts();
+
     // Selection Toolbar
     const toolbar = document.getElementById('selectionToolbar');
     if (toolbar) {
@@ -1995,9 +2058,16 @@ function sanitizeFilename(name) {
         .replace(/\s+/g, '-');
 }
 
+/**
+ * Escape and normalize a CSV cell per RFC 4180 while flattening embedded line
+ * breaks so Microsoft Excel never auto-expands narrow rows to 409.6pt gaps.
+ */
 function escapeCsvCell(val, isPhone = false) {
     if (val === undefined || val === null || val === '') return '—';
-    let str = String(val).trim();
+    let str = String(val)
+        .replace(/\s*[\r\n]+\s*/g, ' | ')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
     if (!str) return '—';
 
     // Formula injection protection: prepend ' if value starts with =, +, -, @, \t, \r
@@ -2033,8 +2103,11 @@ function generateCsvContent(profileList, includeContact = true) {
                 return escapeCsvCell(regDate);
             }
             if (col.key === 'Salary (₹)') {
-                const sal = p['Salary'] || p['Salary (₹)'];
-                return escapeCsvCell(sal ? formatSalary(sal) : '—');
+                const sal = p['Salary'] !== undefined && p['Salary'] !== null && p['Salary'] !== ''
+                    ? p['Salary']
+                    : p['Salary (₹)'];
+                const hasSal = sal !== undefined && sal !== null && sal !== '' && sal !== '—';
+                return escapeCsvCell(hasSal ? formatSalary(sal) : '—');
             }
             const val = p[col.key];
             return escapeCsvCell(val, col.isPhone);
@@ -2043,6 +2116,154 @@ function generateCsvContent(profileList, includeContact = true) {
     });
 
     return csv;
+}
+
+/**
+ * Parse a generated CSV string strictly per RFC 4180 for pre-download integrity verification.
+ */
+function parseCsvStrictForValidation(csvText) {
+    const hasBom = typeof csvText === 'string' && csvText.charCodeAt(0) === 0xFEFF;
+    const text = hasBom ? csvText.slice(1) : String(csvText || '');
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (inQuotes) {
+            if (ch === '"' && next === '"') {
+                cell += '"';
+                i++;
+            } else if (ch === '"') {
+                inQuotes = false;
+            } else {
+                cell += ch;
+            }
+        } else {
+            if (ch === '"') {
+                inQuotes = true;
+            } else if (ch === ',') {
+                row.push(cell);
+                cell = '';
+            } else if (ch === '\r' && next === '\n') {
+                row.push(cell);
+                rows.push(row);
+                row = [];
+                cell = '';
+                i++;
+            } else if (ch === '\n' || ch === '\r') {
+                row.push(cell);
+                rows.push(row);
+                row = [];
+                cell = '';
+            } else {
+                cell += ch;
+            }
+        }
+    }
+    if (cell.length > 0 || row.length > 0) {
+        row.push(cell);
+        rows.push(row);
+    }
+
+    return {
+        hasBom,
+        endedInQuotes: inQuotes,
+        headers: rows[0] || [],
+        dataRows: rows.slice(1)
+    };
+}
+
+/**
+ * Validate source records and parsed CSV bytes before download/share to prevent
+ * partial, duplicate, or Excel-breaking exports.
+ */
+function validateProfileCsvPayload(records, expectedCount, exportLabel, includeContact = true) {
+    if (isDataLoading) {
+        return {
+            ok: false,
+            title: 'Loading Profiles',
+            message: 'Please wait a moment while all profiles finish loading from the database.'
+        };
+    }
+
+    if (!Array.isArray(records) || records.length !== expectedCount) {
+        const diagnostics = {
+            exportLabel,
+            expectedCount,
+            sourceCount: Array.isArray(records) ? records.length : -1
+        };
+        console.error('[Export Validation Failed] Source count mismatch:', diagnostics);
+        return {
+            ok: false,
+            title: 'Export Integrity Check Failed',
+            message: `Export "${exportLabel}" aborted: expected ${expectedCount} records but found ${diagnostics.sourceCount}.`
+        };
+    }
+
+    const expectedKeys = new Set();
+    for (const r of records) {
+        const key = String((r && (r.id || r.profileId)) || '').trim();
+        if (!key || expectedKeys.has(key)) {
+            console.error('[Export Validation Failed] Missing or duplicate record key:', { exportLabel, total: records.length });
+            return {
+                ok: false,
+                title: 'Export Integrity Check Failed',
+                message: `Export "${exportLabel}" aborted due to missing or duplicate record identifiers.`
+            };
+        }
+        expectedKeys.add(key);
+    }
+
+    const csvContent = generateCsvContent(records, includeContact);
+    const parsed = parseCsvStrictForValidation(csvContent);
+    const expectedCols = CSV_COLUMNS.length;
+    const malformattedRow = parsed.dataRows.findIndex(r => r.length !== expectedCols || r.some(c => c.includes('\n') || c.includes('\r')));
+    const csvProfileIds = parsed.dataRows.map(r => String(r[0] || '').trim()).filter(Boolean);
+    const uniqueCsvIds = new Set(csvProfileIds);
+
+    const expectedProfileIds = new Set(records.map(r => String(r.profileId || r.id || '').trim()).filter(Boolean));
+    const missingFromCsv = Array.from(expectedProfileIds).filter(id => !uniqueCsvIds.has(id));
+
+    if (
+        !parsed.hasBom ||
+        parsed.endedInQuotes ||
+        parsed.headers.length !== expectedCols ||
+        parsed.dataRows.length !== expectedCount ||
+        uniqueCsvIds.size !== expectedCount ||
+        missingFromCsv.length > 0 ||
+        malformattedRow !== -1
+    ) {
+        const diagnostics = {
+            exportLabel,
+            hasBom: parsed.hasBom,
+            endedInQuotes: parsed.endedInQuotes,
+            headers: parsed.headers.length,
+            expectedCount,
+            csvRows: parsed.dataRows.length,
+            uniqueCsvIds: uniqueCsvIds.size,
+            missingIdsCount: missingFromCsv.length,
+            malformattedRow
+        };
+        console.error('[Export Validation Failed] CSV output failed integrity check:', diagnostics);
+        return {
+            ok: false,
+            title: 'Export Integrity Check Failed',
+            message: `Export "${exportLabel}" aborted: generated ${parsed.dataRows.length} rows instead of ${expectedCount} (${missingFromCsv.length} missing IDs).`
+        };
+    }
+
+    const metrics = {
+        exportLabel,
+        expectedCount,
+        exportedRows: parsed.dataRows.length,
+        uniqueIds: uniqueCsvIds.size,
+        columns: parsed.headers.length
+    };
+    console.info('[Export Verified]', metrics);
+    return { ok: true, csvContent, metrics };
 }
 
 function downloadCsvFile(content, filename) {
@@ -2057,52 +2278,96 @@ function downloadCsvFile(content, filename) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function exportValidatedProfileCollection(records, expectedCount, exportLabel, filename, includeContact = true) {
+    if (isExportInProgress) {
+        console.warn('[Export] Concurrent export ignored while previous export finishes.');
+        return false;
+    }
+    isExportInProgress = true;
+    try {
+        const result = validateProfileCsvPayload(records, expectedCount, exportLabel, includeContact);
+        if (!result.ok) {
+            showDialog('warning', result.title, result.message);
+            return false;
+        }
+        downloadCsvFile(result.csvContent, filename);
+        return true;
+    } finally {
+        isExportInProgress = false;
+    }
+}
+
 function handleExportAction(type) {
     closeAllDropdowns();
     let exportList = [];
+    let expectedCount = 0;
+    let exportLabel = '';
     let filenameSuffix = '';
 
     if (type === 'selected') {
-        exportList = getFilteredProfiles().filter(p => selectedProfileIds.has(p.id));
-        if (exportList.length === 0) {
+        expectedCount = selectedProfileIds.size;
+        exportList = profiles.filter(p => selectedProfileIds.has(p.id));
+        if (expectedCount === 0 || exportList.length === 0) {
             showDialog('info', 'No Profiles Selected', 'Please select at least one profile using the checkboxes to export.');
             return;
         }
+        exportLabel = 'Selected Profiles';
         filenameSuffix = 'selected-profiles';
     } else if (type === 'filtered') {
         exportList = getFilteredProfiles();
+        expectedCount = exportList.length;
         if (exportList.length === 0) {
             showDialog('info', 'No Filtered Profiles', 'No profiles match the active search or filters.');
             return;
         }
+        exportLabel = 'Filtered Profiles';
         filenameSuffix = 'filtered-profiles';
     } else {
         exportList = [...profiles];
+        expectedCount = profiles.length;
         if (exportList.length === 0) {
             showDialog('info', 'No Profiles Found', 'There are no profiles in the database to export.');
             return;
         }
+        exportLabel = 'All Profiles';
         filenameSuffix = 'all-profiles';
     }
 
     const filename = `noor-e-nikah-${filenameSuffix}-${getTodayDate()}.csv`;
-    const csvContent = generateCsvContent(exportList, true);
-    downloadCsvFile(csvContent, filename);
+    exportValidatedProfileCollection(exportList, expectedCount, exportLabel, filename, true);
 }
 
-function exportSingleProfile(idx) {
-    const p = profiles[idx];
-    if (!p) return;
+function exportSingleProfile(idxOrId) {
+    let p = null;
+    if (typeof idxOrId === 'number') {
+        p = profiles[idxOrId];
+    } else if (typeof idxOrId === 'string') {
+        p = profiles.find(x => x.id === idxOrId || x.profileId === idxOrId);
+    }
+    if (!p) {
+        showDialog('warning', 'Export Failed', 'Selected profile record could not be located.');
+        return;
+    }
     const nameStr = sanitizeFilename(p['Full Name'] || p.profileId || 'profile');
     const filename = `noor-e-nikah-profile-${nameStr}-${getTodayDate()}.csv`;
-    const csvContent = generateCsvContent([p], true);
-    downloadCsvFile(csvContent, filename);
+    exportValidatedProfileCollection([p], 1, `Single Profile (${p.profileId || p.id})`, filename, true);
 }
 
 // WhatsApp Sharing Engine
+function sanitizeWhatsAppUrlText(text) {
+    if (!text) return '';
+    // Strip 4-byte SMP emoji sequences and VS16 (\uFE0F) that wa.me redirects corrupt to U+FFFD,
+    // while preserving BMP typography (★, •, —, ₹) and Hindi/Urdu/Arabic scripts intact.
+    return String(text)
+        .replace(/\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*|\uFE0F/gu, '')
+        .replace(/[ ]{2,}/g, ' ')
+        .replace(/^[ ]+/gm, '')
+        .trim();
+}
+
 function formatSingleProfileWhatsApp(p, includeContact = false) {
     if (!p) return '';
-    let msg = `🌟 NOOR-E-NIKAH MATRIMONIAL PROFILE 🌟\n\n`;
+    let msg = `★ *NOOR-E-NIKAH MATRIMONIAL PROFILE* ★\n\n`;
     msg += `Profile ID: ${p.profileId || '—'}\n`;
     msg += `Name: ${p['Full Name'] || '—'}\n`;
     msg += `Registering For: ${p['Registering For'] || '—'}\n`;
@@ -2112,7 +2377,7 @@ function formatSingleProfileWhatsApp(p, includeContact = false) {
     if (p['Skin Colour']) msg += `Skin Colour: ${p['Skin Colour']}\n`;
     msg += `\n`;
 
-    msg += `🎓 EDUCATION & PROFESSION\n`;
+    msg += `*EDUCATION & PROFESSION*\n`;
     msg += `Education: ${p.Education || '—'}\n`;
     msg += `Occupation: ${p.Occupation || '—'}\n`;
     if (p['Salary'] || p['Salary (₹)']) {
@@ -2126,14 +2391,14 @@ function formatSingleProfileWhatsApp(p, includeContact = false) {
     if (p['Languages Known']) msg += `Languages: ${p['Languages Known']}\n`;
     msg += `\n`;
 
-    msg += `🕌 RELIGIOUS & FAMILY\n`;
+    msg += `*RELIGIOUS & FAMILY*\n`;
     msg += `Maslak: ${p.Maslak || p['Maslak / Religious Background'] || '—'}\n`;
     msg += `Surname / Biradari: ${p['Surname / Biradari'] || '—'}\n`;
     msg += `Native Place: ${p['Native Place'] || p['Family Location'] || '—'}\n`;
     msg += `Family Type: ${p['Family Type'] || '—'}\n`;
     msg += `\n`;
 
-    msg += `🎯 MATCH PREFERENCES\n`;
+    msg += `*MATCH PREFERENCES*\n`;
     msg += `Preferred Age: ${p['Preferred Age Range'] || '—'}\n`;
     msg += `Preferred Location: ${p['Preferred Location'] || '—'}\n`;
     msg += `Preferred Education: ${p['Preferred Education'] || '—'}\n`;
@@ -2142,7 +2407,7 @@ function formatSingleProfileWhatsApp(p, includeContact = false) {
     msg += `\n`;
 
     if (includeContact) {
-        msg += `📞 CONTACT DETAILS\n`;
+        msg += `*CONTACT DETAILS*\n`;
         msg += `Guardian: ${p['Guardian Name'] || '—'} (${p.Relationship || '—'})\n`;
         msg += `Mobile: ${p.Mobile || '—'}\n`;
         msg += `WhatsApp: ${p.WhatsApp || '—'}\n`;
@@ -2157,9 +2422,9 @@ function formatSingleProfileWhatsApp(p, includeContact = false) {
 }
 
 function formatMultiProfileWhatsApp(profileList, includeContact = false) {
-    let msg = `🌟 NOOR-E-NIKAH MATRIMONIAL PROFILES 🌟\n\n`;
+    let msg = `★ *NOOR-E-NIKAH MATRIMONIAL PROFILES* ★\n\n`;
     msg += `Total Profiles: ${profileList.length}\n\n`;
-    msg += `Summary List:\n`;
+    msg += `*Summary List:*\n`;
     profileList.slice(0, 10).forEach((p, idx) => {
         msg += `${idx + 1}. ${p['Full Name'] || 'Candidate'} — ${p.Gender || '—'}, ${p.Age ? p.Age + ' yrs' : '—'} | ${p.City || '—'} | ${p.Occupation || '—'} (ID: ${p.profileId || '—'})\n`;
     });
@@ -2168,17 +2433,22 @@ function formatMultiProfileWhatsApp(profileList, includeContact = false) {
     }
     msg += `\n`;
     if (includeContact) {
-        msg += `ℹ️ Contact details are included in the shared export.\n`;
+        msg += `[Contact Included] Contact details are included in the shared export.\n`;
     } else {
-        msg += `🔒 Contact details are kept private as per selection.\n`;
+        msg += `[Privacy Protected] Contact details are kept private as per selection.\n`;
     }
-    msg += `📎 A consolidated CSV file is attached.\n\n`;
+    msg += `[CSV Export] A consolidated CSV file has been generated and downloaded to your device for easy record-keeping.\n\n`;
     msg += `Shared via Noor-E-Nikah Matrimonial Services`;
     return msg;
 }
 
-function openShareSingleProfile(idx) {
-    const p = profiles[idx];
+function openShareSingleProfile(idxOrId) {
+    let p = null;
+    if (typeof idxOrId === 'number') {
+        p = profiles[idxOrId];
+    } else if (typeof idxOrId === 'string') {
+        p = profiles.find(x => x.id === idxOrId || x.profileId === idxOrId);
+    }
     if (!p) return;
     shareModalState = {
         type: 'single',
@@ -2203,7 +2473,7 @@ function handleShareAction(type) {
     let shareList = [];
 
     if (type === 'selected') {
-        shareList = getFilteredProfiles().filter(p => selectedProfileIds.has(p.id));
+        shareList = profiles.filter(p => selectedProfileIds.has(p.id));
         if (shareList.length === 0) {
             showDialog('info', 'No Profiles Selected', 'Please select at least one profile using the checkboxes to share.');
             return;
@@ -2261,13 +2531,24 @@ async function executeShareWhatsApp() {
 
     if (shareModalState.type === 'single') {
         const text = formatSingleProfileWhatsApp(shareModalState.profiles[0], shareModalState.includeContact);
-        const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+        const waUrl = 'https://wa.me/?text=' + encodeURIComponent(sanitizeWhatsAppUrlText(text));
         window.open(waUrl, '_blank');
         closeShareModal();
     } else {
         const text = formatMultiProfileWhatsApp(shareModalState.profiles, shareModalState.includeContact);
         const filename = `noor-e-nikah-${shareModalState.type}-profiles-${getTodayDate()}.csv`;
-        const csvContent = generateCsvContent(shareModalState.profiles, shareModalState.includeContact);
+        const csvValidation = validateProfileCsvPayload(
+            shareModalState.profiles,
+            shareModalState.profiles.length,
+            `WhatsApp Share (${shareModalState.type})`,
+            shareModalState.includeContact
+        );
+        if (!csvValidation.ok) {
+            closeShareModal();
+            showDialog('warning', csvValidation.title, csvValidation.message);
+            return;
+        }
+        const csvContent = csvValidation.csvContent;
 
         let sharedSuccessfully = false;
         try {
@@ -2289,7 +2570,7 @@ async function executeShareWhatsApp() {
 
         if (!sharedSuccessfully) {
             downloadCsvFile(csvContent, filename);
-            const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+            const waUrl = 'https://wa.me/?text=' + encodeURIComponent(sanitizeWhatsAppUrlText(text));
             window.open(waUrl, '_blank');
             closeShareModal();
             showDialog('info', 'File Downloaded', `The profile export CSV file (${filename}) has been downloaded. WhatsApp is now open so you can attach the downloaded file.`);
@@ -3829,33 +4110,91 @@ function deleteNote(idx) {
     }, false, 'textarea', [], '', 'Delete', 'Cancel');
 }
 
-// Export Data - stacked buttons on mobile
-function exportCSV(segment) {
-    let d = profiles;
-    if(segment !== 'All') {
-        if(segment==='Male') d=d.filter(p=>p.Gender==='Male');
-        else if(segment==='Female') d=d.filter(p=>p.Gender==='Female');
-        else if(segment==='New') d=d.filter(p=>p.status==='New');
-        else d=d.filter(p=>p.status===segment);
+const EXPORT_SEGMENT_RULES = {
+    All: { label: 'All', match: () => true },
+    Male: { label: 'Male', match: p => p.Gender === 'Male' },
+    Female: { label: 'Female', match: p => p.Gender === 'Female' },
+    New: { label: 'Pending', match: p => p.status === 'New' },
+    Pending: { label: 'Pending', match: p => p.status === 'New' },
+    Reviewed: { label: 'Reviewed', match: p => p.status === 'Reviewed' },
+    Shortlisted: { label: 'Shortlisted', match: p => p.status === 'Shortlisted' },
+    Contacted: { label: 'Contacted', match: p => p.status === 'Contacted' },
+    'Follow Up': { label: 'Follow-Up', match: p => p.status === 'Follow Up' },
+    followup: { label: 'Follow-Up', match: p => p.status === 'Follow Up' },
+    Closed: { label: 'Closed', match: p => (p.status || '').trim().toLowerCase() === 'closed' },
+    closed: { label: 'Closed', match: p => (p.status || '').trim().toLowerCase() === 'closed' }
+};
+
+function getProfilesBySegment(segment) {
+    const key = segment || 'All';
+    const rule = EXPORT_SEGMENT_RULES[key];
+    if (rule) {
+        return { label: rule.label, records: profiles.filter(rule.match) };
     }
-    if(d.length===0) return showDialog('info','Export Failed', `No ${segment} profiles found to export.`);
-    
-    let headers = ['Profile ID','Status','Full Name','Gender','Age','City','State','Mobile'];
-
-// Supabase Data Mapping
-
-
-    let csv = headers.join(',') + '\n' + d.map(p=> {
-        return headers.map(h => `"${(p[h]||'').replace(/"/g, '""')}"`).join(',');
-    }).join('\n');
-    
-    let blob = new Blob([csv], {type: 'text/csv'});
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url; 
-    a.download = `NoorENikah_${segment}_Export.csv`; 
-    a.click();
+    return { label: String(key), records: profiles.filter(p => p.status === key) };
 }
+
+// Unified CSV Export for Dedicated Export Center & Quick Actions
+function exportCSV(segment) {
+    const { label, records } = getProfilesBySegment(segment);
+    if (records.length === 0) {
+        return showDialog(
+            'info',
+            'Nothing to Export',
+            'No records available to export.',
+            null,
+            false,
+            'textarea',
+            [],
+            '',
+            'OK',
+            'Close'
+        );
+    }
+
+    const filename = `noor-e-nikah-${sanitizeFilename(label)}-profiles-${getTodayDate()}.csv`;
+    exportValidatedProfileCollection(records, records.length, label, filename, true);
+}
+
+function initExportView() {
+    updateExportViewCounts();
+}
+
+function updateExportViewCounts() {
+    const allCount = getProfilesBySegment('All').records.length;
+    const maleCount = getProfilesBySegment('Male').records.length;
+    const femaleCount = getProfilesBySegment('Female').records.length;
+    const pendingCount = getProfilesBySegment('New').records.length;
+    const reviewedCount = getProfilesBySegment('Reviewed').records.length;
+    const shortlistedCount = getProfilesBySegment('Shortlisted').records.length;
+    const contactedCount = getProfilesBySegment('Contacted').records.length;
+    const followupCount = getProfilesBySegment('Follow Up').records.length;
+    const closedCount = getProfilesBySegment('Closed').records.length;
+    const selCount = (typeof selectedProfileIds !== 'undefined' && selectedProfileIds) ? selectedProfileIds.size : 0;
+    const fltCount = typeof getFilteredProfiles === 'function' ? getFilteredProfiles().length : allCount;
+
+    const setEl = (id, count) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = count;
+    };
+
+    setEl('exportCardCountAll', allCount);
+    setEl('exportCardCountMale', maleCount);
+    setEl('exportCardCountFemale', femaleCount);
+    setEl('exportCardCountPending', pendingCount);
+    setEl('exportCardCountReviewed', reviewedCount);
+    setEl('exportCardCountShortlisted', shortlistedCount);
+    setEl('exportCardCountContacted', contactedCount);
+    setEl('exportCardCountFollowUp', followupCount);
+    setEl('exportCardCountClosed', closedCount);
+    setEl('exportCardCountSelected', selCount);
+    setEl('exportCardCountFiltered', fltCount);
+}
+
+// Global exports for inline onclick and cross-module calls
+window.exportCSV = exportCSV;
+window.initExportView = initExportView;
+window.updateExportViewCounts = updateExportViewCounts;
 
 async function viewSupabasePhoto(path) {
     try {
